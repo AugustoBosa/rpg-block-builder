@@ -2,13 +2,15 @@ import { final, GUIAS, padrao, piso, PISO, SECAO_GUIAS, SECAO_PISO, stl, type Op
 import { PEDRA, SECAO_PEDRA } from './pedra'
 import { alturaGrid, assento, avisos, corpo, degrau, ENCAIXES, FORMATOS, fundo, grid, malha, SECAO, SISTEMA } from './sistema'
 import { cotas, limpaCotas } from './cotas'
-import { esquemaGrid, esquemaSistema } from './esquema'
-import { aplicaCorte, aplicaVisivel, cena, config, type Corte, enquadra, eleva, MODOS, mostra, type Modo, setModo } from './vista'
+import { esquema } from './esquema'
+import { esfera } from './esferas'
+import { aoMudarVer, aplicaCorte, aplicaVisivel, cena, config, type Corte, enquadra, eleva, MODOS, mostra, type Modo, setModo, setTransp, type Ver } from './vista'
 
 // nada é salvo: cada abertura começa do padrão
 const o: Opcoes = padrao()
 const PREVIA = .5 // mm: malha da prévia do piso
 let enquadrar = true // só ao trocar de passo ou de peça; mexer num slider não move a câmera
+let ver: Ver = 'frontal' // vista 2D do painel de esquemas: a mais próxima da câmera (ver vista.ts)
 const $ = (id: string) => document.getElementById(id)!
 
 let pendente: ReturnType<typeof setTimeout>
@@ -24,17 +26,26 @@ function previa() {
       mostra(1, null)
     }
     atualizaCotas()
-    if (config.passo !== 3) $('dirc').innerHTML = config.passo === 1 ? esquemaSistema(o) : esquemaGrid(o, sel3.value)
+    redesenhaEsquema()
     if (enquadrar) { enquadra(config.passo); enquadrar = false }
   }, 60)
 }
+// painel de esquemas: isométrica com os planos + a vista 2D mais próxima da câmera; "Mostrar tudo" abre todas
+function redesenhaEsquema() {
+  if (config.passo !== 3) $('dirc').innerHTML = esquema(o, config.passo, sel3.value, config.mostrar, ver)
+}
+aoMudarVer(v => { ver = v; redesenhaEsquema() })
+const tudo = $('tudo') as HTMLDialogElement
+$('verTudo').onclick = () => { $('tudoc').innerHTML = esquema(o, config.passo, sel3.value, config.mostrar, 'tudo'); tudo.showModal() }
+$('fechaTudo').onclick = () => tudo.close()
+tudo.onclick = e => { if (e.target === tudo) tudo.close() } // clique fora da caixa
 
 // cotas 3D: um estado só (vale para as três abas); refaz só as linhas, não as malhas
 let mostrarCotas = false
 function atualizaCotas() {
   limpaCotas()
   if (!mostrarCotas) return
-  const raiz = cotas(config.passo as 1 | 2 | 3, o, peca())
+  const raiz = cotas(config.passo as 1 | 2 | 3, o, peca(), config.mostrar)
   raiz.userData.elevavel.position.z = config.passo === 1 ? config.elevacao : 0 // o pé, ombro e folga sobem com o bloco
   cena.add(raiz)
 }
@@ -122,7 +133,10 @@ function popover(texto: string) {
 addEventListener('click', e => { if (!(e.target as Element).closest('.barra, .pop')) for (const p of pops) p.classList.remove('aberto') })
 
 const corte = () => config.corte[config.passo]
-const mostrarSeg = segmentos([['ambos', 'Ambos'], ['bloco', 'Bloco'], ['grid', 'Grid']], v => { config.mostrar = v as typeof config.mostrar; aplicaVisivel() })
+const mostrarSeg = segmentos([['ambos', 'Ambos'], ['bloco', 'Bloco'], ['grid', 'Grid']], v => {
+  config.mostrar = v as typeof config.mostrar
+  aplicaVisivel(); atualizaCotas(); redesenhaEsquema() // cotas e esquemas seguem as peças visíveis
+})
 mostrarSeg.el.classList.add('so1')
 const pc = popover('Corte'), cortar = document.createElement('input'), inverte = document.createElement('input')
 cortar.type = inverte.type = 'checkbox'
@@ -134,18 +148,38 @@ eixoRot.append('Eixo', eixoSeg.el)
 const poeCorte = controle(pc.pop, 'Posição (mm)', 0, -60, 60, v => { corte().pos = v }, .5, aplicaCorte)
 pc.pop.prepend(campo('Cortar', cortar), eixoRot)
 pc.pop.append(campo('Inverter lado', inverte))
-const pe = popover('Elevação'), poeElev = controle(pe.pop, 'Elevação (0 = assentado)', 0, 0, 30, v => { config.elevacao = v }, .5, eleva)
-pe.b.classList.add('so1')
 const cotasBtn = botao('Cotas', () => { mostrarCotas = !mostrarCotas; cotasBtn.classList.toggle('ativo', mostrarCotas); atualizaCotas() }, 'Mostrar cotas no modelo')
-const modoSeg = segmentos(MODOS, v => setModo(v as Modo))
-modoSeg.el.style.marginLeft = 'auto'
-barra.append(mostrarSeg.el, pc.b, pe.b, cotasBtn, modoSeg.el, pc.pop, pe.pop)
-$('vista').append(barra)
-modoSeg.marca(config.modo); mostrarSeg.marca(config.mostrar)
+
+// sombreamento: esferas como no Blender; no modo Arestas aparece o slider de transparência
+const esfs = document.createElement('div'), esfBtn = new Map<Modo, HTMLButtonElement>(), transp = document.createElement('div'), transpS = document.createElement('input')
+esfs.className = 'esfs'
+transp.className = 'transp'
+Object.assign(transpS, { type: 'range', min: 0, max: 1, step: .05, value: config.transp, title: 'Transparência dos objetos' })
+transpS.oninput = () => setTransp(+transpS.value)
+transp.append('Transparência', transpS)
+const marcaModo = (m: Modo) => { esfBtn.forEach((b, k) => b.classList.toggle('ativo', k === m)); transp.hidden = m !== 'arestas' }
+for (const [v, t] of MODOS) { const b = botao('', () => { setModo(v); marcaModo(v) }, t); b.append(esfera(v)); esfBtn.set(v, b); esfs.append(b) }
+const dire = document.createElement('div')
+dire.className = 'dire'
+dire.append(transp, esfs)
+
+// elevação: slider vertical sempre à mostra na lateral esquerda da vista (só no passo 1)
+const elev = document.createElement('div'), elevV = document.createElement('span'), elevS = document.createElement('input')
+elev.className = 'elev'; elev.title = 'Elevação do bloco sobre o grid (0 = assentado)'
+Object.assign(elevS, { type: 'range', min: 0, max: 30, step: .5, value: config.elevacao })
+const textoElev = () => { elevV.textContent = String(config.elevacao).replace('.', ',') + ' mm' }
+elevS.oninput = () => { config.elevacao = +elevS.value; textoElev(); eleva() }
+textoElev()
+elev.append(elevV, elevS)
+
+barra.append(mostrarSeg.el, pc.b, cotasBtn, dire, pc.pop)
+$('vista').append(barra, elev)
+marcaModo(config.modo); mostrarSeg.marca(config.mostrar)
 function sincronizaBarra(n: number) { // valores do corte da aba atual; itens do passo 1 só aparecem no passo 1
   const c = config.corte[n]
-  cortar.checked = c.ativo; inverte.checked = c.inverte; eixoSeg.marca(c.eixo); poeCorte(c.pos); poeElev(config.elevacao)
+  cortar.checked = c.ativo; inverte.checked = c.inverte; eixoSeg.marca(c.eixo); poeCorte(c.pos)
   barra.dataset.passo = String(n)
+  elev.hidden = n !== 1
   for (const p of pops) p.classList.remove('aberto')
 }
 

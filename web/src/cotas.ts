@@ -35,33 +35,39 @@ function ponta(c: Celula, s: number): V {
 
 const cruz = (a: V, b: V): V => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]]
 const ponto = (a: V, b: V) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
-interface Item { a: V; b: V; v0: V; dist: number; r: CSS2DObject }
+interface Item { a: V; b: V; dist: number; r: CSS2DObject }
 
 /** Guarda as cotas de um grupo e as redesenha (`orienta`) no plano perpendicular à câmera: a linha de cota
- *  sai sempre na direção que a câmera vê de lado, para o outro lado do centro da peça. `v0` é o respaldo (de frente para a cota). */
+ *  sai sempre na direção que a câmera vê de lado, para o outro lado do centro da peça.
+ *  Cota sem boa leitura (medida na direção da visão) ou atrás da peça some; `ativo = false` esconde o grupo (peça oculta). */
 class Desenho {
   g = new THREE.Group()
+  ativo = true
   private itens: Item[] = []
   private linhas: THREE.LineSegments | null = null
   constructor(private centro: V = [0, 0, 0]) {}
-  /** Cota linear de a até b; a linha de cota fica `dist` mm na direção `v0` (unitária) até a câmera pedir outra. */
-  cota(a: V, b: V, v0: V, dist: number, texto: string) {
+  /** Cota linear de a até b; a linha de cota fica `dist` mm afastada, na direção que `orienta` escolhe. */
+  cota(a: V, b: V, dist: number, texto: string) {
     const el = document.createElement('div')
     el.className = 'cota'
     el.textContent = texto
     el.style.cssText = 'font:11px sans-serif;color:#ffb000;pointer-events:none;white-space:nowrap;text-shadow:0 0 3px #000'
     const r = new CSS2DObject(el)
     this.g.add(r)
-    this.itens.push({ a, b, v0, dist, r })
+    this.itens.push({ a, b, dist, r })
   }
-  /** Recalcula linhas e rótulos para a direção de visão `dir` (da câmera para a cena). */
-  orienta(dir: V) {
+  /** Recalcula linhas e rótulos para a direção de visão `dir` (da câmera para a cena); `oculto(p)`: algo da peça entre a câmera e p. */
+  orienta(dir: V, oculto: (p: V) => boolean) {
     const pos: number[] = [], seg = (p: V, q: V) => pos.push(...p, ...q)
-    for (const { a, b, v0, dist, r } of this.itens) {
+    for (const { a, b, dist, r } of this.itens) {
       const u = unidade(soma(b, a, -1)), c = cruz(dir, u), m = meio(a, b)
-      let v = Math.hypot(...c) > .2 ? unidade(c) : v0 // u quase paralelo à visão: mantém o lado original
+      r.visible = false
+      if (!this.ativo || Math.hypot(...c) < .25) continue // u quase paralelo à visão: não há como ler a medida
+      let v = unidade(c)
       if (ponto(v, soma(m, this.centro, -1)) < 0) v = [-v[0], -v[1], -v[2]] // sempre para fora da peça
       const dA = soma(a, v, dist), dB = soma(b, v, dist), w = soma(u, v, TICK / (2 * Math.SQRT2)) // meio traço: (u + v) / √2 × TICK / 2
+      if (oculto(meio(dA, dB))) continue // atrás da peça
+      r.visible = true
       seg(soma(a, v, EXT), soma(a, v, dist + EXT))
       seg(soma(b, v, EXT), soma(b, v, dist + EXT))
       seg(dA, dB)
@@ -82,12 +88,12 @@ class Desenho {
 
 /** Cota vertical (Z) em x = xf; a linha de cota fica `dist` mm à esquerda (−X). */
 const alt = (d: Desenho, xf: number, dist: number, z0: number, z1: number, texto: string) =>
-  d.cota([xf, 0, z0], [xf, 0, z1], [-1, 0, 0], dist, texto)
+  d.cota([xf, 0, z0], [xf, 0, z1], dist, texto)
 
 /** Dimensões externas de uma peça: X embaixo, Y à direita, altura à esquerda (de 0 a `h`). */
 function externas(d: Desenho, k: Caixa, h: number, rotuloZ: string) {
-  d.cota([k.x0, k.y0, 0], [k.x1, k.y0, 0], [0, -1, 0], OFF, mm(k.x1 - k.x0))
-  d.cota([k.x1, k.y0, 0], [k.x1, k.y1, 0], [1, 0, 0], OFF, mm(k.y1 - k.y0))
+  d.cota([k.x0, k.y0, 0], [k.x1, k.y0, 0], OFF, mm(k.x1 - k.x0))
+  d.cota([k.x1, k.y0, 0], [k.x1, k.y1, 0], OFF, mm(k.y1 - k.y0))
   alt(d, k.x0, 2 * OFF, 0, h, rotuloZ + ' ' + mm(h))
 }
 
@@ -95,15 +101,15 @@ function externas(d: Desenho, k: Caixa, h: number, rotuloZ: string) {
 function sistema(o: Opcoes, fixa: Desenho, bloco: Desenho) {
   const c = celula(o), M = medidas(o), k = caixa(c, 1, 1)
   const zb = fundo(o) + o.folga_fundo // base do pé (como em main.ts)
-  if (!c.hex) fixa.cota([k.x0, k.y0, 0], [k.x1, k.y0, 0], [0, -1, 0], OFF, mm(k.x1 - k.x0))
+  if (!c.hex) fixa.cota([k.x0, k.y0, 0], [k.x1, k.y0, 0], OFF, mm(k.x1 - k.x0))
   const a = ponta(c, -1), b = ponta(c, 1), L = mm(b[1] - a[1])
-  fixa.cota(a, b, [1, 0, 0], k.x1 + OFF - a[0], c.hex ? 'entre lados ' + L : L)
+  fixa.cota(a, b, k.x1 + OFF - a[0], c.hex ? 'entre lados ' + L : L)
   alt(fixa, k.x0, 3 * OFF, 0, M.alturaGrid, 'grid ' + mm(M.alturaGrid))
 
   alt(bloco, k.x0 + o.recuo, 2 * OFF, zb, zb + M.hPe, `pé ${mm(M.hPe)} · chanfro ${mm(o.chanfro)} · cônico ${mm(o.conicidade)}`)
   alt(bloco, k.x0 + M.nervuraMeia, OFF, zb + M.hPe, M.alturaGrid, 'ombro ' + mm(M.assento - M.hPe))
   alt(bloco, k.x0 + o.recuo, OFF, fundo(o), zb, 'folga ' + mm(o.folga_fundo))
-  bloco.cota([0, c.a[1] - o.recuo, zb], [0, c.a[1], zb], [1, 0, 0], 2, 'recuo ' + mm(o.recuo)) // planta: lado de cima
+  bloco.cota([0, c.a[1] - o.recuo, zb], [0, c.a[1], zb], 2, 'recuo ' + mm(o.recuo)) // planta: lado de cima
 }
 
 /** Passo 2: grid N × M (ou degrau, com a altura do degrau). */
@@ -116,13 +122,17 @@ function grade(o: Opcoes, peca: string, fixa: Desenho) {
 }
 
 /** Cotas do passo: cada chamada troca as anteriores. O grupo devolvido vai para a cena; `userData.elevavel` é o que sobe com a elevação do passo 1. */
-export function cotas(passo: 1 | 2 | 3, o: Opcoes, peca: string): THREE.Group {
+export function cotas(passo: 1 | 2 | 3, o: Opcoes, peca: string, mostrar = 'ambos'): THREE.Group {
   limpaCotas()
   const h = passo === 3 ? o.altura : medidas(o).alturaGrid, c: V = [0, 0, h / 2] // centro aproximado da peça: as cotas saem para fora dele
   const fixa = new Desenho(c), bloco = new Desenho(c)
   desenhos = [fixa, bloco]
   ultima = null
-  if (passo === 1) sistema(o, fixa, bloco)
+  if (passo === 1) { // no passo 1 a fixa é do grid e a outra é do bloco; peça oculta, cotas ocultas
+    fixa.ativo = mostrar !== 'bloco'
+    bloco.ativo = mostrar !== 'grid'
+    sistema(o, fixa, bloco)
+  }
   else if (passo === 2) grade(o, peca, fixa)
   else externas(fixa, caixa(celula(o), o.linhas, o.colunas), o.altura, 'altura')
   const raiz = new THREE.Group()
@@ -159,11 +169,26 @@ export function criaRotulos(vista: HTMLElement) {
   vista.appendChild(el)
   redimensionaRotulos(vista.clientWidth, vista.clientHeight)
 }
-/** Chame depois de render.render(cena, cam): desenha os rótulos da cena. */
-export function renderRotulos(cena: THREE.Scene, cam: THREE.Camera) {
+/** Faz as cotas se refazerem no próximo quadro (corte, elevação ou peça visível mudaram). */
+export function reorienta() { ultima = null }
+
+const raio = new THREE.Raycaster(), alvo = new THREE.Vector3()
+/** Chame depois de render.render(cena, cam): desenha os rótulos da cena. `oclusores` dá as peças que escondem cotas. */
+export function renderRotulos(cena: THREE.Scene, cam: THREE.Camera, oclusores: () => THREE.Mesh[]) {
   if (atual) { // câmera girou mais de ~2°: refaz as cotas no plano da vista
     const d = cam.getWorldDirection(new THREE.Vector3())
-    if (!ultima || ultima.dot(d) < .9994) { ultima = d; for (const x of desenhos) x.orienta([d.x, d.y, d.z]) }
+    if (!ultima || ultima.dot(d) < .9994) {
+      ultima = d
+      const ocl = oclusores()
+      const oculto = (p: V) => { // há superfície da peça (fora do corte) entre a câmera e o ponto?
+        alvo.set(...p).sub(cam.position)
+        const L = alvo.length()
+        raio.set(cam.position, alvo.normalize())
+        raio.far = L - .5
+        return raio.intersectObjects(ocl, false).some(h => !((h.object as THREE.Mesh).material as THREE.Material).clippingPlanes?.some(q => q.distanceToPoint(h.point) < 0))
+      }
+      for (const x of desenhos) x.orienta([d.x, d.y, d.z], oculto)
+    }
   }
   rotulos?.render(cena, cam)
 }
