@@ -22,6 +22,10 @@ Legenda da coluna **Web**: ✅ feito · ⏳ a portar · 🔁 repensar · ❌ nã
 | 2026-11-06 | Nome do projeto: **RPG Block Builder** |
 | 2026-11-06 | Interface em 2 passos: o Passo 1 define o sistema (formato e encaixe) e o Passo 2 cria blocos e guias (grid e degrau) dentro dele; depois entram paredes, materiais e props. Todo o encaixe é parametrizado, com 3 tipos de partida (reto + chanfro, cônico, ímã) |
 | 2026-11-06 | Nada é salvo por enquanto: cada abertura começa do padrão. O formato de salvar fica para depois |
+| 2026-11-06 | Repositório público com histórico limpo (branch `main`) e GitHub Pages; os dados do original ficam só no PC (`master` local) |
+| 2026-11-06 | Interface de celular básica, só funcional |
+| 2026-11-07 | Blocos de N × M células. Grids e adaptadores (degrau) em aba própria, seguindo o Sistema. Interface em 3 abas: Sistema, Blocos, Grids |
+| 2026-11-07 | Linhas, colunas e similares só com valores inteiros (passo por parâmetro) |
 | 2026-11-06 | Backup de `amostra_hd/` não será feito |
 
 Risco de copyright (avisado ao usuário): medidas configuráveis reduzem o risco, mas não o eliminam. Faltam: encaixe próprio (não publicar `spec_encaixe.json` como padrão), nome próprio (decidido: RPG Block Builder; falta conferir marca no INPI e no USPTO), texturas revisadas (Glifos e Nichos são as mais próximas das originais), termos de uso e revisão por advogado.
@@ -128,10 +132,10 @@ Como comparar uma textura nova com o Blender sem se enganar: a janela de 16 mm d
 | Passo | Entrega | Estimativa |
 |---|---|---|
 | 1 | Piloto do piso de Pedra | ✅ feito (2026-11-06) |
-| 2 | Parede, canto e telhado, com portas e janelas (`manifold-3d`), no Passo 2 da interface | ~1 semana |
+| 2 | Parede, canto e telhado, com portas e janelas (`manifold-3d`), na aba Blocos | ~1 semana |
 | 3 | As outras 14 texturas (piso e parede) | 2–3 semanas |
 | 4 | Conjuntos, temas, interface, Web Worker, hospedagem | ~1 semana |
-| 1b | Encaixe próprio e ajustável; hexágono; grid e degrau simples; interface em 2 passos | ✅ feito (2026-11-06), falta a aprovação |
+| 1b | Encaixe próprio e ajustável; hexágono; grid e degrau; blocos N × M; 3 abas; celular; site no Pages | ✅ feito (2026-11-06/07), falta a aprovação |
 | depois | Gerador de grid próprio (§5) | a estimar |
 | depois | Props importados (qualquer piso, sempre fundidos) | a definir |
 
