@@ -1,5 +1,5 @@
 // Gera peças pela linha de comando (mesmo código do navegador), para medir com as ferramentas Python.
-// npx tsx cli.ts <pasta> [--peca piso|grid|degrau] [--formato quadrado|retangulo|hexagono] [--semente 1] [--recuo 4] [--pedra_vao 0.8] ...
+// npx tsx cli.ts <pasta> [--peca piso|grid|degrau] [--formato quadrado|hexagono] [--semente 1] [--recuo 4] [--pedra_vao 0.8] ...
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fechada, final, padrao, piso, stl, type Malha } from './src/bloco'

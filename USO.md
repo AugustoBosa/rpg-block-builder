@@ -20,7 +20,7 @@ Versão para hospedar: `npm --prefix web run build` grava o site estático em `w
 | Superfície | semente, desgaste, tamanho da pedra, profundidade, posição X/Y no mapa (emenda com o vizinho) |
 | Borda | quina (largura e gasto), lateral (largura e gasto), ruído da borda |
 | Relevo | teto do relevo, ganho da junta |
-| Pedra avançada | os 13 ajustes internos da Pedra (vão, bisel, cascalho, rachaduras, lascas, grão...) |
+| Pedra avançada (3 seções: Forma das pedras, Superfície, Desgaste) | os 13 ajustes internos da Pedra (vão, bisel, cascalho, rachaduras, lascas, grão...) |
 
 ## 2. Linha de comando (mesmo código da web)
 
@@ -28,7 +28,7 @@ Versão para hospedar: `npm --prefix web run build` grava o site estático em `w
 cd web
 npx tsx cli.ts <pasta> [--opção valor ...]
 ```
-Grava o STL e diz se a malha fecha. `--peca piso|grid|degrau` (padrão: piso), `--formato quadrado|retangulo|hexagono`. As outras opções são as mesmas da web: sistema (`--largura 60`, `--recuo 4`, `--ima_d 6`...), piso (`--linhas 2 --colunas 3`, `--semente 3`, `--posicao_x 1` em células...), grid e degrau (`--grid_linhas 2 --grid_colunas 3 --altura_degrau 30`). Ajustes da Pedra: `--pedra_<nome>` (por exemplo, `--pedra_vao 0.8`).
+Grava o STL e diz se a malha fecha. `--peca piso|grid|degrau` (padrão: piso), `--formato quadrado|hexagono` (quadrado: `--largura` e `--comprimento` independentes; hexágono: `--largura` é a medida entre lados). As outras opções são as mesmas da web: sistema (`--largura 60`, `--recuo 4`, `--ima_d 6`...), piso (`--linhas 2 --colunas 3`, `--semente 3`, `--posicao_x 1` em células...), grid e degrau (`--grid_linhas 2 --grid_colunas 3 --altura_degrau 30`). Ajustes da Pedra: `--pedra_<nome>` (por exemplo, `--pedra_vao 0.8`).
 
 ## 3. Medir um STL
 

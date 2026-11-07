@@ -22,6 +22,13 @@ export const PISO = { // nome: [padrão, mín, máx, rótulo, passo?] (sem passo
 export const GUIAS = { // grid e degrau (aba própria)
   grid_linhas: [3, 1, 12, 'Linhas', 1], grid_colunas: [3, 1, 12, 'Colunas', 1], altura_degrau: [24, 10, 80, 'Degrau: altura (mm)'],
 } as const
+// seções das abas Blocos e Grids (chave → título; as tuplas acima não mudam)
+export const SECAO_PISO = {
+  linhas: 'Peça', colunas: 'Peça', altura: 'Peça', posicao_x: 'Peça', posicao_y: 'Peça',
+  semente: 'Textura Pedra', desgaste: 'Textura Pedra', tamanho_pedra: 'Textura Pedra', profundidade: 'Textura Pedra', teto: 'Textura Pedra', junta_piso: 'Textura Pedra',
+  quina_largura: 'Borda', quina_gasto: 'Borda', lateral_largura: 'Borda', lateral_gasto: 'Borda', ruido_borda: 'Borda',
+} as const
+export const SECAO_GUIAS = { grid_linhas: 'Dimensões', grid_colunas: 'Dimensões', altura_degrau: 'Dimensões' } as const
 type Num<T> = { -readonly [k in keyof T]: number }
 export type Opcoes = Sistema & Num<typeof PISO> & Num<typeof GUIAS> & { pedra: KnobsPedra }
 const ini = (t: object) => Object.fromEntries(Object.entries(t).map(([k, v]) => [k, v[0]]))

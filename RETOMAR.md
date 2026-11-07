@@ -12,18 +12,23 @@ Leia este arquivo primeiro. Comandos: `USO.md`. Visão: `README.md`. Inventário
   - Os dados do original ficam no disco, mas ignorados pelo `.gitignore` do `main`: `catalogo/` (302 jpg), índices e listagem do HD, `spec_encaixe.json`, `docs/HD.md`, `docs/AMOSTRA_HD.md` e `graphify-out/`. Nunca usar `git add -f` neles.
   - Sem o `spec_encaixe.json`, `gerar.py`, `validar.py` e outros scripts Python só rodam nesta cópia local.
   - O hook `pre-commit` (graphify) só adiciona o grafo quando ele não está no `.gitignore`.
-- **A ferramenta (web, three.js + `manifold-3d`), em 3 abas:**
-  1. **Sistema:** formato da célula (quadrado, retângulo, hexágono com lados planos em cima e embaixo, de 15 a 100 mm) e **encaixe próprio**. São 3 tipos de partida (pé reto + chanfro, que é o padrão; cônico; com ímã), e todas as medidas são editáveis: altura do pé, recuo, chanfro, conicidade, ombro, nervura, folga lateral, folga embaixo, ímã (diâmetro, altura, folga) e fundo do grid. O pé do bloco e o furo do grid saem do mesmo perfil (`web/src/sistema.ts`). A prévia mostra o bloco assentado num grid 1 × 1, em corte. Medidas padrão: grid de 8,8 mm de altura; o bloco apoia na nervura a 8,5 mm do fundo do pé.
-  2. **Blocos:** piso de Pedra de **linhas × colunas** células (de 1 a 6), com um pé por célula e uma laje contínua. Todas as células usam a mesma rede de pontos (no hexágono, a rede é triangular), e o desgaste só acontece na borda externa. Mais os 13 ajustes da Pedra.
-  3. **Grids:** grid N × M (vazado ou com fundo) e degrau N × M (adaptador de nível: pé embaixo, furos em cima). Ambos seguem o Sistema.
+- **A ferramenta (web, three.js + `manifold-3d`), em 3 abas, nesta ordem:**
+  1. **Sistema:** formato da célula (quadrado, com largura X e comprimento Y independentes, ou hexágono com lados planos em cima e embaixo, medido entre lados; de 15 a 100 mm) e **encaixe próprio**. São 3 tipos de partida (pé reto + chanfro, que é o padrão; cônico; com ímã), e todas as medidas são editáveis: altura do pé, recuo, chanfro, conicidade, ombro, nervura, folga lateral, folga embaixo, ímã (diâmetro, altura, folga) e fundo do grid. O pé do bloco e o furo do grid saem do mesmo perfil (`web/src/sistema.ts`). A prévia mostra o bloco assentado num grid 1 × 1, em corte. Medidas padrão: grid de 8,8 mm de altura; o bloco apoia na nervura a 8,5 mm do fundo do pé.
+  2. **Grids:** grid N × M (vazado ou com fundo) e degrau N × M (adaptador de nível: pé embaixo, furos em cima). Ambos seguem o Sistema.
+  3. **Blocos:** piso de Pedra de **linhas × colunas** células (de 1 a 6), com um pé por célula e uma laje contínua. Todas as células usam a mesma rede de pontos (no hexágono, a rede é triangular), e o desgaste só acontece na borda externa. Mais os 13 ajustes da Pedra, em 3 seções avançadas (Forma das pedras, Superfície, Desgaste).
+- **Vista 3D (`web/src/vista.ts`):** gizmo de orientação; corte por eixo X, Y ou Z, com posição e inverter (um estado por aba; ligado só no Sistema, eixo Y, posição 0); elevação do bloco de 0 a 30 mm (só no Sistema; 0 = assentado); modos Sólido, Inclinação, Normais, Arestas e Matcap; checkbox "Mostrar cotas".
+- **Cotas e esquemas:** cotas 3D (`web/src/cotas.ts`) e esquemas 2D em SVG no painel direito (`web/src/esquema.ts`: planta, frontal, lateral e isométrica), nas abas Sistema e Grids. `medidas()` em `sistema.ts` é a única fonte dos números.
+- **Interface:** controles em seções recolhíveis (`<details>`); os textos de nota foram removidos.
   - **Passo por parâmetro:** linhas, colunas e semente só aceitam números inteiros; a posição no mapa anda de 0,5 em 0,5 célula. O passo fica na 5ª posição da tabela de opções (`PISO`, `GUIAS` em `bloco.ts`), e o valor digitado é arredondado.
   - **Layout de celular** (até 700 px): a prévia fica em cima e os controles embaixo.
   - **Nada é salvo:** cada abertura começa do padrão. O formato de salvar fica para depois (decisão do usuário; não propor antes).
 - **Conferido:**
   - As 9 combinações de peça e formato geram malha fechada (`cli.ts` diz "fechada: sim").
-  - Pisos 2 × 3 fecham no quadrado, no retângulo e no hexágono.
+  - Pisos 2 × 3 fecham no quadrado e no hexágono (o formato retângulo foi removido).
   - Emenda de 0,0000 mm entre vizinhos 1 × 1, no quadrado e no hexágono.
   - O 1 × 1 continua com 216 mil triângulos, e o campo da Pedra não mudou (p50 1,509, p95 1,895).
+  - Correção visual: z-fighting entre o ombro do bloco e o topo do grid, com polygonOffset no grid (só na vista; STL inalterado).
+  - Rodada atual (abas, vista 3D, cotas, esquemas): verificada em 2026-11-07: build ok, navegador (desktop e celular) sem erro, CLI fechada (grid 312 tri, piso 1×1 216204 tri). Ainda não commitada nem publicada.
 - **Blender congelado:** `gerar.py` fica só como referência de qualidade e de receita das 15 texturas.
 - **Nada foi impresso.** O encaixe próprio ainda não foi testado na mão.
 
@@ -40,10 +45,15 @@ Leia este arquivo primeiro. Comandos: `USO.md`. Visão: `README.md`. Inventário
 - No hexágono, a borda externa do grid N × M fica recortada, célula a célula.
 - `validar.py` só conhece a célula de 35 mm e o pé das originais: ele reprova o encaixe próprio. Para conferir se a malha fecha, use o `cli.ts`.
 - Facetas p90 14,4° e arestas ≥ 60° em 1,7 % (originais: 0,1–0,3 %).
+- Esquemas 2D: rótulos sobrepostos nas vistas frontal e lateral quando as medidas são pequenas (ex.: chanfro 0,8 mm).
+- Cota de 1 casa decimal arredonda a folga 0,15 mm para "0,1".
+- Hexágono: a cota horizontal do esquema vai de vértice a vértice, mas o texto mostra o "entre lados".
+- A câmera não enquadra as cotas.
+- O gizmo tem 128 px fixos (o ViewHelper do three 0.187 não aceita tamanho).
 
 ## Decisões do usuário (em vigor)
 - Ferramenta online, sem servidor. Tudo é parametrizado.
-- A interface é dividida em passos: o Sistema define o padrão; Blocos e Grids criam as peças dentro dele.
+- A interface é dividida em passos: o Sistema define o padrão; Grids e Blocos criam as peças dentro dele.
 - Os 3 tipos de encaixe ficam disponíveis; a tela abre no reto + chanfro.
 - "Guias" = grid + degrau (Level), em aba própria.
 - Repositório público com histórico limpo; os dados do original nunca vão a público.

@@ -1,6 +1,6 @@
 # Migração do Blender para a web
 
-Este documento tem o inventário do gerador em Blender (`gerar.py`), o que já existe na web e o plano para o resto. Estado em 2026-11-06.
+Este documento tem o inventário do gerador em Blender (`gerar.py`), o que já existe na web e o plano para o resto. Estado em 2026-11-07.
 
 Legenda da coluna **Web**: ✅ feito · ⏳ a portar · 🔁 repensar · ❌ não portar.
 
@@ -26,6 +26,8 @@ Legenda da coluna **Web**: ✅ feito · ⏳ a portar · 🔁 repensar · ❌ nã
 | 2026-11-06 | Interface de celular básica, só funcional |
 | 2026-11-07 | Blocos de N × M células. Grids e adaptadores (degrau) em aba própria, seguindo o Sistema. Interface em 3 abas: Sistema, Blocos, Grids |
 | 2026-11-07 | Linhas, colunas e similares só com valores inteiros (passo por parâmetro) |
+| 2026-11-07 | Abas em ordem: 1 Sistema, 2 Grids, 3 Blocos. Formato retângulo removido: quadrado com largura X e comprimento Y independentes, ou hexágono (entre lados) |
+| 2026-11-07 | Interface com seções recolhíveis; vista 3D com gizmo, corte por eixo, elevação do bloco, modos de vista e cotas; esquemas 2D (planta, frontal, lateral, isométrica) ao lado |
 | 2026-11-06 | Backup de `amostra_hd/` não será feito |
 
 Risco de copyright (avisado ao usuário): medidas configuráveis reduzem o risco, mas não o eliminam. Faltam: encaixe próprio (não publicar `spec_encaixe.json` como padrão), nome próprio (decidido: RPG Block Builder; falta conferir marca no INPI e no USPTO), texturas revisadas (Glifos e Nichos são as mais próximas das originais), termos de uso e revisão por advogado.
@@ -35,7 +37,7 @@ Risco de copyright (avisado ao usuário): medidas configuráveis reduzem o risco
 ### 2.1 Base do bloco
 | Item | O que é | Valores no Blender | Web |
 |---|---|---|---|
-| Célula | Tamanho do bloco no grid | 35 mm fixo | ✅ Passo 1 da interface: quadrado, retângulo ou hexágono, 15–100 mm |
+| Célula | Tamanho do bloco no grid | 35 mm fixo | ✅ Aba Sistema: quadrado (largura e comprimento independentes) ou hexágono, 15–100 mm |
 | Pé longo / curto | Encaixe no grid | 16,6 / 9,8 mm até encher a célula; altura 24,5 / 17,5 | ❌ substituído pelo encaixe próprio |
 | Folga | Pé mais estreito ou largo | −0,2 a 0 testados | ✅ slider |
 | Bloco de teste de folga | Marcas da folga em relevo | 3 blocos | ⏳ |
@@ -104,6 +106,18 @@ dungeon, castelo, ruína, taverna, pântano, deserto, inundada, vulcão, caverna
 | Malha fecha? | retenta outra razão; por fim, malha crua | ✅ igual (`fechada` em `bloco.ts`) |
 | JSON lateral | ficha da peça | ✅ só na linha de comando |
 | Corte de portas | booleana Manifold | ⏳ `manifold-3d` |
+
+### 2.9 Interface (estado em 2026-11-07)
+| Item | O que é | Web |
+|---|---|---|
+| Abas | 1 Sistema, 2 Grids, 3 Blocos | ✅ |
+| Seções recolhíveis | controles em `<details>`; Pedra avançada em 3 seções | ✅ |
+| Vista 3D (`web/src/vista.ts`) | gizmo de orientação; corte X/Y/Z com posição e inverter (um estado por aba); elevação 0–30 mm (só Sistema); modos Sólido, Inclinação, Normais, Arestas, Matcap | ✅ |
+| Cotas 3D (`web/src/cotas.ts`) | checkbox "Mostrar cotas"; números vêm de `medidas()` | ✅ |
+| Esquemas 2D (`web/src/esquema.ts`) | planta, frontal, lateral e isométrica em SVG, nas abas Sistema e Grids | ✅ |
+| Correção visual | z-fighting ombro/topo do grid resolvido com polygonOffset (só na vista; STL inalterado) | ✅ |
+
+Pendências desta parte: ver `RETOMAR.md`, seção "Pendências conhecidas (web)".
 
 ## 3. Piloto (piso de Pedra) — resultado
 

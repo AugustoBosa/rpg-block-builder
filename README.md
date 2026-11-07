@@ -8,11 +8,11 @@ Este projeto gera blocos de masmorra para imprimir em 3D (FDM). Os blocos encaix
 
 Os dados medidos do produto original de referência (catálogo, índices e `spec_encaixe.json`) não fazem parte deste repositório. Os scripts Python de medição e o `gerar.py` esperam esses arquivos e só rodam na cópia local do autor.
 
-## Estado (2026-11-06)
+## Estado (2026-11-07)
 
 | Parte | Estado |
 |---|---|
-| Ferramenta web (`web/`) | **Passo 1 · Sistema:** formato da célula (quadrado, retângulo, hexágono) e encaixe próprio parametrizado. **Passo 2 · Blocos:** piso de Pedra de N × M células (um pé por célula). **Passo 3 · Grids:** grid e degrau (adaptador de nível), sempre nas medidas do Sistema. STL final no navegador |
+| Ferramenta web (`web/`) | **Aba 1 · Sistema:** formato da célula (quadrado com largura e comprimento independentes, ou hexágono) e encaixe próprio parametrizado. **Aba 2 · Grids:** grid e degrau (adaptador de nível), sempre nas medidas do Sistema. **Aba 3 · Blocos:** piso de Pedra de N × M células (um pé por célula). Vista 3D com corte, elevação, modos e cotas; esquemas 2D. STL final no navegador |
 | Gerador em Blender (`gerar.py`) | **Congelado.** Fica só como referência de qualidade e de receita das texturas. O plugin (painel) foi descontinuado em 2026-11-06 |
 | Ferramentas de medição (Python) | Ativas: conferem os STL da web e do Blender |
 | Impressão | Nada foi impresso ainda |

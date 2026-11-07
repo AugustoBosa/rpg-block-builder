@@ -9,14 +9,21 @@ const { Manifold } = wasm
 type Solido = InstanceType<typeof Manifold>
 export interface Malha { pos: Float32Array; idx: Uint32Array }
 
-export const FORMATOS = { quadrado: 'Quadrado', retangulo: 'Retângulo', hexagono: 'Hexágono' } as const
+export const FORMATOS = { quadrado: 'Quadrado', hexagono: 'Hexágono' } as const
 export const SISTEMA = { // nome: [padrão, mín, máx, rótulo]
-  largura: [35, 15, 100, 'Largura (mm)'], comprimento: [35, 15, 100, 'Comprimento (mm)'],
+  largura: [35, 15, 100, 'Largura X (mm)'], comprimento: [35, 15, 100, 'Comprimento Y (mm)'],
   altura_pe: [6, 2, 20, 'Pé: altura (mm)'], recuo: [4, 1.5, 10, 'Pé: recuo da borda (mm)'], chanfro: [.8, 0, 2, 'Pé: chanfro embaixo (mm)'],
   conicidade: [0, 0, 3, 'Pé: conicidade (mm)'], ombro: [2.5, 0, 10, 'Ombro: altura (mm)'], nervura: [3, .8, 8, 'Nervura do grid (mm)'],
   folga: [.15, -.3, .6, 'Folga lateral (mm)'], folga_fundo: [.3, 0, 2, 'Folga embaixo do pé (mm)'],
   ima_d: [0, 0, 12, 'Ímã: diâmetro (mm, 0 = sem)'], ima_h: [2, .5, 5, 'Ímã: altura (mm)'], folga_ima: [.15, 0, .5, 'Ímã: folga (mm)'],
   fundo: [0, 0, 5, 'Grid: fundo (mm, 0 = vazado)'],
+} as const
+export const SECAO = { // chave → seção da aba Sistema (fica ao lado da tabela; as tuplas não mudam)
+  largura: 'Célula', comprimento: 'Célula',
+  altura_pe: 'Pé do bloco', recuo: 'Pé do bloco', chanfro: 'Pé do bloco', conicidade: 'Pé do bloco', folga: 'Pé do bloco',
+  ombro: 'Ombro e nervura', nervura: 'Ombro e nervura', folga_fundo: 'Ombro e nervura',
+  ima_d: 'Ímã', ima_h: 'Ímã', folga_ima: 'Ímã',
+  fundo: 'Grid',
 } as const
 export const ENCAIXES = { // presets: só ajustam os números, todos continuam editáveis
   reto: ['Pé reto + chanfro', { conicidade: 0, ima_d: 0 }],
@@ -33,7 +40,7 @@ export function celula(s: Sistema): Celula {
     const n = [0, 1, 2, 3, 4, 5].map(i => [Math.cos((30 + 60 * i) * Math.PI / 180), Math.sin((30 + 60 * i) * Math.PI / 180)] as [number, number])
     return { n, a: n.map(() => F / 2), passo: [1.5 * l, F], area: 1.5 * Math.sqrt(3) * l * l, hex: true }
   }
-  const L = s.largura, C = s.formato === 'quadrado' ? L : s.comprimento
+  const L = s.largura, C = s.comprimento
   return { n: [[1, 0], [0, 1], [-1, 0], [0, -1]], a: [L / 2, C / 2, L / 2, C / 2], passo: [L, C], area: L * C, hex: false }
 }
 
@@ -89,6 +96,20 @@ export const assento = (s: Sistema) => hPe(s) + s.ombro // o bloco apoia na nerv
 export const fundo = (s: Sistema) => s.ima_d > 0 ? Math.max(s.fundo, s.ima_h + .8) : s.fundo // ímã pede fundo fechado
 export const alturaGrid = (s: Sistema) => fundo(s) + s.folga_fundo + assento(s)
 
+/** Medidas do encaixe, sem geometria. `perfilPe`: [z, recuo] do fundo do pé até o ombro (o corpo acrescenta o topo);
+ *  `perfilFuro`: [z, recuo] com z a partir da base do furo (base = topo do grid − alturaGrid). */
+export interface Medidas { cel: Celula; perfilPe: number[][]; perfilFuro: number[][]; alturaGrid: number; assento: number; hPe: number; nervuraMeia: number; fundoReal: number }
+export function medidas(s: Sistema): Medidas {
+  const cel = celula(s), r = s.recuo + s.folga, zs = assento(s), h = hPe(s), nm = nervura(s), f = fundo(s), G = alturaGrid(s)
+  const zb = f > 0 ? f : -1, zf = f + s.folga_fundo // zb: base do furo; zf: topo da folga embaixo do pé
+  const db = s.recuo + s.conicidade + s.conicidade * (zf + s.chanfro - zb) / Math.max(h - s.chanfro, .1) // parede do pé prolongada até zb
+  return {
+    cel, assento: zs, hPe: h, alturaGrid: G, nervuraMeia: nm, fundoReal: f,
+    perfilPe: [[0, r + s.conicidade + s.chanfro], [s.chanfro, r + s.conicidade], [h, r], [zs, nm + s.folga], [zs, 0]],
+    perfilFuro: [[zb, db], [zf + h, s.recuo], [G, nm], [G + 1, nm]],
+  }
+}
+
 /** Avisos de medidas que não fecham (a geometria é limitada, mas o usuário precisa saber). */
 export function avisos(s: Sistema): string[] {
   const c = celula(s), amin = Math.min(...c.a), av: string[] = []
@@ -119,19 +140,17 @@ const ima = (s: Sistema, z: number) => { // cilindro do ímã com o fundo em z; 
 
 /** Bloco de 1 célula até `topo`: pé (com folga e ímã) + corpo cheio. */
 export function corpo(s: Sistema, topo: number) {
-  const c = celula(s), r = s.recuo + s.folga, zs = assento(s)
-  let m = pilha(c, [[0, r + s.conicidade + s.chanfro], [s.chanfro, r + s.conicidade], [hPe(s), r], [zs, nervura(s) + s.folga], [zs, 0], [Math.max(topo, zs + .5), 0]])
+  const M = medidas(s), zs = M.assento
+  let m = pilha(M.cel, [...M.perfilPe, [Math.max(topo, zs + .5), 0]])
   if (s.ima_d > 0) m = g(m.subtract(ima(s, 0)))
   return m
 }
 
 /** Furo de 1 célula com o topo do grid em zTopo (o mesmo perfil do pé, sem folga e sem o chanfro de baixo). */
 function furo(s: Sistema, c: Celula, zTopo: number) {
-  const base = zTopo - alturaGrid(s), f = fundo(s), zf = base + f + s.folga_fundo, h = hPe(s), r = s.recuo
-  const zb = f > 0 ? base + f : base - 1
-  const db = r + s.conicidade + s.conicidade * (zf + s.chanfro - zb) / Math.max(h - s.chanfro, .1) // parede do pé prolongada até zb
-  let m = pilha(c, [[zb, db], [zf + h, r], [zTopo, nervura(s)], [zTopo + 1, nervura(s)]])
-  if (s.ima_d > 0) m = g(m.add(ima(s, base + f - s.ima_h - .2)))
+  const M = medidas(s), base = zTopo - M.alturaGrid
+  let m = pilha(c, M.perfilFuro.map(([z, d]) => [z + base, d]))
+  if (s.ima_d > 0) m = g(m.add(ima(s, base + M.fundoReal - s.ima_h - .2)))
   return m
 }
 

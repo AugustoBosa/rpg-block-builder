@@ -10,6 +10,11 @@ export const PEDRA = { // nome: [padrão, mín, máx, rótulo]
   grao: [.1, 0, .5, 'Grão (mm)'],
 } as const
 export type KnobsPedra = { -readonly [k in keyof typeof PEDRA]: number }
+export const SECAO_PEDRA = { // chave → seção "Avançado" da aba Blocos
+  distorcao: 'Avançado — Forma das pedras', vao: 'Avançado — Forma das pedras', vao_desgaste: 'Avançado — Forma das pedras', bisel: 'Avançado — Forma das pedras', domo: 'Avançado — Forma das pedras',
+  cascalho: 'Avançado — Superfície', inclinacao: 'Avançado — Superfície', altura_var: 'Avançado — Superfície', grao: 'Avançado — Superfície',
+  rachadas: 'Avançado — Desgaste', racha_fundo: 'Avançado — Desgaste', lasca_largura: 'Avançado — Desgaste', lasca_fundo: 'Avançado — Desgaste',
+} as const
 
 const v1: Vor = { r0: 0, r1: 0, r2: 0, px: 0, py: 0, borda: 0 }
 const v2: Vor = { ...v1 }
