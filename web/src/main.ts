@@ -14,6 +14,7 @@ const $ = (id: string) => document.getElementById(id)!
 const vista = $('vista')
 const render = new THREE.WebGLRenderer({ antialias: true })
 render.localClippingEnabled = true
+render.setPixelRatio(Math.min(devicePixelRatio, 2)) // tela de celular: nítido sem pesar
 vista.appendChild(render.domElement)
 const cena = new THREE.Scene()
 cena.background = new THREE.Color(0x1d1f22)

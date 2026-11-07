@@ -21,6 +21,16 @@
     h3 { margin: 14px 0 4px; font-size: 13px; color: #aab }
     .nota { font-size: 12px; color: #9a9 }
     #aviso { font-size: 12px; color: #e9a35a }
+    /* celular: prévia em cima (fixa), controles embaixo com rolagem própria; alvos de toque maiores */
+    @media (max-width: 700px) {
+      body { flex-direction: column; height: 100dvh }
+      main { order: -1; flex: none; height: 42dvh }
+      aside { width: 100%; flex: 1; min-height: 0 }
+      label { grid-template-columns: 1fr 80px; margin: 10px 0 }
+      input[type=number] { width: 76px; font-size: 16px; padding: 4px }
+      input[type=range] { height: 28px }
+      select, button { font-size: 16px; padding: 10px }
+    }
   </style>
 </head>
 <body>
