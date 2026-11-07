@@ -74,6 +74,7 @@ export function contorno(c: Celula, d: number): [number, number][] {
 /** Centros das células de uma peça linhas × colunas (hexágono: colunas desencontradas), centrados na origem. */
 export function centros(c: Celula, linhas: number, colunas: number): [number, number][] {
   const P: [number, number][] = []
+  linhas = Math.max(1, Math.round(linhas)); colunas = Math.max(1, Math.round(colunas)) // não há meia célula
   for (let r = 0; r < linhas; r++) for (let k = 0; k < colunas; k++)
     P.push([k * c.passo[0], r * c.passo[1] + (c.hex && k % 2 ? c.passo[1] / 2 : 0)])
   const cx = (Math.min(...P.map(p => p[0])) + Math.max(...P.map(p => p[0]))) / 2

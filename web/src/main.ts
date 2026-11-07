@@ -89,17 +89,25 @@ function previa() {
 }
 
 // controles: um slider + caixa numérica por opção
-function controle(pai: HTMLElement, rotulo: string, ini: number, min: number, max: number, muda: (v: number) => void) {
+function controle(pai: HTMLElement, rotulo: string, ini: number, min: number, max: number, muda: (v: number) => void, passo?: number) {
   const l = document.createElement('label'), num = document.createElement('input'), sl = document.createElement('input')
   l.append(rotulo, num, sl)
-  for (const e of [num, sl]) Object.assign(e, { type: e === sl ? 'range' : 'number', min, max, step: max - min > 100 ? 1 : (max - min) / 200, value: ini })
-  const ao = (e: HTMLInputElement) => () => { const v = +e.value; num.value = sl.value = String(v); muda(v); previa() }
+  const step = passo ?? (max - min) / 200 // com passo: só valores cheios (linhas, colunas, semente...)
+  for (const e of [num, sl]) Object.assign(e, { type: e === sl ? 'range' : 'number', min, max, step, value: ini })
+  const ao = (e: HTMLInputElement) => () => {
+    if (e.value === '') return // caixa sendo apagada para digitar
+    let v = Math.min(max, Math.max(min, +e.value))
+    if (passo) v = +(Math.round(v / passo) * passo).toFixed(6)
+    sl.value = String(v)
+    if (e === sl || +num.value !== v) num.value = String(v)
+    muda(v); previa()
+  }
   num.oninput = ao(num); sl.oninput = ao(sl)
   pai.append(l)
 }
-const grupo = (pai: HTMLElement, tab: Record<string, readonly [number, number, number, string]>, alvo: any, pular: string[] = []) => {
-  for (const [k, [, min, max, rot]] of Object.entries(tab))
-    if (!pular.includes(k)) controle(pai, rot, alvo[k], min, max, v => { alvo[k] = v })
+const grupo = (pai: HTMLElement, tab: Record<string, readonly [number, number, number, string, number?]>, alvo: any, pular: string[] = []) => {
+  for (const [k, [, min, max, rot, passo]] of Object.entries(tab))
+    if (!pular.includes(k)) controle(pai, rot, alvo[k], min, max, v => { alvo[k] = v }, passo)
 }
 const opcoes = (sel: HTMLSelectElement, itens: [string, string][]) => sel.append(...itens.map(([v, t]) => new Option(t, v)))
 

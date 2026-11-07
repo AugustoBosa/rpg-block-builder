@@ -11,16 +11,16 @@ const RELEVO = 2.6 // mm: o corpo termina RELEVO abaixo do topo
 const BORDA_FIXA = 1.2 // mm: a redução não toca esta faixa da borda
 const TRI_MIN = 240000, SUAVIZA = 4 // TRI_MIN: triângulos do piso 35 × 35 (como as originais); cresce com a área^0,75
 
-export const PISO = { // nome: [padrão, mín, máx, rótulo]
-  linhas: [1, 1, 6, 'Linhas (células)'], colunas: [1, 1, 6, 'Colunas (células)'], altura: [24.5, 12, 60, 'Altura total (mm)'],
-  semente: [1, 0, 9999, 'Semente'], desgaste: [.5, 0, 1, 'Desgaste'], tamanho_pedra: [10, 5, 25, 'Tamanho da pedra (mm)'],
-  profundidade: [.5, .4, .7, 'Profundidade'], posicao_x: [0, -8, 8, 'Posição X no mapa (células)'], posicao_y: [0, -8, 8, 'Posição Y no mapa (células)'],
+export const PISO = { // nome: [padrão, mín, máx, rótulo, passo?] (sem passo: contínuo)
+  linhas: [1, 1, 6, 'Linhas (células)', 1], colunas: [1, 1, 6, 'Colunas (células)', 1], altura: [24.5, 12, 60, 'Altura total (mm)'],
+  semente: [1, 0, 9999, 'Semente', 1], desgaste: [.5, 0, 1, 'Desgaste'], tamanho_pedra: [10, 5, 25, 'Tamanho da pedra (mm)'],
+  profundidade: [.5, .4, .7, 'Profundidade'], posicao_x: [0, -8, 8, 'Posição X no mapa (células)', .5], posicao_y: [0, -8, 8, 'Posição Y no mapa (células)', .5],
   quina_largura: [1.8, 0, 5, 'Quina: largura (mm)'], quina_gasto: [1, 0, 3, 'Quina: gasto'], lateral_largura: [2, 0, 5, 'Lateral: largura (mm)'],
   lateral_gasto: [1, 0, 3, 'Lateral: gasto'], ruido_borda: [.3, .05, 2, 'Ruído da borda'], teto: [2.5, .5, 2.5, 'Teto do relevo (mm)'],
   junta_piso: [2.4, .5, 5, 'Ganho da junta (× profundidade)'], resolucao: [.125, .1, 1, 'Malha (mm)'],
 } as const
 export const GUIAS = { // grid e degrau (aba própria)
-  grid_linhas: [3, 1, 12, 'Linhas'], grid_colunas: [3, 1, 12, 'Colunas'], altura_degrau: [24, 10, 80, 'Degrau: altura (mm)'],
+  grid_linhas: [3, 1, 12, 'Linhas', 1], grid_colunas: [3, 1, 12, 'Colunas', 1], altura_degrau: [24, 10, 80, 'Degrau: altura (mm)'],
 } as const
 type Num<T> = { -readonly [k in keyof T]: number }
 export type Opcoes = Sistema & Num<typeof PISO> & Num<typeof GUIAS> & { pedra: KnobsPedra }
