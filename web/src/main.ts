@@ -67,7 +67,7 @@ function enquadra() {
   const { center: c, radius: r } = g.boundingSphere!
   const dir = passo === 1 ? new THREE.Vector3(.25, -1, .3) : new THREE.Vector3(.6, -.8, .8)
   ctl.target.set(c.x, c.y, c.z + pecas[0].position.z * .5)
-  cam.position.copy(ctl.target).addScaledVector(dir.normalize(), r * 3.2)
+  cam.position.copy(ctl.target).addScaledVector(dir.normalize(), r * 3.6)
   enquadrar = false
 }
 
@@ -81,8 +81,7 @@ function previa() {
       $('aviso').textContent = avisos(o).join(' ')
       $('resumo').textContent = `Grid: ${alturaGrid(o).toFixed(1)} mm de altura. O bloco apoia na nervura a ${assento(o).toFixed(1)} mm do fundo do pé.`
     } else {
-      const p = ($('peca') as HTMLSelectElement).value
-      mostra(0, p === 'piso' ? piso({ ...o, resolucao: PREVIA }) : p === 'grid' ? malha(grid(o, o.linhas, o.colunas)) : malha(degrau(o, o.linhas, o.colunas, o.altura_degrau)))
+      mostra(0, peca() === 'piso' ? piso({ ...o, resolucao: PREVIA }) : gera(peca()))
       mostra(1, null)
     }
     if (enquadrar) enquadra()
@@ -119,30 +118,31 @@ opcoes(encaixe, Object.entries(ENCAIXES).map(([k, [t]]) => [k, t]))
 formato.onchange = () => { o.formato = formato.value as Opcoes['formato']; montaSistema() }
 encaixe.onchange = () => { Object.assign(o, ENCAIXES[encaixe.value as keyof typeof ENCAIXES][1]); montaSistema() }
 
-// passo 2: peças dentro do sistema
+// passo 2: blocos (linhas × colunas células); passo 3: grids e adaptadores. Os dois leem as medidas do passo 1.
 grupo($('gerais'), PISO, o, ['resolucao'])
 grupo($('pedra'), PEDRA, o.pedra)
 grupo($('op-guias'), GUIAS, o)
-const peca = $('peca') as HTMLSelectElement
-peca.onchange = () => { $('op-piso').hidden = peca.value !== 'piso'; $('op-guias').hidden = peca.value === 'piso'; enquadrar = true; previa() }
+const sel3 = $('peca3') as HTMLSelectElement
+const peca = () => passo === 2 ? 'piso' : sel3.value
+const gera = (p: string) => p === 'grid' ? malha(grid(o, o.grid_linhas, o.grid_colunas)) : malha(degrau(o, o.grid_linhas, o.grid_colunas, o.altura_degrau))
+sel3.onchange = () => { enquadrar = true; previa() }
 
 function vaiPara(n: number) {
   passo = n
-  $('passo1').hidden = n !== 1; $('passo2').hidden = n !== 2
-  $('ir1').classList.toggle('ativo', n === 1); $('ir2').classList.toggle('ativo', n === 2)
+  for (const i of [1, 2, 3]) { $('passo' + i).hidden = n !== i; $('ir' + i).classList.toggle('ativo', n === i) }
+  $('saida').hidden = n === 1
   enquadrar = true
   previa()
 }
-$('ir1').onclick = () => vaiPara(1)
-$('ir2').onclick = () => vaiPara(2)
+for (const i of [1, 2, 3]) $('ir' + i).onclick = () => vaiPara(i)
 
 const estado = $('estado')
 $('baixar').onclick = () => {
   estado.textContent = 'Gerando a malha final (alguns segundos)...'
-  setTimeout(async () => { // ponytail: roda na thread principal (a tela trava ~2 s no piso); passar para Web Worker se incomodar
-    const t = performance.now(), p = peca.value, f = FORMATOS[o.formato]
-    const m = p === 'piso' ? await final(piso(o)) : p === 'grid' ? malha(grid(o, o.linhas, o.colunas)) : malha(degrau(o, o.linhas, o.colunas, o.altura_degrau))
-    const nome = p === 'piso' ? `Piso Pedra ${f} s${o.semente}` : `${p === 'grid' ? 'Grid' : 'Degrau'} ${f} ${o.linhas}x${o.colunas}`
+  setTimeout(async () => { // ponytail: roda na thread principal (a tela trava ~2 s por célula no piso); passar para Web Worker se incomodar
+    const t = performance.now(), p = peca(), f = FORMATOS[o.formato]
+    const m = p === 'piso' ? await final(piso(o)) : gera(p)
+    const nome = p === 'piso' ? `Piso Pedra ${f} ${o.linhas}x${o.colunas} s${o.semente}` : `${p === 'grid' ? 'Grid' : 'Degrau'} ${f} ${o.grid_linhas}x${o.grid_colunas}`
     const a = document.createElement('a')
     a.href = URL.createObjectURL(new Blob([stl(m)], { type: 'model/stl' }))
     a.download = nome + '.stl'

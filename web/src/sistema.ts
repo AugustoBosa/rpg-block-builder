@@ -37,10 +37,28 @@ export function celula(s: Sistema): Celula {
   return { n: [[1, 0], [0, 1], [-1, 0], [0, -1]], a: [L / 2, C / 2, L / 2, C / 2], passo: [L, C], area: L * C, hex: false }
 }
 
-/** Distância até a borda (positiva dentro). */
-export function distBorda(c: Celula, x: number, y: number) {
+/** Peça de linhas × colunas células: centros e lados externos [ax, ay, bx, by, nx, ny] (os lados entre células não contam). */
+export interface Regiao { c: Celula; cs: [number, number][]; seg: number[][]; area: number }
+export function regiao(s: Sistema, linhas: number, colunas: number): Regiao {
+  const c = celula(s), cs = centros(c, linhas, colunas), v = contorno(c, 0), k = c.n.length, seg: number[][] = []
+  for (const [x, y] of cs) for (let i = 0; i < k; i++) {
+    const [nx, ny] = c.n[i], vx = x + 2 * c.a[i] * nx, vy = y + 2 * c.a[i] * ny // centro do vizinho deste lado
+    if (cs.some(([px, py]) => Math.hypot(px - vx, py - vy) < 1e-3)) continue
+    const a = v[(i + k - 1) % k], b = v[i] // lado i: do vértice (i−1, i) ao (i, i+1)
+    seg.push([x + a[0], y + a[1], x + b[0], y + b[1], nx, ny])
+  }
+  return { c, cs, seg, area: c.area * cs.length }
+}
+
+/** Distância do ponto ao segmento [ax, ay, bx, by, ...]. */
+export function distSeg(g: number[], x: number, y: number) {
+  const dx = g[2] - g[0], dy = g[3] - g[1], t = Math.max(0, Math.min(1, ((x - g[0]) * dx + (y - g[1]) * dy) / (dx * dx + dy * dy)))
+  return Math.hypot(x - g[0] - t * dx, y - g[1] - t * dy)
+}
+/** Distância até a borda externa da peça. */
+export function distBorda(r: Regiao, x: number, y: number) {
   let d = 1e9
-  for (let i = 0; i < c.a.length; i++) d = Math.min(d, c.a[i] - c.n[i][0] * x - c.n[i][1] * y)
+  for (const g of r.seg) d = Math.min(d, distSeg(g, x, y))
   return d
 }
 
@@ -123,11 +141,13 @@ export function grid(s: Sistema, linhas: number, colunas: number) {
   return g(placa.subtract(g(Manifold.union(cs.map(([x, y]) => g(furo(s, c, G).translate(x, y, 0)))))))
 }
 
+/** Corpo de várias células: um pé por célula, corpo cheio emendado até `topo`. */
+export const corpos = (s: Sistema, cs: [number, number][], topo: number) => g(Manifold.union(cs.map(([x, y]) => g(corpo(s, topo).translate(x, y, 0)))))
+
 /** Degrau linhas × colunas: blocos com pé embaixo e furos de grid em cima, para empilhar níveis. */
 export function degrau(s: Sistema, linhas: number, colunas: number, altura: number) {
   const c = celula(s), H = Math.max(altura, alturaGrid(s) + assento(s) + 1), cs = centros(c, linhas, colunas)
-  const blocos = g(Manifold.union(cs.map(([x, y]) => g(corpo(s, H).translate(x, y, 0)))))
-  return g(blocos.subtract(g(Manifold.union(cs.map(([x, y]) => g(furo(s, c, H).translate(x, y, 0)))))))
+  return g(corpos(s, cs, H).subtract(g(Manifold.union(cs.map(([x, y]) => g(furo(s, c, H).translate(x, y, 0)))))))
 }
 
 /** Malha do sólido (libera os sólidos da construção). */

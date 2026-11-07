@@ -12,7 +12,7 @@ Os dados medidos do produto original de referência (catálogo, índices e `spec
 
 | Parte | Estado |
 |---|---|
-| Ferramenta web (`web/`) | **Passo 1 · Sistema:** formato da célula (quadrado, retângulo, hexágono) e encaixe próprio parametrizado. **Passo 2 · Peças:** piso de Pedra, grid e degrau. STL final no navegador |
+| Ferramenta web (`web/`) | **Passo 1 · Sistema:** formato da célula (quadrado, retângulo, hexágono) e encaixe próprio parametrizado. **Passo 2 · Blocos:** piso de Pedra de N × M células (um pé por célula). **Passo 3 · Grids:** grid e degrau (adaptador de nível), sempre nas medidas do Sistema. STL final no navegador |
 | Gerador em Blender (`gerar.py`) | **Congelado.** Fica só como referência de qualidade e de receita das texturas. O plugin (painel) foi descontinuado em 2026-11-06 |
 | Ferramentas de medição (Python) | Ativas: conferem os STL da web e do Blender |
 | Impressão | Nada foi impresso ainda |

@@ -28,7 +28,7 @@ Versão para hospedar: `npm --prefix web run build` grava o site estático em `w
 cd web
 npx tsx cli.ts <pasta> [--opção valor ...]
 ```
-Grava o STL e diz se a malha fecha. `--peca piso|grid|degrau` (padrão: piso), `--formato quadrado|retangulo|hexagono`. As outras opções são as mesmas da web: sistema (`--largura 60`, `--recuo 4`, `--ima_d 6`...), piso (`--semente 3`, `--posicao_x 1`...), grid e degrau (`--linhas 2 --colunas 3 --altura_degrau 30`). Ajustes da Pedra: `--pedra_<nome>` (por exemplo, `--pedra_vao 0.8`).
+Grava o STL e diz se a malha fecha. `--peca piso|grid|degrau` (padrão: piso), `--formato quadrado|retangulo|hexagono`. As outras opções são as mesmas da web: sistema (`--largura 60`, `--recuo 4`, `--ima_d 6`...), piso (`--linhas 2 --colunas 3`, `--semente 3`, `--posicao_x 1` em células...), grid e degrau (`--grid_linhas 2 --grid_colunas 3 --altura_degrau 30`). Ajustes da Pedra: `--pedra_<nome>` (por exemplo, `--pedra_vao 0.8`).
 
 ## 3. Medir um STL
 

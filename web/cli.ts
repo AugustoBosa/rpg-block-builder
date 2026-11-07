@@ -21,9 +21,9 @@ let m: Malha, nome: string
 if (peca === 'piso') {
   const cru = piso(o)
   m = await final(cru)
-  nome = `WEB-Piso Pedra ${o.formato} s${String(o.semente).padStart(2, '0')} x${o.posicao_x} y${o.posicao_y}`
-} else if (peca === 'grid') { m = malha(grid(o, o.linhas, o.colunas)); nome = `WEB-Grid ${o.formato} ${o.linhas}x${o.colunas}` }
-else if (peca === 'degrau') { m = malha(degrau(o, o.linhas, o.colunas, o.altura_degrau)); nome = `WEB-Degrau ${o.formato} ${o.linhas}x${o.colunas}` }
+  nome = `WEB-Piso Pedra ${o.formato} ${o.linhas}x${o.colunas} s${String(o.semente).padStart(2, '0')} x${o.posicao_x} y${o.posicao_y}`
+} else if (peca === 'grid') { m = malha(grid(o, o.grid_linhas, o.grid_colunas)); nome = `WEB-Grid ${o.formato} ${o.grid_linhas}x${o.grid_colunas}` }
+else if (peca === 'degrau') { m = malha(degrau(o, o.grid_linhas, o.grid_colunas, o.altura_degrau)); nome = `WEB-Degrau ${o.formato} ${o.grid_linhas}x${o.grid_colunas}` }
 else throw new Error(`peça desconhecida: ${peca}`)
 const t1 = performance.now()
 mkdirSync(pasta, { recursive: true })
