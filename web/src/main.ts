@@ -1,7 +1,7 @@
 import { GUIAS, padrao, PISO, SECAO_GUIAS, SECAO_PISO, type Opcoes } from './bloco'
 import { cancelaExporta, exporta, previa as pedePrevia } from './cliente'
 import { PEDRA, SECAO_PEDRA } from './pedra'
-import { aberturaNova, paredeNova, paredesValidas, tracejado3D } from './aberturas'
+import { aberturaNova, ladoBloco, paredeNova, paredesValidas, tracejado3D } from './aberturas'
 import type { Abertura, Parede } from './parede'
 import { avisos, ENCAIXES, FORMATOS, fundo, regiao, SECAO, SISTEMA } from './sistema'
 import { cotas, limpaCotas } from './cotas'
@@ -284,11 +284,12 @@ function montaParedes() {
     const d = document.createElement('details'), sm = document.createElement('summary'), c = document.createElement('div')
     sm.textContent = `Parede ${i + 1} · ${p.ancora.tipo === 'aresta' ? 'em aresta' : 'em eixo'}`
     d.open = true; d.append(sm, c); div.append(d)
-    escolha(c, 'Âncora', p.ancora.tipo, [['aresta', 'Aresta do bloco'], ['eixo', 'Eixo (reta livre)']], v => {
-      p.ancora = v === 'aresta' ? { tipo: 'aresta', celula: 0, lado: 0 } : { tipo: 'eixo', eixo: 'x', desloc: 0 }; refaz()
+    escolha(c, 'Âncora', p.ancora.tipo, [['aresta', 'Lado do bloco'], ['eixo', 'Eixo (reta livre)']], v => {
+      p.ancora = v === 'aresta' ? { tipo: 'aresta', celula: 0, lado: 0 } : { tipo: 'eixo', eixo: 'x', desloc: 0 }
+      p.lado = v === 'aresta' ? 'dentro' : 'centro'; refaz()
     })
     const a = p.ancora
-    if (a.tipo === 'aresta') controle(c, 'Aresta nº', a.lado, 0, 23, v => { a.lado = v }, 1)
+    if (a.tipo === 'aresta') controle(c, 'Lado do bloco nº', a.lado, 0, (hex ? 6 : 4) - 1, v => { a.lado = v }, 1)
     else {
       escolha(c, 'Eixo', a.eixo, [['x', 'X'], ['y', 'Y'], ...(hex ? [['h0', '0°'], ['h60', '60°'], ['h120', '120°']] as [string, string][] : [])], v => { a.eixo = v as typeof a.eixo; previa() })
       controle(c, 'Deslocamento (mm)', a.desloc, -100, 100, v => { a.desloc = v }, .5)
@@ -319,8 +320,7 @@ function montaParedes() {
     c.append(botao('+ Abertura', () => { const ab = aberturaNova('porta'); ab.pos = p.comprimento / 2; p.aberturas.push(ab); refaz() }), botao('− Parede', () => { o.paredes.splice(i, 1); refaz() }))
   })
   div.append(botao('+ Parede', () => {
-    const g = regiao(o, o.linhas, o.colunas).seg[0], len = Math.hypot(g[2] - g[0], g[3] - g[1])
-    o.paredes.push(paredeNova('p' + ++nParede, { tipo: 'aresta', celula: 0, lado: 0 }, +len.toFixed(1))); refaz()
+    o.paredes.push(paredeNova('p' + ++nParede, { tipo: 'aresta', celula: 0, lado: 0 }, +ladoBloco(o, 0)!.L.toFixed(1))); refaz()
   }))
 }
 let nParede = 0

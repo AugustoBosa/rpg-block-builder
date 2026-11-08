@@ -54,7 +54,7 @@ const D3: [string, (f: 'quadrado' | 'hexagono') => OpcoesP][] = [
   ['uma em cada aresta', f => { const o = op({ formato: f }); return { ...o, paredes: regiao(o, 1, 1).seg.map((_, i) => naAresta(o, i, 'a' + i)) } }],
   ['1 em eixo', f => ({ ...op({ formato: f }), paredes: [noEixo('x', 3, 'e')] })],
   ['2 cruzadas em eixos', f => ({ ...op({ formato: f }), paredes: f === 'quadrado' ? [noEixo('x', 0, 'x'), noEixo('y', 0, 'y')] : [noEixo('h0', 0, 'x'), noEixo('h60', 0, 'y')] })],
-  ['2x3 com 3 mistas', f => { const o = op({ formato: f, linhas: 2, colunas: 3 }); return { ...o, paredes: [naAresta(o, 0, 'a'), noEixo('x', 5, 'e'), naAresta(o, regiao(o, 2, 3).seg.length - 1, 'b', { lado: 'dentro' })] } }],
+  ['2x3 com 3 mistas', f => { const o = op({ formato: f, linhas: 2, colunas: 3 }); return { ...o, paredes: [naAresta(o, 0, 'a'), noEixo('x', 5, 'e'), naAresta(o, 1, 'b', { lado: 'dentro' })] } }],
   ['balanço, lado centro', f => { const o = op({ formato: f }); return { ...o, paredes: [naAresta(o, 0, 'a', { lado: 'centro', inicio: -8, comprimento: seg(o, 0).len + 16 })] } }],
 ]
 

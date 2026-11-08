@@ -1,11 +1,24 @@
 // Aberturas (porta e janela = só o vão): perfil 2D (u ao longo da parede, v para cima), parte dentro e parte fora do retângulo da parede.
 // Geometria pura (sem WASM); o corte do sólido está em parede.ts.
 import type { Opcoes } from './bloco'
-import { regiao } from './sistema'
+import { celula, regiao } from './sistema'
 import type { Abertura, Ancora, Linha, Parede } from './parede'
 
 export const paredeNova = (id: string, ancora: Ancora, comprimento: number): Parede =>
-  ({ id, ancora, inicio: 0, comprimento, altura: 30, espessura: 6, lado: 'fora', aberturas: [] })
+  ({ id, ancora, inicio: 0, comprimento, altura: 30, espessura: 6, lado: ancora.tipo === 'aresta' ? 'dentro' : 'centro', aberturas: [] })
+
+/** Lado `i` do contorno do bloco (4 no quadrado, 6 no hexágono; `i` = direção da normal): a reta externa mais afastada, do primeiro ao último ponto das células. */
+export function ladoBloco(o: Opcoes, i: number) {
+  const k = regiao(o, o.linhas, o.colunas).seg, n0 = k.find((g, j) => j >= 0 && Math.abs(Math.atan2(g[5], g[4]) - Math.atan2(celula(o).n[i][1], celula(o).n[i][0])) < 1e-6)
+  if (!n0) return null
+  const n: [number, number] = [n0[4], n0[5]], off = (g: number[]) => g[0] * n[0] + g[1] * n[1]
+  const m = Math.max(...k.filter(g => g[4] === n0[4] && g[5] === n0[5]).map(off))
+  const gs = k.filter(g => g[4] === n0[4] && g[5] === n0[5] && m - off(g) < 1e-3)
+  const L0 = Math.hypot(n0[2] - n0[0], n0[3] - n0[1]), d: [number, number] = [(n0[2] - n0[0]) / L0, (n0[3] - n0[1]) / L0]
+  const t = gs.flatMap(g => [g[0] * d[0] + g[1] * d[1], g[2] * d[0] + g[3] * d[1]]), t0 = Math.min(...t)
+  const b = gs[0], tb = b[0] * d[0] + b[1] * d[1]
+  return { d, n, L: Math.max(...t) - t0, s: [b[0] + d[0] * (t0 - tb), b[1] + d[1] * (t0 - tb)] as [number, number] }
+}
 export const aberturaNova = (tipo: Abertura['tipo'] = 'porta'): Abertura =>
   ({ tipo, forma: 'reta', pos: 0, largura: 10, altura: 18, peitoril: tipo === 'porta' ? 0 : 8, batente: { ligado: false, largura: 1.5, saliencia: .6 } })
 
@@ -15,10 +28,9 @@ export function quadro(o: Opcoes, p: Parede, dl = 0) {
   const a = p.ancora
   let d: [number, number], n: [number, number], s: [number, number]
   if (a.tipo === 'aresta') {
-    const g = regiao(o, o.linhas, o.colunas).seg[a.lado]
+    const g = ladoBloco(o, a.lado)
     if (!g) throw new Error(`parede ${p.id}: lado ${a.lado} não existe`)
-    const L = Math.hypot(g[2] - g[0], g[3] - g[1])
-    d = [(g[2] - g[0]) / L, (g[3] - g[1]) / L]; n = [g[4], g[5]]; s = [g[0], g[1]]
+    d = g.d; n = g.n; s = g.s
   } else {
     const t = ({ x: 0, y: 90, h0: 0, h60: 60, h120: 120 }[a.eixo]) * Math.PI / 180
     d = [Math.cos(t), Math.sin(t)]; n = [-d[1], d[0]]; s = [n[0] * a.desloc, n[1] * a.desloc]
@@ -89,6 +101,5 @@ export function foraDaArea(p: Parede, a: Abertura): Linha[] {
 
 /** Paredes cuja âncora existe no bloco atual (uma aresta some se linhas, colunas ou formato mudam): as outras são ignoradas. */
 export const paredesValidas = (o: Opcoes) => {
-  const n = regiao(o, o.linhas, o.colunas).seg.length
-  return o.paredes.filter(p => p.ancora.tipo !== 'aresta' || p.ancora.lado < n)
+  return o.paredes.filter(p => p.ancora.tipo !== 'aresta' || ladoBloco(o, p.ancora.lado))
 }
