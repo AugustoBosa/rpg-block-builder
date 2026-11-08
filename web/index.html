@@ -106,6 +106,17 @@
     <aside id="dir"><details id="esquemas"><summary>Esquemas</summary><button id="verTudo">Mostrar tudo</button><div id="dirc"></div></details></aside>
   </div>
   <dialog id="tudo"><button id="fechaTudo">Fechar</button><div id="tudoc"></div></dialog>
+  <script>
+    // falha ao carregar (WebGL desligado, WASM ou Worker bloqueado): avisa em vez de deixar a tela vazia
+    addEventListener('error', e => {
+      if (!e.error || document.getElementById('falha')) return
+      const d = document.createElement('div')
+      d.id = 'falha'
+      d.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99;padding:10px 14px;background:#7a1f1f;color:#fff;font:14px sans-serif'
+      d.textContent = 'A ferramenta não conseguiu iniciar. Confira se o WebGL e os Web Workers estão ligados no navegador e recarregue a página. Detalhe: ' + e.error.message
+      document.body.prepend(d)
+    })
+  </script>
   <script type="module" src="/src/main.ts"></script>
 </body>
 </html>

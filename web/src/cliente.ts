@@ -11,7 +11,8 @@ class Fila {
   constructor() { this.inicia() }
   private inicia() {
     this.w = new Worker(new URL('./gera.worker.ts', import.meta.url), { type: 'module' })
-    this.pronto = new Promise(ok => {
+    this.pronto = new Promise((ok, no) => {
+      this.w.onerror = () => no(new Error('Não foi possível iniciar o gerador (Web Worker ou WASM bloqueado). Recarregue a página ou troque de navegador.'))
       this.w.onmessage = ({ data: r }: MessageEvent<Resposta | 'pronto'>) => {
         if (r === 'pronto') return ok()
         const e = this.espera
@@ -21,6 +22,7 @@ class Fila {
         'erro' in r ? e.falha(new Error(r.erro)) : e.ok(r)
       }
     })
+    this.pronto.catch(() => {}) // quem espera o worker recebe o erro; sem isso o navegador acusaria rejeição sem tratamento
   }
   /** Cancela o pedido em andamento (se houver): o worker é descartado e recriado. */
   cancela() {
