@@ -83,8 +83,29 @@ function rede(o: Opcoes, r: Regiao, res: number) {
   return { XY, tri, loops }
 }
 
-/** Malha crua (sem suavizar). zt = topo do corpo. */
-export function piso(o: Opcoes): Malha & { zt: number; r: Regiao } {
+/** O relevo de cada ponto da rede depende só das coordenadas do ponto: dá para calcular em partes, em paralelo. */
+function relevo(o: Opcoes, r: Regiao, XY: number[]) {
+  const ox = o.posicao_x * r.c.passo[0], oy = o.posicao_y * r.c.passo[1], ds = o.semente * 13.7
+  const prof = Math.max(o.profundidade, .4) * o.junta_piso, des = o.desgaste, tam = o.tamanho_pedra
+  return {
+    rn: (L: number) => ruido(XY[L * 2] + ox, XY[L * 2 + 1] + oy, ds, o.ruido_borda, 3, .5, 9),
+    corte: (L: number, rn: number) => { // profundidade do corte do topo no ponto L
+      const x = XY[L * 2], y = XY[L * 2 + 1]
+      const quina = mapa(distBorda(r, x, y), 0, o.quina_largura, 1, 0) * (.25 + des * .8) * (.6 + rn * .8) * o.quina_gasto
+      return Math.min(Math.min(pedra(x + ox, y + oy, ds, tam, prof, des, o.pedra), o.teto) + quina, o.teto)
+    },
+  }
+}
+/** Parte `i` de `n` do relevo do topo (pontos [de, de + c.length) da rede); `piso()` aceita o resultado montado em `cortes`. */
+export function cortesParte(o: Opcoes, i: number, n: number) {
+  const r = regiao(o, o.linhas, o.colunas), { XY } = rede(o, r, Math.max(o.resolucao, .1)), nl = XY.length / 2
+  const f = relevo(o, r, XY), de = Math.floor(nl * i / n), c = new Float64Array(Math.floor(nl * (i + 1) / n) - de)
+  for (let L = de; L < de + c.length; L++) c[L - de] = f.corte(L, f.rn(L))
+  return { de, nl, c }
+}
+
+/** Malha crua (sem suavizar). zt = topo do corpo. `cortes` (opcional): relevo do topo já calculado por cortesParte. */
+export function piso(o: Opcoes, cortes?: Float64Array): Malha & { zt: number; r: Regiao } {
   const r = regiao(o, o.linhas, o.colunas), zt = o.altura - RELEVO
   const cp = malha(corpos(o, r.cs, zt))
   const P: number[] = Array.from(cp.pos), T: number[] = Array.from(cp.idx)
@@ -95,15 +116,13 @@ export function piso(o: Opcoes): Malha & { zt: number; r: Regiao } {
   const z0 = zt - .6, z1 = zt + RELEVO, nz = Math.round((z1 - z0) / res + 1)
   const { XY, tri, loops } = rede(o, r, res), nl = XY.length / 2
   const base = P.length / 3, id = new Int32Array(nl * nz).fill(-1)
-  const ox = o.posicao_x * r.c.passo[0], oy = o.posicao_y * r.c.passo[1], ds = o.semente * 13.7
-  const prof = Math.max(o.profundidade, .4) * o.junta_piso, des = o.desgaste, tam = o.tamanho_pedra
+  const f = relevo(o, r, XY), des = o.desgaste
   const corte = new Float32Array(nl).fill(-1) // corte do topo por ponto da rede, calculado uma vez
   const v = (L: number, k: number) => {
     const n = L + nl * k
     if (id[n] >= 0) return id[n]
     const x = XY[L * 2], y = XY[L * 2 + 1], z = z0 + k * (z1 - z0) / (nz - 1)
-    const gx = x + ox, gy = y + oy
-    const rn = ruido(gx, gy, ds, o.ruido_borda, 3, .5, 9)
+    const rn = f.rn(L)
     const lado = (.2 + des * .5) * (.4 + rn * 1.2) * mapa(z, zt, z1, 0, 1) * o.lateral_gasto // recuo da lateral: até ~1 mm no topo
     let dx = 0, dy = 0 // recuo para dentro, somado por lado externo (perto da quina, dos dois)
     for (const g of r.seg) {
@@ -111,10 +130,7 @@ export function piso(o: Opcoes): Malha & { zt: number; r: Regiao } {
       dx -= e * g[4]; dy -= e * g[5]
     }
     let ct = corte[L]
-    if (ct < 0) {
-      const quina = mapa(distBorda(r, x, y), 0, o.quina_largura, 1, 0) * (.25 + des * .8) * (.6 + rn * .8) * o.quina_gasto
-      ct = corte[L] = Math.min(Math.min(pedra(gx, gy, ds, tam, prof, des, o.pedra), o.teto) + quina, o.teto)
-    }
+    if (ct < 0) ct = corte[L] = cortes ? cortes[L] : f.corte(L, rn) // 1ª vez em precisão dupla, as seguintes em Float32 (como sempre foi)
     // a coluna da lateral encolhe até o relevo daquele ponto: a textura desce pela lateral, sem parede fina em volta (o fundo z0 fica)
     P.push(x + dx * lado, y + dy * lado, z0 + (z - z0) * (1 - ct / (z1 - z0)))
     return (id[n] = base + (P.length / 3 - 1 - base))
@@ -176,10 +192,13 @@ export async function final(m: Malha & { zt: number; r: Regiao }): Promise<Malha
 export function fechada(pos: Float32Array, idx: Uint32Array) {
   const nv = pos.length / 3, arestas = new Set<number>()
   for (let t = 0; t < idx.length; t += 3) {
-    const [a, b, c] = [idx[t], idx[t + 1], idx[t + 2]].map(i => [pos[i * 3], pos[i * 3 + 1], pos[i * 3 + 2]])
-    const u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], w = [c[0] - a[0], c[1] - a[1], c[2] - a[2]]
-    const area = Math.hypot(u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]) / 2
-    const lado2 = Math.max(...[[a, b], [b, c], [c, a]].map(([p, q]) => (p[0] - q[0]) ** 2 + (p[1] - q[1]) ** 2 + (p[2] - q[2]) ** 2))
+    // sem arrays temporários: roda a cada tentativa de redução, em malhas de milhões de triângulos
+    const a = idx[t] * 3, b = idx[t + 1] * 3, c = idx[t + 2] * 3
+    const u0 = pos[b] - pos[a], u1 = pos[b + 1] - pos[a + 1], u2 = pos[b + 2] - pos[a + 2]
+    const w0 = pos[c] - pos[a], w1 = pos[c + 1] - pos[a + 1], w2 = pos[c + 2] - pos[a + 2]
+    const area = Math.hypot(u1 * w2 - u2 * w1, u2 * w0 - u0 * w2, u0 * w1 - u1 * w0) / 2
+    const d2 = (p: number, q: number) => (pos[p] - pos[q]) ** 2 + (pos[p + 1] - pos[q + 1]) ** 2 + (pos[p + 2] - pos[q + 2]) ** 2
+    const lado2 = Math.max(d2(a, b), d2(b, c), d2(c, a))
     if (area < 1e-6 && area < 1e-3 * lado2) return false
     for (let e = 0; e < 3; e++) {
       const k = idx[t + e] * nv + idx[t + (e + 1) % 3]

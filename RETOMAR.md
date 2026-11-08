@@ -31,6 +31,7 @@ Leia este arquivo primeiro. Comandos: `USO.md`. Visão: `README.md`. Inventário
   - O 1 × 1 continua com 216 mil triângulos, e o campo da Pedra não mudou (p50 1,509, p95 1,895).
   - Correção visual: z-fighting entre o ombro do bloco e o topo do grid, com polygonOffset no grid (só na vista; STL inalterado).
   - Rodada de abas, vista 3D, cotas e esquemas: **publicada em 2026-11-07** (commits `e9aad89`, `09b1c5e`, `3082644` no `main`; árvore limpa). Build ok, CLI fechada (grid 312 tri, piso 1×1 216204 tri). Desktop verificado no navegador; celular e "Mostrar tudo" retestados em 2026-11-08 (itens 3–8, em 375 px, 700 px e desktop).
+- **Geração em Web Worker (2026-11-08):** `gera.worker.ts` + `cliente.ts` (a prévia reinicia o worker a cada pedido novo; a exportação tem worker próprio e botão Cancelar). `vite.config.ts` força worker em formato `es` (top-level await do WASM). Barra da vista → popover **Desempenho** (pixels da vista 1×/1,5×/2×, e na prévia do piso): malha da PRÉVIA (Auto por orçamento de ms, com refino ao parar; ou Manual) e malha do STL separada (`o.resolucao`). A prévia nunca altera o STL: os 5 STL de referência (piso 1×1, 2×3 quadrado e hexágono, grid, degrau) saem com hash idêntico.
 - **Blender congelado:** `gerar.py` fica só como referência de qualidade e de receita das 15 texturas.
 - **Nada foi impresso.** O encaixe próprio ainda não foi testado na mão.
 
@@ -56,7 +57,8 @@ Leia este arquivo primeiro. Comandos: `USO.md`. Visão: `README.md`. Inventário
 | 10 | Revisão do usuário no site e impressão 1 × 1 de teste (itens de "Próximo") | físico | — |
 
 ## Pendências conhecidas (web)
-- **Bloco grande pesa:** 2 × 3 dá cerca de 0,9 a 1,5 milhão de triângulos (45–75 MB) e leva 15–20 s, com a tela travada (roda na thread principal). Opções: Web Worker e/ou um alvo de triângulos menor (`TRI_MIN × área^0,75` em `bloco.ts`).
+- **Bloco grande:** 2 × 3 gera ~0,9 a 1,1 milhão de triângulos. Na exportação, o relevo do topo é calculado em paralelo (pool de até 6 workers, `cortesParte` em `bloco.ts`; 17 s → 6,4 s com 12 núcleos, mesmo hash); a tela não trava e há Cancelar. Sobra em série: a malha e `final()` (suavizar + reduzir). A prévia usa 1 worker só.
+- **Não feito de propósito:** renderização sob demanda (o laço do three tem amortecimento, animação e gizmo) e relevo em GPU/WASM-SIMD (o float da GPU difere da CPU e a prévia deixaria de ser igual ao STL).
 - Emenda entre dois blocos N × M vizinhos não foi medida. Dentro de um bloco, as células se emendam por construção.
 - No hexágono, a borda externa do grid N × M fica recortada, célula a célula.
 - `validar.py` só conhece a célula de 35 mm e o pé das originais: ele reprova o encaixe próprio. Para conferir se a malha fecha, use o `cli.ts`.

@@ -1,33 +1,55 @@
-import { final, GUIAS, padrao, piso, PISO, SECAO_GUIAS, SECAO_PISO, stl, type Opcoes } from './bloco'
+import { GUIAS, padrao, PISO, SECAO_GUIAS, SECAO_PISO, type Opcoes } from './bloco'
+import { cancelaExporta, exporta, previa as pedePrevia } from './cliente'
 import { PEDRA, SECAO_PEDRA } from './pedra'
-import { alturaGrid, assento, avisos, corpo, degrau, ENCAIXES, FORMATOS, fundo, grid, malha, SECAO, SISTEMA } from './sistema'
+import { avisos, ENCAIXES, FORMATOS, fundo, SECAO, SISTEMA } from './sistema'
 import { cotas, limpaCotas } from './cotas'
 import { EIXO, esquema } from './esquema'
 import { esfera } from './esferas'
-import { aoMudarVer, aplicaCorte, aplicaVisivel, cena, config, type Corte, enquadra, eleva, MODOS, mostra, type Modo, setModo, setOverlays, setTransp, type Ver } from './vista'
+import { aoMudarVer, aplicaCorte, aplicaVisivel, cena, config, type Corte, enquadra, eleva, MODOS, mostra, type Modo, setModo, setOverlays, setPixelRatioMax, setTransp, type Ver } from './vista'
 
 // nada é salvo: cada abertura começa do padrão
 const o: Opcoes = padrao()
-const PREVIA = .5 // mm: malha da prévia do piso
 let enquadrar = true // só ao trocar de passo ou de peça; mexer num slider não move a câmera
 let ver: Ver = 'frontal' // vista 2D do painel de esquemas: a mais próxima da câmera (ver vista.ts)
 const $ = (id: string) => document.getElementById(id)!
 
-let pendente: ReturnType<typeof setTimeout>
-function previa() {
-  clearTimeout(pendente)
-  pendente = setTimeout(() => {
-    if (config.passo === 1) { // bloco liso assentado num grid 1 × 1, cortado ao meio (a elevação é somada pela vista)
-      mostra(0, malha(corpo(o, o.altura)), fundo(o) + o.folga_fundo)
-      mostra(1, malha(grid(o, 1, 1)))
-      $('aviso').textContent = avisos(o).join(' ')
-    } else {
-      mostra(0, peca() === 'piso' ? piso({ ...o, resolucao: PREVIA }) : gera(peca()))
-      mostra(1, null)
-    }
-    atualizaCotas()
-    redesenhaEsquema()
-    if (enquadrar) { enquadra(mostrarCotas); enquadrar = false }
+// resolução da PRÉVIA do piso (só a tela): nunca altera o STL, que usa o.resolucao
+const RES = [.25, .5, 1, 2] // mm; do mais fino ao mais grosso
+const perf = { auto: true, manual: .5, orcamento: 300, refina: true }
+let k = 0 // ms·mm² medido: a prévia do piso leva ≈ k / res² ms
+const resRapida = () => !perf.auto ? perf.manual : k ? RES.find(r => k / r ** 2 <= perf.orcamento) ?? RES[RES.length - 1] : .5
+const gerando = Object.assign(document.createElement('div'), { className: 'gerando', textContent: 'gerando…', hidden: true })
+const infoPerf = document.createElement('div')
+
+let pendente: ReturnType<typeof setTimeout>, refino: ReturnType<typeof setTimeout>, geracao = 0
+function previa(res = resRapida()) {
+  clearTimeout(pendente); clearTimeout(refino)
+  pendente = setTimeout(async () => {
+    const eu = ++geracao, passo = config.passo, snap = structuredClone(o), p = peca()
+    gerando.hidden = false
+    try {
+      const r = await pedePrevia({ tipo: 'previa', passo, peca: p, o: snap, res })
+      if (eu !== geracao) return
+      if (passo === 1) { // bloco liso assentado num grid 1 × 1, cortado ao meio (a elevação é somada pela vista)
+        mostra(0, r.m[0], fundo(snap) + snap.folga_fundo)
+        mostra(1, r.m[1])
+        $('aviso').textContent = avisos(snap).join(' ')
+      } else {
+        mostra(0, r.m[0])
+        mostra(1, null)
+      }
+      if (passo === 3) {
+        const nk = r.ms * res ** 2
+        k = k ? (k + nk) / 2 : nk
+        infoPerf.textContent = `Malha atual: ${String(res).replace('.', ',')} mm · ${r.ms.toFixed(0)} ms`
+        const fina = res / 2 // refino ao parar: um passo mais fino por vez, enquanto couber em 8× o orçamento
+        if (perf.auto && perf.refina && fina >= RES[0] && k / fina ** 2 <= 8 * perf.orcamento) refino = setTimeout(() => previa(fina), 400)
+      }
+      atualizaCotas()
+      redesenhaEsquema()
+      if (enquadrar) { enquadra(mostrarCotas); enquadrar = false }
+    } catch (e) { if (e !== 'cancelado') throw e }
+    finally { if (eu === geracao) gerando.hidden = true }
   }, 60)
 }
 // painel de esquemas: isométrica com os planos + a vista 2D mais próxima da câmera; "Mostrar tudo" abre todas
@@ -174,6 +196,23 @@ po.pop.append(campo('Arestas', ovArestas), campo('Vértices', ovVertices))
 // transparência das peças: vale em qualquer modo e fica recolhida
 const ptr = popover('Transparência')
 controle(ptr.pop, 'Transparência (%)', 0, 0, 100, v => setTransp(v / 100), 5, () => {})
+// desempenho (aba Blocos): resolução da prévia na tela; a malha do STL é separada e não depende dela
+const pd = popover('Desempenho'), refinaCk = marca(), modoPerf = segmentos([['auto', 'Auto'], ['manual', 'Manual']], v => { perf.auto = v === 'auto'; previa() })
+const pixels = segmentos([['1', '1×'], ['1.5', '1,5×'], ['2', '2×']], v => setPixelRatioMax(+v))
+pixels.marca('2')
+const pixRot = document.createElement('label')
+pixRot.append('Pixels da vista', pixels.el)
+refinaCk.checked = true
+refinaCk.onchange = () => { perf.refina = refinaCk.checked; previa() }
+modoPerf.marca('auto')
+const modoRot = document.createElement('label'), tituloExp = document.createElement('div')
+modoRot.append('Malha da prévia', modoPerf.el)
+tituloExp.className = 'nota'; tituloExp.textContent = 'Exportação (não depende da tela)'
+pd.pop.append(pixRot, modoRot)
+controle(pd.pop, 'Manual (mm)', perf.manual, .25, 2, v => { perf.manual = v }, .25)
+controle(pd.pop, 'Orçamento Auto (ms)', perf.orcamento, 100, 1500, v => { perf.orcamento = v }, 50)
+pd.pop.append(campo('Refinar ao parar', refinaCk), infoPerf, tituloExp)
+controle(pd.pop, 'Malha do STL (mm)', o.resolucao, .1, .5, v => { o.resolucao = v }, .025, () => {})
 const cotasBtn = botao('Cotas', () => { mostrarCotas = !mostrarCotas; cotasBtn.classList.toggle('ativo', mostrarCotas); atualizaCotas() }, 'Mostrar cotas no modelo')
 
 // sombreamento: esferas como no Blender
@@ -191,8 +230,8 @@ elevS.oninput = () => { config.elevacao = +elevS.value; textoElev(); eleva() }
 textoElev()
 elev.append(elevV, elevS)
 
-barra.append(home, pv.b, pc.b, po.b, ptr.b, cotasBtn, esfs, pv.pop, pc.pop, po.pop, ptr.pop)
-$('vista').append(barra, elev)
+barra.append(home, pv.b, pc.b, po.b, ptr.b, pd.b, cotasBtn, esfs, pv.pop, pc.pop, po.pop, ptr.pop, pd.pop)
+$('vista').append(barra, elev, gerando)
 marcaModo(config.modo)
 function sincronizaBarra(n: number) { // valores do corte da aba atual; itens do passo 1 só aparecem no passo 1
   const c = config.corte[n]
@@ -230,7 +269,6 @@ grupo(PEDRA, o.pedra, SECAO_PEDRA, secoes($('pedra'), ['Avançado — Forma das 
 grupo(GUIAS, o, SECAO_GUIAS, secoes($('op-guias'), ['Dimensões']))
 const sel3 = $('peca3') as HTMLSelectElement
 const peca = () => config.passo === 3 ? 'piso' : sel3.value
-const gera = (p: string) => p === 'grid' ? malha(grid(o, o.grid_linhas, o.grid_colunas)) : malha(degrau(o, o.grid_linhas, o.grid_colunas, o.altura_degrau))
 sel3.onchange = () => { enquadrar = true; previa() }
 
 function vaiPara(n: number) {
@@ -244,19 +282,22 @@ function vaiPara(n: number) {
 }
 for (const i of [1, 2, 3]) $('ir' + i).onclick = () => vaiPara(i)
 
-const estado = $('estado')
-$('baixar').onclick = () => {
-  estado.textContent = 'Gerando a malha final (alguns segundos)...'
-  setTimeout(async () => { // ponytail: roda na thread principal (a tela trava ~2 s por célula no piso); passar para Web Worker se incomodar
-    const t = performance.now(), p = peca(), f = FORMATOS[o.formato]
-    const m = p === 'piso' ? await final(piso(o)) : gera(p)
-    const nome = p === 'piso' ? `Piso Pedra ${f} ${o.linhas}x${o.colunas} s${o.semente}` : `${p === 'grid' ? 'Grid' : 'Degrau'} ${f} ${o.grid_linhas}x${o.grid_colunas}`
+const estado = $('estado'), baixar = $('baixar') as HTMLButtonElement, cancela = $('cancela')
+baixar.onclick = async () => { // roda num worker; os parâmetros ficam congelados no clique
+  const t = performance.now(), p = peca(), s = structuredClone(o), f = FORMATOS[s.formato]
+  const nome = p === 'piso' ? `Piso Pedra ${f} ${s.linhas}x${s.colunas} s${s.semente}` : `${p === 'grid' ? 'Grid' : 'Degrau'} ${f} ${s.grid_linhas}x${s.grid_colunas}`
+  baixar.disabled = true; cancela.hidden = false
+  estado.textContent = 'Gerando...'
+  try {
+    const r = await exporta({ tipo: 'exporta', peca: p, o: s }, e => { estado.textContent = e })
     const a = document.createElement('a')
-    a.href = URL.createObjectURL(new Blob([stl(m)], { type: 'model/stl' }))
+    a.href = URL.createObjectURL(new Blob([r.stl], { type: 'model/stl' }))
     a.download = nome + '.stl'
     a.click()
-    estado.textContent = `${m.idx.length / 3} triângulos em ${((performance.now() - t) / 1000).toFixed(1)} s`
-  }, 30)
+    estado.textContent = `${r.tri} triângulos em ${((performance.now() - t) / 1000).toFixed(1)} s`
+  } catch (e) { estado.textContent = e === 'cancelado' ? 'Cancelado.' : `Erro: ${e}` }
+  finally { baixar.disabled = false; cancela.hidden = true }
 }
+cancela.onclick = cancelaExporta
 montaSistema()
 vaiPara(1)

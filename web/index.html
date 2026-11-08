@@ -31,6 +31,7 @@
     .barra button.ativo, .pop button.ativo { background: #5a6b7d; border-color: #8aa }
     .seg { display: flex } .seg button { border-radius: 0; margin-left: -1px } .seg button:first-child { border-radius: 4px 0 0 4px; margin-left: 0 } .seg button:last-child { border-radius: 0 4px 4px 0 }
     .barra[data-passo="2"] .so1, .barra[data-passo="3"] .so1 { display: none }
+    .gerando { position: absolute; right: 10px; bottom: 10px; z-index: 5; padding: 3px 9px; font-size: 12px; border-radius: 10px; background: rgba(29,31,34,.82); pointer-events: none }
     .pop { display: none; position: absolute; top: 100%; z-index: 7; width: 220px; padding: 4px 10px 8px; background: #26292d; border: 1px solid #555; border-radius: 0 0 6px 6px }
     .pop.aberto { display: block }
     .pop .seg button { padding: 4px 14px }
@@ -80,7 +81,7 @@
 <body>
   <aside>
     <nav><button id="ir1" class="ativo">1 · Sistema</button><button id="ir2">2 · Grids</button><button id="ir3">3 · Blocos</button></nav>
-    <div id="saida" hidden><button id="baixar">Baixar STL</button><div class="nota" id="estado"></div></div>
+    <div id="saida" hidden><button id="baixar">Baixar STL</button><button id="cancela" hidden>Cancelar</button><div class="nota" id="estado"></div></div>
     <section id="passo1">
       <div id="sistema"></div>
       <div id="aviso"></div>

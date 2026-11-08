@@ -339,6 +339,8 @@ export function enquadra(comCotas = false) {
   cam.position.copy(ctl.target).addScaledVector(new THREE.Vector3(1, -1, 1).normalize(), (r * (comCotas ? 1.3 : 1.6) + (comCotas ? MARGEM : 0)) / Math.sin(f)) // 1,6: sobra como antes (1,3 com cotas); margem das cotas em mm
 }
 
+/** Teto da densidade de pixels da vista (1, 1,5 ou 2): só a tela; menos pixels = menos GPU. */
+export function setPixelRatioMax(max: number) { render.setPixelRatio(Math.min(devicePixelRatio, max)); tamanho() }
 function tamanho() {
   render.setSize(vista.clientWidth, vista.clientHeight)
   cam.aspect = vista.clientWidth / vista.clientHeight
