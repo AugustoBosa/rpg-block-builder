@@ -3,7 +3,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { ViewHelper } from 'three/examples/jsm/helpers/ViewHelper.js'
 import { toCreasedNormals } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import type { Malha } from './bloco'
-import { criaRotulos, redimensionaRotulos, renderRotulos, reorienta } from './cotas'
+import { criaRotulos, MARGEM, redimensionaRotulos, renderRotulos, reorienta } from './cotas'
 import { EIXO } from './esquema'
 
 // cena da prévia (z para cima, como no fatiador): renderer, câmera, luzes, gizmo e as duas peças
@@ -324,15 +324,19 @@ export function setModo(m: Modo) {
   atualizaInfo()
 }
 
-/** Câmera olhando a peça na pose isométrica (tecla Home). */
-export function enquadra() {
-  const g = (pecas[0].children[0] as THREE.Mesh).geometry
-  g.computeBoundingSphere()
-  const { center: c, radius: r } = g.boundingSphere!
+/** Câmera olhando a peça na pose isométrica (tecla Home). `comCotas`: soma MARGEM mm ao raio (cotas ligadas). */
+export function enquadra(comCotas = false) {
+  caixaTmp.makeEmpty() // caixa das peças visíveis, já com a elevação (position.z) e o grid
+  pecas.forEach((p, i) => {
+    if (!p.visible || !base[i].getAttribute('position')) return
+    base[i].computeBoundingBox()
+    caixaTmp.union(caixaPeca.copy(base[i].boundingBox!).translate(p.position))
+  })
+  const c = caixaTmp.getCenter(new THREE.Vector3()), r = caixaTmp.getSize(new THREE.Vector3()).length() / 2
   anim = null
-  ctl.target.set(c.x, c.y, c.z + pecas[0].position.z * .5)
+  ctl.target.copy(c)
   const meia = THREE.MathUtils.degToRad(cam.fov / 2), f = Math.min(meia, Math.atan(Math.tan(meia) * cam.aspect)) // a menor meia-abertura (vertical ou horizontal)
-  cam.position.copy(ctl.target).addScaledVector(new THREE.Vector3(1, -1, 1).normalize(), r / Math.sin(f) * 1.6) // 1,6: sobra para as cotas
+  cam.position.copy(ctl.target).addScaledVector(new THREE.Vector3(1, -1, 1).normalize(), (r * (comCotas ? 1.3 : 1.6) + (comCotas ? MARGEM : 0)) / Math.sin(f)) // 1,6: sobra como antes (1,3 com cotas); margem das cotas em mm
 }
 
 function tamanho() {

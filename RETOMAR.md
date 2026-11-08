@@ -30,7 +30,7 @@ Leia este arquivo primeiro. Comandos: `USO.md`. Visão: `README.md`. Inventário
   - Emenda de 0,0000 mm entre vizinhos 1 × 1, no quadrado e no hexágono.
   - O 1 × 1 continua com 216 mil triângulos, e o campo da Pedra não mudou (p50 1,509, p95 1,895).
   - Correção visual: z-fighting entre o ombro do bloco e o topo do grid, com polygonOffset no grid (só na vista; STL inalterado).
-  - Rodada atual (abas, vista 3D, cotas, esquemas): verificada em 2026-11-07: build ok, navegador (desktop e celular) sem erro, CLI fechada (grid 312 tri, piso 1×1 216204 tri). Ainda não commitada nem publicada.
+  - Rodada de abas, vista 3D, cotas e esquemas: **publicada em 2026-11-07** (commits `e9aad89`, `09b1c5e`, `3082644` no `main`; árvore limpa). Build ok, CLI fechada (grid 312 tri, piso 1×1 216204 tri). Desktop verificado no navegador; celular e "Mostrar tudo" retestados em 2026-11-08 (itens 3–8, em 375 px, 700 px e desktop).
 - **Blender congelado:** `gerar.py` fica só como referência de qualidade e de receita das 15 texturas.
 - **Nada foi impresso.** O encaixe próprio ainda não foi testado na mão.
 
@@ -41,16 +41,27 @@ Leia este arquivo primeiro. Comandos: `USO.md`. Visão: `README.md`. Inventário
 4. Web Worker, conjuntos e temas. Cerca de 1 semana.
 5. Depois: o gerador de grid completo (`docs/MIGRACAO.md` §5: travas, borda, alívio, ímãs na nervura) e os props importados.
 
+## Em aberto (chamar direcionado: "faça o item N")
+| # | Item | Área | Tamanho |
+|---|------|------|---------|
+| 1 | ~~Retestar o celular~~ **feito** (usuário testou no celular, 2026-11-07) | — | — |
+| 2 | ~~Retestar "Mostrar tudo"~~ **aceitável** (usuário, 2026-11-07) | — | — |
+| 3 | ~~Cotas 3D empilham numa vista 3D muito estreita (~330 px)~~ **feito** (2026-11-08): Cotas 3D em vista estreita: a menor sem vaga some; as 2 horizontais maiores e a maior altura sempre saem (menor custo). Resta no máximo 1 cruzamento principal × menor em pose extrema a 375 px | — | — |
+| 4 | ~~Slider vertical de elevação (à esquerda) pode cobrir cotas do lado esquerdo~~ **feito** (2026-11-08): Slider de elevação: `.elev` virou zona proibida para rótulos (`zonaElev` em `cotas.ts`) | — | — |
+| 5 | ~~Esquemas 2D: rótulos colados em medidas pequenas (folga 0,3; chanfro 0,8)~~ **feito** (2026-11-08): Esquemas: `afasta` determinístico, mínimo de 16 px (sem rótulos colados) | — | — |
+| 6 | ~~Cota 0,15 mm aparece como "0,1" (1 casa decimal)~~ **feito** (2026-11-08): Cotas com até 2 casas decimais (0,15 aparece como "0,15") | — | — |
+| 7 | ~~Hexágono: cota do esquema vai de vértice a vértice, mas o texto diz "entre lados"~~ **feito** (2026-11-08): Hexágono: recuo medido entre lados planos; conicidade e nervura/2 omitidas na frontal do hexágono (lá a linha vai de vértice a vértice) | — | — |
+| 8 | ~~Câmera não enquadra as cotas (só as peças)~~ **feito** (2026-11-08): Home enquadra peças visíveis + elevação + margem das cotas (`MARGEM` 18 mm, fator 1,3 com cotas) | — | — |
+| 9 | Skill de desenho técnico de terceiros (`technical-drawing`, skills.sh) não foi instalada; só decidir se vale | fora do repo | 10 min |
+| 10 | Revisão do usuário no site e impressão 1 × 1 de teste (itens de "Próximo") | físico | — |
+
 ## Pendências conhecidas (web)
 - **Bloco grande pesa:** 2 × 3 dá cerca de 0,9 a 1,5 milhão de triângulos (45–75 MB) e leva 15–20 s, com a tela travada (roda na thread principal). Opções: Web Worker e/ou um alvo de triângulos menor (`TRI_MIN × área^0,75` em `bloco.ts`).
 - Emenda entre dois blocos N × M vizinhos não foi medida. Dentro de um bloco, as células se emendam por construção.
 - No hexágono, a borda externa do grid N × M fica recortada, célula a célula.
 - `validar.py` só conhece a célula de 35 mm e o pé das originais: ele reprova o encaixe próprio. Para conferir se a malha fecha, use o `cli.ts`.
 - Facetas p90 14,4° e arestas ≥ 60° em 1,7 % (originais: 0,1–0,3 %).
-- Esquemas 2D: rótulos sobrepostos nas vistas frontal e lateral quando as medidas são pequenas (ex.: chanfro 0,8 mm).
-- Cota de 1 casa decimal arredonda a folga 0,15 mm para "0,1".
-- Hexágono: a cota horizontal do esquema vai de vértice a vértice, mas o texto mostra o "entre lados".
-- A câmera não enquadra as cotas.
+- Cotas 3D: a 375 px ainda pode haver 1 cruzamento entre cota principal e menor em pose extrema, e a principal pode cruzar o slider (item 3/4).
 - O gizmo tem 128 px fixos (o ViewHelper do three 0.187 não aceita tamanho).
 
 ## Decisões do usuário (em vigor)

@@ -13,7 +13,7 @@ interface Cota { a: P2; b: P2; off: P2; txt: string } // pontas em coordenadas d
 const COR = { traco: '#e3e8ee', cota: '#ffb000', fundo: '#1b1d21', eixo: '#7d8590', grid: '#6fa8dc', bloco: '#d9b36c' }
 export const EIXO = { x: '#ff3653', y: '#8adb00', z: '#2c8fff' } // as cores do gizmo da vista 3D
 const VW = 400 // largura do viewBox: o painel (340 px) e o diálogo mostram quase em tamanho real, então o texto fica legível
-const f0 = (v: number) => v.toFixed(1).replace('.', ',')
+const f0 = (v: number) => String(+v.toFixed(2)).replace('.', ',') // vírgula decimal, até 2 casas, sem zeros finais
 const f1 = (v: number) => f0(v) + ' mm'
 const pt = (p: P2) => p[0].toFixed(1) + ',' + p[1].toFixed(1)
 const poli = (P: (p: P2) => P2, ps: P2[], attr: string) => `<polygon points="${ps.map(p => pt(P(p))).join(' ')}" ${attr}/>`
@@ -70,15 +70,14 @@ function secao(c: Celula, k: 0 | 1, u: number, perfil: number[][]): P2[] {
   return [...perfil.map(([z, d]): P2 => [u + w(d), -z]), ...[...perfil].reverse().map(([z, d]): P2 => [u - w(d), -z])]
 }
 
-/** Afasta valores (ordenados) até haver `min` entre vizinhos, sem mover o conjunto para longe do original. Devolve na ordem de entrada. */
+/** Afasta valores até haver `min` entre vizinhos (em ordem crescente), sem mover o conjunto para longe do original. Devolve na ordem de entrada.
+ *  Determinístico: empurra cada um para baixo até o anterior + min, depois recentra o grupo na média original. */
 function afasta(vs: number[], min: number): number[] {
-  const idx = vs.map((_, i) => i).sort((i, j) => vs[i] - vs[j]), r = idx.map(i => vs[i])
-  for (let n = 0; n < 40; n++) for (let t = 1; t < r.length; t++) {
-    const d = min - (r[t] - r[t - 1])
-    if (d > 0) { r[t - 1] -= d / 2; r[t] += d / 2 }
-  }
+  const idx = vs.map((_, i) => i).sort((i, j) => vs[i] - vs[j]), r = idx.map(i => vs[i]), m0 = r.reduce((s, v) => s + v, 0) / r.length
+  for (let t = 1; t < r.length; t++) r[t] = Math.max(r[t], r[t - 1] + min)
+  const sh = m0 - r.reduce((s, v) => s + v, 0) / r.length
   const out: number[] = []
-  idx.forEach((i, t) => { out[i] = r[t] })
+  idx.forEach((i, t) => { out[i] = r[t] + sh })
   return out
 }
 
@@ -96,13 +95,13 @@ function cotasSvg(P: (p: P2) => P2, lista: Cota[]): string {
     const g = L.filter(c => c.vert && (c.q.off[0] >= 0 ? 1 : -1) === lado)
     if (!g.length) continue
     const x = lado > 0 ? Math.max(...g.flatMap(c => [c.Ao[0], c.Bo[0]])) + 12 : Math.min(...g.flatMap(c => [c.Ao[0], c.Bo[0]])) - 12
-    const ys = afasta(g.map(c => c.my), 15)
+    const ys = afasta(g.map(c => c.my), 16)
     g.forEach((c, i) => pos.set(c, { x, y: ys[i], anc: lado > 0 ? 'start' : 'end', chamada: true }))
   }
   for (const lado of [1, -1]) { // texto de cota horizontal: acima (−) ou abaixo (+) da linha
     const g = L.filter(c => !c.vert && (c.q.off[1] >= 0 ? 1 : -1) === lado)
     if (!g.length) continue
-    const xs = afasta(g.map(c => c.mx), Math.max(...g.map(c => lar(c.q.txt))))
+    const xs = afasta(g.map(c => c.mx), Math.max(...g.map(c => lar(c.q.txt))) + 2)
     g.forEach((c, i) => pos.set(c, { x: xs[i], y: c.my + (lado > 0 ? 14 : -5), anc: 'middle', chamada: false }))
   }
   return L.map(c => {
@@ -152,7 +151,9 @@ function planta(o: Opcoes, m: Modelo, mini = false): string {
     ? [{ a: S(rx, ry - a1), b: S(rx, ry + a1), off: [-16, 0], txt: `entre lados ${f0(o.largura)}` }]
     : [{ a: S(rx - a0, ry - a1), b: S(rx + a0, ry - a1), off: [0, 16], txt: `largura ${f0(o.largura)}` },
        { a: S(rx + a0, ry - a1), b: S(rx + a0, ry + a1), off: [16, 0], txt: `comprimento ${f0(o.comprimento)}` }]
-  if (!mini) cot.push({ a: S(rx + W(0), ry), b: S(rx + W(o.recuo), ry), off: [0, -16], txt: `recuo ${f0(o.recuo)}` })
+  if (!mini) cot.push(c.hex // lados planos: o recuo é a distância perpendicular entre o lado de cima e o recuado (em Y)
+    ? { a: S(rx, ry + a1), b: S(rx, ry + a1 - o.recuo), off: [16, 0], txt: `recuo ${f0(o.recuo)}` }
+    : { a: S(rx + W(0), ry), b: S(rx + W(o.recuo), ry), off: [0, -16], txt: `recuo ${f0(o.recuo)}` })
   const ps = [...formas.flatMap(f => f[0]), ...cot.flatMap(q => [q.a, q.b]), ...ima, ...eixos.flat()]
   return vista(`Planta · plano z = ${f1(zPlanta(m))}`, ps, P => formas.map(([p, a]) => poli(P, p, a)).join('') +
     eixos.map(([p, q]) => `<line x1="${P(p)[0].toFixed(1)}" y1="${P(p)[1].toFixed(1)}" x2="${P(q)[0].toFixed(1)}" y2="${P(q)[1].toFixed(1)}" ${TRACO_PONTO}/>`).join('') +
@@ -184,9 +185,9 @@ function corte(o: Opcoes, m: Modelo, k: 0 | 1, mini = false): string {
     const h = M.hPe, zs = M.assento, uc = uMax
     cot.push(vz(xr, zb, zb + h, 14, `pé ${f0(h)}`), vz(xr, zb + h, zb + zs, 14, `ombro ${f0(zs - h)}`))
     if (o.chanfro > 0) cot.push(vz(xl, zb, zb + o.chanfro, -14, `chanfro ${f0(o.chanfro)}`))
-    if (o.conicidade > 0) cot.push(hz(zb + o.chanfro, uc + W(M.perfilPe[1][1]), uc + W(M.perfilPe[2][1]), 16, `conicidade ${f0(o.conicidade)}`))
+    if (o.conicidade > 0 && !(c.hex && k === 0)) cot.push(hz(zb + o.chanfro, uc + W(M.perfilPe[1][1]), uc + W(M.perfilPe[2][1]), 16, `conicidade ${f0(o.conicidade)}`))
   }
-  if (furo) cot.push(hz(T, uMax + W(M.nervuraMeia), xr, -16, `nervura/2 ${f0(M.nervuraMeia)}`))
+  if (furo && !(c.hex && k === 0)) cot.push(hz(T, uMax + W(M.nervuraMeia), xr, -16, `nervura/2 ${f0(M.nervuraMeia)}`))
   const zTopo = Math.max(T, ...(pe ?? []).map(p => p[0])), eixos = cut.map(p => [[p[k], -zTopo - 3], [p[k], 3]] as P2[])
   const ps = [...formas.flatMap(f => f[0]), ...(mini ? [] : cot.flatMap(q => [q.a, q.b])), ...eixos.flat()]
   return vista(k === 0 ? 'Frontal · plano y = 0' : 'Lateral · plano x = 0', ps, P =>

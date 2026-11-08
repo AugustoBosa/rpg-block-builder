@@ -27,7 +27,7 @@ function previa() {
     }
     atualizaCotas()
     redesenhaEsquema()
-    if (enquadrar) { enquadra(); enquadrar = false }
+    if (enquadrar) { enquadra(mostrarCotas); enquadrar = false }
   }, 60)
 }
 // painel de esquemas: isométrica com os planos + a vista 2D mais próxima da câmera; "Mostrar tudo" abre todas
@@ -138,7 +138,7 @@ addEventListener('click', e => { if (!(e.target as Element).closest('.barra, .po
 const corte = () => config.corte[config.passo]
 const marca = () => Object.assign(document.createElement('input'), { type: 'checkbox' })
 
-const home = botao('⌂', () => enquadra(), 'Início: pose isométrica (tecla Home)')
+const home = botao('⌂', () => enquadra(mostrarCotas), 'Início: pose isométrica (tecla Home)')
 // visibilidade (passo 1): um check para o bloco e outro para o grid
 const pv = popover('Visibilidade'), verBloco = marca(), verGrid = marca()
 verBloco.checked = verGrid.checked = true
@@ -204,7 +204,7 @@ function sincronizaBarra(n: number) { // valores do corte da aba atual; itens do
 addEventListener('keydown', e => { // Home: volta à pose isométrica (nos campos de texto, Home continua sendo do campo)
   if (e.key !== 'Home' || (e.target instanceof Element && e.target.closest('select, textarea, input:not([type=range])'))) return
   e.preventDefault()
-  enquadra()
+  enquadra(mostrarCotas)
 })
 
 // passo 1: sistema (remonta ao trocar formato ou encaixe, porque rótulos e valores mudam)

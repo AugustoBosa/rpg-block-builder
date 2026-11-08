@@ -11,6 +11,7 @@ const DV = 8 // mm: primeira coluna das cotas verticais (cada coluna extra soma 
 const COL = 7 // mm entre colunas de cotas verticais
 const EXT = 1 // mm: a linha de extensão passa 1 mm da peça e 1 mm além da linha de cota
 const TICK = 1.2 // mm: traço de 45° nas pontas
+export const MARGEM = 18 // mm: espaço das cotas em volta da peça (enquadra, tecla Home); colunas + rótulos
 
 type V = [number, number, number]
 interface Caixa { x0: number; x1: number; y0: number; y1: number }
@@ -18,7 +19,7 @@ interface Caixa { x0: number; x1: number; y0: number; y1: number }
 const soma = (a: V, b: V, k = 1): V => [a[0] + b[0] * k, a[1] + b[1] * k, a[2] + b[2] * k]
 const meio = (a: V, b: V): V => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2]
 const unidade = (a: V): V => { const l = Math.hypot(...a); return l > 1e-9 ? [a[0] / l, a[1] / l, a[2] / l] : [0, 0, 1] }
-const n = (v: number) => v.toFixed(1).replace('.', ',') // vírgula decimal, 1 casa
+const n = (v: number) => String(+v.toFixed(2)).replace('.', ',') // vírgula decimal, até 2 casas, sem zeros finais
 const mm = (v: number) => n(v) + ' mm'
 
 /** Caixa envolvente de uma peça linhas × colunas (centrada na origem, como centros()). */
@@ -41,7 +42,7 @@ const ponto = (a: V, b: V) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
 type Ret = [number, number, number, number] // retângulo de rótulo na tela (px)
 const cruza = (p: Ret, q: Ret) => p[0] < q[2] + 3 && q[0] < p[2] + 3 && p[1] < q[3] + 3 && q[1] < p[3] + 3
 /** `inset`: cota vertical (z) — vai para uma quina do contorno encolhido de `inset` mm. `alt`: outro lugar possível (aresta oposta) de uma cota horizontal. */
-interface Extra { inset?: number; alt?: [V, V] }
+interface Extra { inset?: number; alt?: [V, V]; sec?: boolean } // sec: secundária, nunca forçada e sai por último
 interface Item extends Extra { a: V; b: V; dist: number; txt: string; r: CSS2DObject }
 /** Contexto de um redesenho: direção da visão, teste de oclusão e projeção (mundo → px), e os rótulos já postos. */
 interface Ctx { dir: V; oculto: (p: V) => boolean; proj: (p: V) => [number, number]; ret: Ret[]; lw: number; lh: number }
@@ -83,6 +84,9 @@ class Desenho {
       return { a, b, v, dist, dA, dB, lab, ret: [x - w / 2, y - 8, x + w / 2, y + 8] }
     }
     const livre = (g: Geo) => g.ret[0] > 0 && g.ret[2] < cx.lw && g.ret[1] > 0 && g.ret[3] < cx.lh && !cx.ret.some(q => cruza(q, g.ret)) // dentro da vista e sem bater em outro rótulo
+    const fora = (g: Geo) => Math.max(0, -g.ret[0]) + Math.max(0, g.ret[2] - cx.lw) + Math.max(0, -g.ret[1]) + Math.max(0, g.ret[3] - cx.lh) // px para fora da vista
+    const cruzs = (g: Geo) => cx.ret.filter(q => cruza(q, g.ret)).length // rótulos que batem
+    const menor = (g: Geo, h: Geo) => fora(g) < fora(h) || (fora(g) === fora(h) && cruzs(g) < cruzs(h)) // g é melhor que h para a cota forçada
     const desenha = (it: Item, g: Geo) => {
       const u = unidade(soma(g.b, g.a, -1)), w = soma(u, g.v, TICK / (2 * Math.SQRT2)) // meio traço: (u + v) / √2 × TICK / 2
       seg(soma(g.a, g.v, EXT), soma(g.a, g.v, g.dist + EXT))
@@ -94,33 +98,44 @@ class Desenho {
       cx.ret.push(g.ret)
     }
     if (this.ativo) {
-      // horizontais e inclinadas: a candidata livre, não escondida, mais longe do centro (na tela)
+      // horizontais e inclinadas: maiores primeiro; a candidata livre, não escondida, mais longe do centro (na tela). Sem vaga, não desenha (a maior sempre sai)
       const [cxp, cyp] = cx.proj(centroMundo)
-      for (const it of this.itens.filter(i => i.inset === undefined)) {
-        let melhor: Geo | null = null, nota = -Infinity
+      const comp = (i: Item) => Math.hypot(...soma(i.b, i.a, -1))
+      let k = 0 // índice entre as não-secundárias
+      this.itens.filter(i => i.inset === undefined).sort((p, q) => (+!!p.sec - +!!q.sec) || comp(q) - comp(p)).forEach(it => {
+        const forca = !it.sec && k < 2 // as duas principais são forçadas
+        if (!it.sec) k++
+        const todas: { g: Geo; nota: number; oc: boolean }[] = []
         for (const [a, b] of [[it.a, it.b], ...(it.alt ? [it.alt] : [])]) {
           const u = unidade(soma(b, a, -1)), c = cruz(cx.dir, u)
           if (Math.hypot(...c) < .25) continue // medida na direção da visão: não há como ler
           let v = unidade(c)
           if (ponto(v, soma(meio(a, b), this.centro, -1)) < 0) v = [-v[0], -v[1], -v[2]] // sempre para fora da peça
           const g = geo(it, a, b, v, it.dist)
-          if (cx.oculto(mundo(meio(g.dA, g.dB)))) continue // atrás da peça
-          const [mx, my] = cx.proj(mundo(meio(a, b))), s = Math.hypot(mx - cxp, my - cyp) - (livre(g) ? 0 : 1e6)
-          if (s > nota) { nota = s; melhor = g }
+          const [mx, my] = cx.proj(mundo(meio(a, b)))
+          todas.push({ g, nota: Math.hypot(mx - cxp, my - cyp), oc: cx.oculto(mundo(meio(g.dA, g.dB))) }) // oc: atrás da peça
         }
-        if (melhor) desenha(it, melhor)
-      }
-      // alturas: menores primeiro, uma quina do contorno visível (esquerda ou direita), colunas para fora até o rótulo caber
+        const vis = todas.filter(c => !c.oc)
+        let melhor: Geo | null = null, nota = -Infinity
+        for (const c of vis) { const s = c.nota - (livre(c.g) ? 0 : 1e6); if (s > nota) { nota = s; melhor = c.g } }
+        if (melhor && livre(melhor)) desenha(it, melhor)
+        else if (forca && todas.length) { // a maior sai mesmo sobreposta: a menos fora da vista, depois a que bate menos (visíveis antes; empate: a mais longe)
+          const pool = vis.length ? vis : todas
+          desenha(it, pool.reduce((x, y) => (menor(y.g, x.g) || (!menor(x.g, y.g) && y.nota > x.nota) ? y : x)).g)
+        }
+      })
+      // alturas: maiores primeiro (pegam vaga antes), uma quina do contorno visível (esquerda ou direita), colunas para fora até o rótulo caber. Sem vaga, não desenha (a maior sempre sai)
       const carga = [0, 0]
-      for (const it of this.itens.filter(i => i.inset !== undefined).sort((p, q) => Math.abs(p.b[2] - p.a[2]) - Math.abs(q.b[2] - q.a[2]))) {
-        if (Math.hypot(...cruz(cx.dir, [0, 0, 1])) < .25) continue // vista de cima ou de baixo
+      const alturas = this.itens.filter(i => i.inset !== undefined).sort((p, q) => Math.abs(q.b[2] - q.a[2]) - Math.abs(p.b[2] - p.a[2]))
+      alturas.forEach((it, k) => {
+        if (Math.hypot(...cruz(cx.dir, [0, 0, 1])) < .25) return // vista de cima ou de baixo
         const zm = (it.a[2] + it.b[2]) / 2
         const q = this.poligono(it.inset!).map(([x, y]) => ({ x, y, sx: cx.proj(mundo([x, y, zm]))[0] }))
         const lados = [q.reduce((m, p) => p.sx < m.sx ? p : m), q.reduce((m, p) => p.sx > m.sx ? p : m)]
         const ordem = [0, 1].sort((i, j) => carga[i] - carga[j]) // começa pelo lado menos carregado
-        const tenta = (lado: number, col: number) => {
+        const tenta = (lado: number, col: number, dentro = 0) => {
           const p = lados[lado], vx = p.x - this.centro[0], vy = p.y - this.centro[1], l = Math.hypot(vx, vy) || 1
-          return geo(it, [p.x, p.y, it.a[2]], [p.x, p.y, it.b[2]], [vx / l, vy / l, 0], it.dist + it.inset! + col * COL) // a coluna fica `DV` mm além da quina real, mesmo com a quina encolhida
+          return geo(it, [p.x, p.y, it.a[2]], [p.x, p.y, it.b[2]], [vx / l, vy / l, 0], it.dist + it.inset! + col * COL + dentro) // a coluna fica `DV` mm além da quina real, mesmo com a quina encolhida; `dentro` < 0 põe a linha sobre a peça
         }
         let escolhida: { g: Geo; lado: number } | null = null
         for (let col = 0; col < 6 && !escolhida; col++) {
@@ -129,10 +144,17 @@ class Desenho {
             if (livre(g) && !cx.oculto(mundo(meio(g.dA, g.dB)))) { escolhida = { g, lado }; break }
           }
         }
-        escolhida ??= { g: tenta(ordem[0], 0), lado: ordem[0] } // sem vaga: coluna 0, mesmo sobrepondo
+        if (!escolhida && k === 0) { // a maior sai mesmo sobreposta: a de menor custo entre lados e colunas (visíveis antes; empate: menor coluna)
+          const todas: { g: Geo; lado: number; oc: boolean }[] = []
+          for (let col = 0; col < 6; col++) for (const lado of ordem) { const g = tenta(lado, col); todas.push({ g, lado, oc: cx.oculto(mundo(meio(g.dA, g.dB))) }) }
+          for (const dentro of [-6, -12]) for (const lado of ordem) { const g = tenta(lado, 0, dentro); todas.push({ g, lado, oc: cx.oculto(mundo(meio(g.dA, g.dB))) }) } // por dentro da peça, depois de fora (menor `fora` ganha)
+          const vis = todas.filter(c => !c.oc), pool = vis.length ? vis : todas
+          escolhida = pool.reduce((x, y) => (menor(y.g, x.g) ? y : x))
+        }
+        if (!escolhida) return // sem vaga: não desenha
         carga[escolhida.lado]++
         desenha(it, escolhida.g)
-      }
+      })
     }
     if (!this.linhas) {
       this.linhas = new THREE.LineSegments(new THREE.BufferGeometry(), LINHA)
@@ -166,7 +188,7 @@ function sistema(o: Opcoes, c: Celula, fixa: Desenho, bloco: Desenho) {
   bloco.altura(M.nervuraMeia, zb + M.hPe, M.alturaGrid, 'ombro ' + mm(M.assento - M.hPe))
   bloco.altura(o.recuo, fundo(o), zb, 'folga ' + mm(o.folga_fundo))
   if (o.chanfro > 0) bloco.altura(o.recuo, zb, zb + o.chanfro, `chanfro ${mm(o.chanfro)}`)
-  bloco.cota([0, c.a[1] - o.recuo, zb], [0, c.a[1], zb], 2, 'recuo ' + mm(o.recuo)) // planta: lado de cima
+  bloco.cota([0, c.a[1] - o.recuo, zb], [0, c.a[1], zb], 2, 'recuo ' + mm(o.recuo), { sec: true }) // planta: lado de cima
 }
 
 /** Passo 2: grid N × M (ou degrau, com a altura do degrau). */
@@ -204,6 +226,7 @@ let desenhos: Desenho[] = []
 let ultima: THREE.Vector3 | null = null // direção de visão do último desenho
 let rotulos: CSS2DRenderer | null = null
 let lw = 1, lh = 1 // tamanho da vista (px), para projetar pontos na tela
+let vistaEl: HTMLElement | null = null // elemento da vista (para achar o slider de elevação)
 
 /** Tira as cotas da cena e libera as linhas e os rótulos. */
 export function limpaCotas() {
@@ -218,6 +241,7 @@ export function limpaCotas() {
 
 /** Cria o renderizador de rótulos sobre a vista (mesmo tamanho, sem pegar o mouse). */
 export function criaRotulos(vista: HTMLElement) {
+  vistaEl = vista
   rotulos = new CSS2DRenderer()
   const el = rotulos.domElement
   el.style.position = 'absolute'
@@ -230,6 +254,14 @@ export function criaRotulos(vista: HTMLElement) {
 
 /** Faz as cotas se refazerem no próximo quadro (corte, elevação ou peça visível mudaram). */
 export function reorienta() { ultima = null }
+
+/** Retângulo do slider de elevação (px na vista), se visível: os rótulos não cobrem. */
+function zonaElev(): Ret[] {
+  const s = vistaEl?.querySelector<HTMLElement>('.elev')
+  if (!vistaEl || !s || s.hidden) return []
+  const a = s.getBoundingClientRect(), b = vistaEl.getBoundingClientRect()
+  return [[a.left - b.left, a.top - b.top, a.right - b.left, a.bottom - b.top]]
+}
 
 const raio = new THREE.Raycaster(), alvo = new THREE.Vector3(), tmp = new THREE.Vector3()
 /** Chame depois de render.render(cena, cam): desenha os rótulos da cena. `oclusores` dá as peças que escondem cotas. */
@@ -247,11 +279,11 @@ export function renderRotulos(cena: THREE.Scene, cam: THREE.Camera, oclusores: (
         return raio.intersectObjects(ocl, false).some(h => !((h.object as THREE.Mesh).material as THREE.Material).clippingPlanes?.some(q => q.distanceToPoint(h.point) < 0))
       }
       const proj = (p: V): [number, number] => { tmp.set(...p).project(cam); return [(tmp.x + 1) / 2 * lw, (1 - tmp.y) / 2 * lh] }
-      const cx: Ctx = { dir: [d.x, d.y, d.z], oculto, proj, ret: [], lw, lh }
+      const cx: Ctx = { dir: [d.x, d.y, d.z], oculto, proj, ret: zonaElev(), lw, lh }
       for (const x of desenhos) x.orienta(cx)
     }
   }
   rotulos?.render(cena, cam)
 }
 /** Chame junto com o resize da vista. */
-export function redimensionaRotulos(w: number, h: number) { lw = w || 1; lh = h || 1; rotulos?.setSize(w, h) }
+export function redimensionaRotulos(w: number, h: number) { lw = w || 1; lh = h || 1; rotulos?.setSize(w, h); reorienta() }
