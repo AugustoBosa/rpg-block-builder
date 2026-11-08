@@ -2,6 +2,8 @@
 
 Todas as medidas estão em mm. Os comandos rodam na raiz do projeto, salvo indicação.
 
+**Atenção:** os scripts Python da raiz (`gerar.py`, `validar.py`, `emenda.py`, `facetas.py`, `calibrar.py`, `medir_stl.py`, `campo_textura.py`, `piloto_externos.py` etc.) só rodam na cópia local do autor. Eles dependem de `spec_encaixe.json` e dos dados do produto original, que ficam fora do repositório público (`.gitignore`). A ferramenta web e a linha de comando (`web/cli.ts`) funcionam sem eles.
+
 ## 1. Ferramenta web (navegador)
 
 Instalar (uma vez): `npm --prefix web install`.

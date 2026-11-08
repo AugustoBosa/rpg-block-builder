@@ -87,6 +87,7 @@ abaDir.onclick = () => { // desktop: recolhe o painel de esquemas para a direita
 }
 const esquemas = $('esquemas') as HTMLDetailsElement, larguraDesk = matchMedia('(min-width: 1100px)')
 esquemas.open = larguraDesk.matches
+const celular = matchMedia('(max-width: 700px)').matches // mesmo breakpoint do CSS de celular: cards Aparência/Corte/Cotas começam recolhidos
 larguraDesk.addEventListener('change', e => { esquemas.open = e.matches })
 
 // controles: um slider + caixa numérica por opção
@@ -196,7 +197,7 @@ corpoCorte.prepend(campo('Cortar', cortar), eixoRot)
 corpoCorte.append(campo('Inverter lado', inverte), campo('Mostrar plano', mostraPlano))
 
 // card "Aparência": materiais (esferas), overlays e transparência (valem em qualquer modo) e, em Avançado, a cor dos objetos
-const cApar = cartao('Aparência', true), cardCorpo = cApar.c, ovArestas = marca(), ovVertices = marca()
+const cApar = cartao('Aparência', !celular), cardCorpo = cApar.c, ovArestas = marca(), ovVertices = marca()
 ovArestas.onchange = ovVertices.onchange = () => { config.arestas = ovArestas.checked; config.vertices = ovVertices.checked; setOverlays() }
 // desempenho (aba Blocos): resolução da prévia na tela; a malha do STL é separada e não depende dela
 const cDesemp = cartao('Desempenho'), pd = { pop: cDesemp.c }, hud = Object.assign(document.createElement('span'), { className: 'hud', textContent: '—' }), refinaCk = marca(), modoPerf = segmentos([['auto', 'Auto'], ['manual', 'Manual']], v => { perf.auto = v === 'auto'; previa() })

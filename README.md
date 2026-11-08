@@ -8,6 +8,8 @@ Este projeto gera blocos de masmorra para imprimir em 3D (FDM). Os blocos encaix
 
 Os dados medidos do produto original de referência (catálogo, índices e `spec_encaixe.json`) não fazem parte deste repositório. Os scripts Python de medição e o `gerar.py` esperam esses arquivos e só rodam na cópia local do autor.
 
+**Licença:** MIT (ver `LICENSE`). A biblioteca manifold-3d usada na web é Apache-2.0, compatível com a MIT.
+
 ## Estado (2026-11-07)
 
 | Parte | Estado |
