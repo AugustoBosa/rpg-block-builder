@@ -173,3 +173,6 @@ Infraestrutura semelhante ao grid original (placa com um furo por célula), com 
 | Economia | furo passante ou fundo fechado, alívio de material |
 
 Regras: o furo do grid e o pé do bloco usam os mesmos parâmetros de encaixe (mudar um muda o outro). O grid original serve só como referência de função, nunca de geometria.
+
+## 6. Paredes com aberturas (2026-11-08)
+Implementadas via `docs/WORKFLOW_PAREDES.md` (F0–F5, D1–D11 aceitos): paredes independentes ancoradas em aresta ou eixo, unidas ao piso por booleana (afundadas 0,6 mm), aberturas reta/arco/abatido/ogiva com peitoril e batente, parte fora da parede vira tracejado, textura Pedra nas faces e no topo. Check: `web/check_paredes.ts`.

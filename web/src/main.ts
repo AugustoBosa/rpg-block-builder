@@ -1,11 +1,13 @@
 import { GUIAS, padrao, PISO, SECAO_GUIAS, SECAO_PISO, type Opcoes } from './bloco'
 import { cancelaExporta, exporta, previa as pedePrevia } from './cliente'
 import { PEDRA, SECAO_PEDRA } from './pedra'
-import { avisos, ENCAIXES, FORMATOS, fundo, SECAO, SISTEMA } from './sistema'
+import { aberturaNova, paredeNova, paredesValidas, tracejado3D } from './aberturas'
+import type { Abertura, Parede } from './parede'
+import { avisos, ENCAIXES, FORMATOS, fundo, regiao, SECAO, SISTEMA } from './sistema'
 import { cotas, limpaCotas } from './cotas'
 import { EIXO, esquema } from './esquema'
 import { esfera } from './esferas'
-import { aoMudarVer, aplicaCorte, aplicaVisivel, cena, config, type Corte, enquadra, eleva, MODOS, mostra, type Modo, setModo, setOverlays, setPixelRatioMax, setTransp, type Ver } from './vista'
+import { aoMudarVer, aplicaCorte, aplicaVisivel, cena, config, type Corte, enquadra, eleva, MODOS, mostra, type Modo, setModo, setOverlays, mostraTracejado, setPixelRatioMax, setTransp, type Ver } from './vista'
 
 // nada é salvo: cada abertura começa do padrão
 const o: Opcoes = padrao()
@@ -26,6 +28,7 @@ function previa(res = resRapida()) {
   clearTimeout(pendente); clearTimeout(refino)
   pendente = setTimeout(async () => {
     const eu = ++geracao, passo = config.passo, snap = structuredClone(o), p = peca()
+    snap.paredes = paredesValidas(snap) // aresta que não existe mais no bloco atual é ignorada
     gerando.hidden = false
     try {
       const r = await pedePrevia({ tipo: 'previa', passo, peca: p, o: snap, res })
@@ -38,6 +41,7 @@ function previa(res = resRapida()) {
         mostra(0, r.m[0])
         mostra(1, null)
       }
+      mostraTracejado(passo === 3 ? snap.paredes.flatMap(w => tracejado3D(snap, w)) : [])
       if (passo === 3) {
         const nk = r.ms * res ** 2
         k = k ? (k + nk) / 2 : nk
@@ -48,13 +52,12 @@ function previa(res = resRapida()) {
       atualizaCotas()
       redesenhaEsquema()
       if (enquadrar) { enquadra(mostrarCotas); enquadrar = false }
-    } catch (e) { if (e !== 'cancelado') throw e }
+    } catch (e) { if (e !== 'cancelado') { $('estado').textContent = `Erro: ${e}`; console.error(e) } }
     finally { if (eu === geracao) gerando.hidden = true }
   }, 60)
 }
 // painel de esquemas: isométrica com os planos + a vista 2D mais próxima da câmera; "Mostrar tudo" abre todas
 function redesenhaEsquema() {
-  if (config.passo === 3) return
   $('dirc').innerHTML = esquema(o, config.passo, sel3.value, config.mostrar, ver)
   const dir = $('dir'), mini = $('dirc').querySelector<HTMLElement>('.thumbs')
   if (mini && esquemas.open && dir.scrollHeight > dir.clientHeight) mini.hidden = true // as miniaturas só entram se sobrar espaço
@@ -260,11 +263,68 @@ function montaSistema() {
 }
 opcoes(formato, Object.entries(FORMATOS))
 opcoes(encaixe, Object.entries(ENCAIXES).map(([k, [t]]) => [k, t]))
-formato.onchange = () => { o.formato = formato.value as Opcoes['formato']; montaSistema() }
+formato.onchange = () => { o.formato = formato.value as Opcoes['formato']; montaSistema(); montaParedes() }
 encaixe.onchange = () => { Object.assign(o, ENCAIXES[encaixe.value as keyof typeof ENCAIXES][1]); montaSistema() }
 
 // aba Blocos (peça de piso e Pedra avançada) e aba Grids (grid e degrau). As duas leem as medidas do Sistema.
-grupo(PISO, o, SECAO_PISO, secoes($('gerais'), ['Peça', 'Textura Pedra', 'Borda'], ['Peça']), ['resolucao'])
+grupo(PISO, o, SECAO_PISO, secoes($('gerais'), ['Peça', 'Paredes', 'Textura Pedra', 'Borda'], ['Peça']), ['resolucao'])
+// paredes (aba Blocos): lista recolhível; cada parede com âncora, medidas, lado e aberturas. Nada é salvo.
+const paredesDiv = $('gerais').querySelector<HTMLElement>('details:nth-child(2) > div')!
+const escolha = (pai: HTMLElement, rot: string, v: string, itens: [string, string][], muda: (v: string) => void) => {
+  const sl = document.createElement('select')
+  opcoes(sl, itens); sl.value = v
+  sl.onchange = () => muda(sl.value)
+  pai.append(campo(rot, sl))
+}
+function montaParedes() {
+  const div = paredesDiv, hex = o.formato === 'hexagono'
+  div.replaceChildren()
+  const refaz = () => { montaParedes(); previa() }
+  o.paredes.forEach((p, i) => {
+    const d = document.createElement('details'), sm = document.createElement('summary'), c = document.createElement('div')
+    sm.textContent = `Parede ${i + 1} · ${p.ancora.tipo === 'aresta' ? 'em aresta' : 'em eixo'}`
+    d.open = true; d.append(sm, c); div.append(d)
+    escolha(c, 'Âncora', p.ancora.tipo, [['aresta', 'Aresta do bloco'], ['eixo', 'Eixo (reta livre)']], v => {
+      p.ancora = v === 'aresta' ? { tipo: 'aresta', celula: 0, lado: 0 } : { tipo: 'eixo', eixo: 'x', desloc: 0 }; refaz()
+    })
+    const a = p.ancora
+    if (a.tipo === 'aresta') controle(c, 'Aresta nº', a.lado, 0, 23, v => { a.lado = v }, 1)
+    else {
+      escolha(c, 'Eixo', a.eixo, [['x', 'X'], ['y', 'Y'], ...(hex ? [['h0', '0°'], ['h60', '60°'], ['h120', '120°']] as [string, string][] : [])], v => { a.eixo = v as typeof a.eixo; previa() })
+      controle(c, 'Deslocamento (mm)', a.desloc, -100, 100, v => { a.desloc = v }, .5)
+    }
+    controle(c, 'Início (mm)', p.inicio, -100, 100, v => { p.inicio = v }, .5)
+    controle(c, 'Comprimento (mm)', p.comprimento, 1, 200, v => { p.comprimento = v }, .5)
+    controle(c, 'Altura (mm)', p.altura, 1, 100, v => { p.altura = v }, .5)
+    controle(c, 'Espessura (mm)', p.espessura, 1, 20, v => { p.espessura = v }, .5)
+    escolha(c, 'Lado da espessura', p.lado, [['fora', 'Fora'], ['centro', 'Centro'], ['dentro', 'Dentro']], v => { p.lado = v as Parede['lado']; previa() })
+    p.aberturas.forEach((ab, j) => {
+      const h = document.createElement('div')
+      h.className = 'nota'; h.textContent = `Abertura ${j + 1}`
+      c.append(h)
+      escolha(c, 'Tipo', ab.tipo, [['porta', 'Porta'], ['janela', 'Janela']], v => { ab.tipo = v as Abertura['tipo']; previa() })
+      escolha(c, 'Forma', ab.forma, [['reta', 'Reta'], ['arco', 'Arco'], ['abatido', 'Arco abatido'], ['ogiva', 'Ogiva']], v => { ab.forma = v as Abertura['forma']; previa() })
+      controle(c, 'Posição do centro (mm)', ab.pos, -100, 200, v => { ab.pos = v }, .5)
+      controle(c, 'Largura (mm)', ab.largura, 2, 60, v => { ab.largura = v }, .5)
+      controle(c, 'Altura (mm)', ab.altura, 2, 100, v => { ab.altura = v }, .5)
+      controle(c, 'Peitoril (mm)', ab.peitoril, -50, 100, v => { ab.peitoril = v }, .5)
+      const ck = marca()
+      ck.checked = ab.batente.ligado
+      ck.onchange = () => { ab.batente.ligado = ck.checked; previa() }
+      c.append(campo('Batente', ck))
+      controle(c, 'Batente: largura (mm)', ab.batente.largura, .5, 6, v => { ab.batente.largura = v }, .1)
+      controle(c, 'Batente: saliência (mm)', ab.batente.saliencia, 0, 3, v => { ab.batente.saliencia = v }, .1)
+      c.append(botao('− Abertura', () => { p.aberturas.splice(j, 1); refaz() }))
+    })
+    c.append(botao('+ Abertura', () => { const ab = aberturaNova('porta'); ab.pos = p.comprimento / 2; p.aberturas.push(ab); refaz() }), botao('− Parede', () => { o.paredes.splice(i, 1); refaz() }))
+  })
+  div.append(botao('+ Parede', () => {
+    const g = regiao(o, o.linhas, o.colunas).seg[0], len = Math.hypot(g[2] - g[0], g[3] - g[1])
+    o.paredes.push(paredeNova('p' + ++nParede, { tipo: 'aresta', celula: 0, lado: 0 }, +len.toFixed(1))); refaz()
+  }))
+}
+let nParede = 0
+montaParedes()
 grupo(PEDRA, o.pedra, SECAO_PEDRA, secoes($('pedra'), ['Avançado — Forma das pedras', 'Avançado — Superfície', 'Avançado — Desgaste']))
 grupo(GUIAS, o, SECAO_GUIAS, secoes($('op-guias'), ['Dimensões']))
 const sel3 = $('peca3') as HTMLSelectElement
@@ -275,7 +335,6 @@ function vaiPara(n: number) {
   config.passo = n
   for (const i of [1, 2, 3]) { $('passo' + i).hidden = n !== i; $('ir' + i).classList.toggle('ativo', n === i) }
   $('saida').hidden = n === 1
-  $('dir').hidden = abaDir.hidden = n === 3 // o passo Blocos não tem esquema
   sincronizaBarra(n)
   enquadrar = true
   previa()
@@ -285,6 +344,7 @@ for (const i of [1, 2, 3]) $('ir' + i).onclick = () => vaiPara(i)
 const estado = $('estado'), baixar = $('baixar') as HTMLButtonElement, cancela = $('cancela')
 baixar.onclick = async () => { // roda num worker; os parâmetros ficam congelados no clique
   const t = performance.now(), p = peca(), s = structuredClone(o), f = FORMATOS[s.formato]
+  s.paredes = paredesValidas(s)
   const nome = p === 'piso' ? `Piso Pedra ${f} ${s.linhas}x${s.colunas} s${s.semente}` : `${p === 'grid' ? 'Grid' : 'Degrau'} ${f} ${s.grid_linhas}x${s.grid_colunas}`
   baixar.disabled = true; cancela.hidden = false
   estado.textContent = 'Gerando...'

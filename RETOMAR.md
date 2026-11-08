@@ -1,4 +1,4 @@
-# RETOMAR — estado do projeto (2026-11-07, branch main)
+# RETOMAR — estado do projeto (2026-11-08, branch main, último commit publicado `63e2f50`)
 
 Projeto: **RPG Block Builder**. "Dungeon Blocks" nos documentos é sempre o produto original de referência, nunca o nosso.
 
@@ -37,9 +37,9 @@ Leia este arquivo primeiro. Comandos: `USO.md`. Visão: `README.md`. Inventário
 
 ## Próximo
 1. **Revisão do usuário** no site. Depois, imprimir 1 grid 1 × 1 e 1 bloco para testar o encaixe e a folga.
-2. Paredes, canto e telhado, com portas e janelas (booleana `manifold-3d`), na aba Blocos. Cerca de 1 semana. Materiais e props também entram na aba Blocos.
+2. **Paredes com aberturas: implementadas em 2026-11-08 (F0–F5 do `docs/WORKFLOW_PAREDES.md`, ainda sem commit).** Só Pedra, sem telhado e sem canto. Código: `web/src/parede.ts` (sólido, união com o piso, textura), `web/src/aberturas.ts` (perfis reta/arco/abatido/ogiva, `foraDaArea`, tracejado, batente), seção "Paredes" na aba Blocos (`main.ts`), tracejado na vista 3D (`vista.ts`) e planta + elevações no esquema (`esquema.ts`). Check: `cd web && npx tsx check_paredes.ts` (37/37 PASS, cerca de 3 min; `ref_hashes.json` é o baseline dos 5 STL). Na prévia a parede sai lisa; o STL sempre texturizado. Pendências conhecidas: parede em aresta que deixa de existir é ignorada sem aviso; tracejado por aresta (não polilinha); erro raro "firstElem.toArray" visto 1× em sessão com HMR. Telhado, canto, outras texturas e props ficam para depois.
 3. As outras 14 texturas. Cerca de 2–3 semanas.
-4. Web Worker, conjuntos e temas. Cerca de 1 semana.
+4. ~~Web Worker~~ **feito e publicado (2026-11-08, `63e2f50`)**. Restam conjuntos e temas (predefinições). Cerca de 3 dias.
 5. Depois: o gerador de grid completo (`docs/MIGRACAO.md` §5: travas, borda, alívio, ímãs na nervura) e os props importados.
 
 ## Em aberto (chamar direcionado: "faça o item N")

@@ -2,7 +2,8 @@
 // (contorno grosso, tracejado para o que está oculto, eixos traço-ponto, hachura nas seções, cotas com traços de 45°).
 // Os números vêm só de medidas() e das funções de sistema.ts; aqui é projeção e desenho.
 import type { Opcoes } from './bloco'
-import { alturaGrid, celula, centros, contorno, medidas, type Celula, type Medidas } from './sistema'
+import { foraDaArea, paredesValidas, perfilAbertura, quadro } from './aberturas'
+import { alturaGrid, celula, centros, contorno, medidas, regiao, type Celula, type Medidas } from './sistema'
 
 type P2 = [number, number]
 type Modo = 'bloco' | 'grade' | 'degrau' // bloco = sistema (bloco sobre grid 1×1); grade; degrau = bloco com furos no topo
@@ -233,9 +234,35 @@ export type Quais = 'planta' | 'frontal' | 'lateral' | 'tudo'
  *  Painel: a isométrica com os planos, a vista pedida em tamanho cheio e, em miniatura (`.thumbs`), as outras duas.
  *  `tudo` (diálogo): as quatro em duas colunas, todas com cotas. */
 export function esquema(o: Opcoes, passo: number, peca: string, mostrar: string, ver: Quais): string {
+  if (passo === 3) return esquemaPiso(o)
   const m = passo === 1 ? modelo(o, [[0, 0]], 'bloco', mostrar) : modelo(o, centros(celula(o), o.grid_linhas, o.grid_colunas), peca === 'degrau' ? 'degrau' : 'grade')
   const vistas = { planta: (mini: boolean) => planta(o, m, mini), frontal: (mini: boolean) => corte(o, m, 0, mini), lateral: (mini: boolean) => corte(o, m, 1, mini) }
   if (ver === 'tudo') return `<div style="${CAIXA.replace('minmax(0,1fr)', 'repeat(2,minmax(0,1fr))')}">${[isometrica(m), vistas.planta(false), vistas.frontal(false), vistas.lateral(false)].join('')}</div>`
   const outras = (['planta', 'frontal', 'lateral'] as const).filter(v => v !== ver)
   return `<div style="${CAIXA}">${isometrica(m)}${vistas[ver](false)}<div class="thumbs">${outras.map(v => vistas[v](true)).join('')}</div></div>`
+}
+
+/** Aba Blocos: planta do piso com as paredes (aberturas tracejadas, inclusive a parte fora) e uma elevação por parede
+ *  (vão cheio por dentro da parede, tracejado por fora). Mesmo estilo dos outros esquemas. */
+export function esquemaPiso(o: Opcoes): string {
+  const r = regiao(o, o.linhas, o.colunas), ps = paredesValidas(o), S = (x: number, y: number): P2 => [x, -y]
+  const TR = `fill="none" stroke="${COR.cota}" stroke-dasharray="4 3" stroke-width="1"`
+  const cel = r.cs.map(([cx, cy]) => contorno(r.c, 0).map(([x, y]) => S(cx + x, cy + y)))
+  const base = ps.map(p => { const q = quadro(o, p), L = p.comprimento; return { p, q, f: [q.pt(0, q.o1), q.pt(L, q.o1), q.pt(L, q.o2), q.pt(0, q.o2)].map(([x, y]) => S(x, y)) } })
+  const vaos = base.flatMap(({ p, q }) => p.aberturas.map(a => [q.pt(a.pos - a.largura / 2, q.o1), q.pt(a.pos + a.largura / 2, q.o1), q.pt(a.pos + a.largura / 2, q.o2), q.pt(a.pos - a.largura / 2, q.o2)].map(([x, y]) => S(x, y))))
+  const todos = [...cel.flat(), ...base.flatMap(b => b.f), ...vaos.flat()]
+  const planta = vista('Planta · piso com paredes', todos, P => cel.map(c => poli(P, c, `fill="none" stroke="${COR.traco}"`)).join('') +
+    base.map(b => poli(P, b.f, `fill="${COR.bloco}" fill-opacity=".35" stroke="${COR.bloco}"`)).join('') + vaos.map(v => poli(P, v, TR)).join(''), EIXO.z)
+  const elev = base.map(({ p }, i) => {
+    const E = (u: number, v: number): P2 => [u, -v], per = p.aberturas.map(a => perfilAbertura(a).map(([u, v]) => E(u, v)))
+    const pts = [E(0, 0), E(p.comprimento, p.altura), ...per.flat()], id = `cp${i}`
+    return vista(`Parede ${i + 1} · elevação (${f0(p.comprimento)} × ${f0(p.altura)} mm)`, pts, P => {
+      const [x0, y0] = P(E(0, p.altura)), [x1, y1] = P(E(p.comprimento, 0))
+      return `<clipPath id="${id}"><rect x="${x0.toFixed(1)}" y="${y0.toFixed(1)}" width="${(x1 - x0).toFixed(1)}" height="${(y1 - y0).toFixed(1)}"/></clipPath>` +
+        `<rect x="${x0.toFixed(1)}" y="${y0.toFixed(1)}" width="${(x1 - x0).toFixed(1)}" height="${(y1 - y0).toFixed(1)}" fill="url(#hb)" stroke="${COR.traco}"/>` +
+        per.map(l => `<polygon points="${l.map(q => pt(P(q))).join(' ')}" fill="${COR.fundo}" stroke="${COR.traco}" clip-path="url(#${id})"/>`).join('') +
+        p.aberturas.flatMap(a => foraDaArea(p, a)).map(l => `<polyline points="${l.map(q => pt(P(E(q[0], q[1])))).join(' ')}" ${TR}/>`).join('')
+    }, COR.bloco)
+  })
+  return `<div style="${CAIXA}">${planta}${elev.join('')}</div>`
 }

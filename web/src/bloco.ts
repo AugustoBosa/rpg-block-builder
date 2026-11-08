@@ -4,10 +4,11 @@
 import { MeshoptSimplifier } from 'meshoptimizer'
 import { mapa, ruido } from './ruido'
 import { pedra, PEDRA, type KnobsPedra } from './pedra'
+import type { Parede } from './parede'
 import { corpos, distBorda, distSeg, malha, regiao, SISTEMA, type Malha, type Regiao, type Sistema } from './sistema'
 export type { Malha }
 
-const RELEVO = 2.6 // mm: o corpo termina RELEVO abaixo do topo
+export const RELEVO = 2.6 // mm: o corpo termina RELEVO abaixo do topo
 const BORDA_FIXA = 1.2 // mm: a redução não toca esta faixa da borda
 const TRI_MIN = 240000, SUAVIZA = 4 // TRI_MIN: triângulos do piso 35 × 35 (como as originais); cresce com a área^0,75
 
@@ -30,9 +31,9 @@ export const SECAO_PISO = {
 } as const
 export const SECAO_GUIAS = { grid_linhas: 'Dimensões', grid_colunas: 'Dimensões', altura_degrau: 'Dimensões' } as const
 type Num<T> = { -readonly [k in keyof T]: number }
-export type Opcoes = Sistema & Num<typeof PISO> & Num<typeof GUIAS> & { pedra: KnobsPedra }
+export type Opcoes = Sistema & Num<typeof PISO> & Num<typeof GUIAS> & { pedra: KnobsPedra; paredes: Parede[] }
 const ini = (t: object) => Object.fromEntries(Object.entries(t).map(([k, v]) => [k, v[0]]))
-export const padrao = (): Opcoes => ({ ...ini(SISTEMA), ...ini(PISO), ...ini(GUIAS), formato: 'quadrado', pedra: ini(PEDRA) } as any)
+export const padrao = (): Opcoes => ({ ...ini(SISTEMA), ...ini(PISO), ...ini(GUIAS), formato: 'quadrado', pedra: ini(PEDRA), paredes: [] } as any)
 
 /** Rede do topo da laje: xy por ponto, triângulos e o contorno de cada célula (anti-horário).
  *  Todas as células caem na mesma rede global, então os pontos dos lados comuns são os mesmos. */

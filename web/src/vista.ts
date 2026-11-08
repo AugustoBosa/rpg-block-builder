@@ -358,3 +358,15 @@ render.setAnimationLoop(() => {
   renderRotulos(cena, cam, oclusores)
   gizmo.render(render)
 })
+
+// tracejado das aberturas que caem fora da parede (pares de pontos xyz, em mm); fica por cima de tudo
+const tracejado = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineDashedMaterial({ color: 0xffa31a, dashSize: 1.5, gapSize: 1, depthTest: false }))
+tracejado.renderOrder = 10
+tracejado.visible = false
+cena.add(tracejado)
+export function mostraTracejado(pts: number[]) {
+  tracejado.geometry.dispose()
+  tracejado.geometry = new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute(pts, 3))
+  tracejado.computeLineDistances()
+  tracejado.visible = pts.length > 0
+}

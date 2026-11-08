@@ -3,5 +3,5 @@
     "target": "ES2022", "module": "ESNext", "moduleResolution": "bundler", "strict": true,
     "lib": ["ES2022", "DOM"], "types": ["node"], "skipLibCheck": true, "noEmit": true
   },
-  "include": ["src", "cli.ts", "campo.ts"]
+  "include": ["src", "cli.ts", "campo.ts", "check_paredes.ts"]
 }
