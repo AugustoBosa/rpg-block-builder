@@ -2,9 +2,9 @@ import { final, GUIAS, padrao, piso, PISO, SECAO_GUIAS, SECAO_PISO, stl, type Op
 import { PEDRA, SECAO_PEDRA } from './pedra'
 import { alturaGrid, assento, avisos, corpo, degrau, ENCAIXES, FORMATOS, fundo, grid, malha, SECAO, SISTEMA } from './sistema'
 import { cotas, limpaCotas } from './cotas'
-import { esquema } from './esquema'
+import { EIXO, esquema } from './esquema'
 import { esfera } from './esferas'
-import { aoMudarVer, aplicaCorte, aplicaVisivel, cena, config, type Corte, enquadra, eleva, MODOS, mostra, type Modo, setModo, setTransp, type Ver } from './vista'
+import { aoMudarVer, aplicaCorte, aplicaVisivel, cena, config, type Corte, enquadra, eleva, MODOS, mostra, type Modo, setModo, setOverlays, setTransp, type Ver } from './vista'
 
 // nada é salvo: cada abertura começa do padrão
 const o: Opcoes = padrao()
@@ -27,12 +27,15 @@ function previa() {
     }
     atualizaCotas()
     redesenhaEsquema()
-    if (enquadrar) { enquadra(config.passo); enquadrar = false }
+    if (enquadrar) { enquadra(); enquadrar = false }
   }, 60)
 }
 // painel de esquemas: isométrica com os planos + a vista 2D mais próxima da câmera; "Mostrar tudo" abre todas
 function redesenhaEsquema() {
-  if (config.passo !== 3) $('dirc').innerHTML = esquema(o, config.passo, sel3.value, config.mostrar, ver)
+  if (config.passo === 3) return
+  $('dirc').innerHTML = esquema(o, config.passo, sel3.value, config.mostrar, ver)
+  const dir = $('dir'), mini = $('dirc').querySelector<HTMLElement>('.thumbs')
+  if (mini && esquemas.open && dir.scrollHeight > dir.clientHeight) mini.hidden = true // as miniaturas só entram se sobrar espaço
 }
 aoMudarVer(v => { ver = v; redesenhaEsquema() })
 const tudo = $('tudo') as HTMLDialogElement
@@ -133,35 +136,51 @@ function popover(texto: string) {
 addEventListener('click', e => { if (!(e.target as Element).closest('.barra, .pop')) for (const p of pops) p.classList.remove('aberto') })
 
 const corte = () => config.corte[config.passo]
-const mostrarSeg = segmentos([['ambos', 'Ambos'], ['bloco', 'Bloco'], ['grid', 'Grid']], v => {
-  config.mostrar = v as typeof config.mostrar
+const marca = () => Object.assign(document.createElement('input'), { type: 'checkbox' })
+
+const home = botao('⌂', () => enquadra(), 'Início: pose isométrica (tecla Home)')
+// visibilidade (passo 1): um check para o bloco e outro para o grid
+const pv = popover('Visibilidade'), verBloco = marca(), verGrid = marca()
+verBloco.checked = verGrid.checked = true
+const mudaVis = (quem: HTMLInputElement) => {
+  if (!verBloco.checked && !verGrid.checked) quem.checked = true // ao menos uma peça fica visível
+  config.mostrar = verBloco.checked && verGrid.checked ? 'ambos' : verBloco.checked ? 'bloco' : 'grid'
   aplicaVisivel(); atualizaCotas(); redesenhaEsquema() // cotas e esquemas seguem as peças visíveis
-})
-mostrarSeg.el.classList.add('so1')
-const pc = popover('Corte'), cortar = document.createElement('input'), inverte = document.createElement('input')
-cortar.type = inverte.type = 'checkbox'
+}
+verBloco.onchange = () => mudaVis(verBloco)
+verGrid.onchange = () => mudaVis(verGrid)
+pv.pop.append(campo('Bloco', verBloco), campo('Grid', verGrid))
+pv.b.classList.add('so1')
+
+// corte: eixo nas cores do gizmo; o plano do corte aparece na cor do eixo
+const pc = popover('Corte'), cortar = marca(), inverte = marca(), mostraPlano = marca()
+mostraPlano.checked = config.planoCorte
 cortar.onchange = () => { corte().ativo = cortar.checked; aplicaCorte() }
 inverte.onchange = () => { corte().inverte = inverte.checked; aplicaCorte() }
+mostraPlano.onchange = () => { config.planoCorte = mostraPlano.checked; aplicaCorte() }
 const eixoSeg = segmentos([['x', 'X'], ['y', 'Y'], ['z', 'Z']], v => { corte().eixo = v as Corte['eixo']; aplicaCorte() })
+;(['x', 'y', 'z'] as const).forEach((e, i) => { (eixoSeg.el.children[i] as HTMLElement).style.color = EIXO[e] })
 const eixoRot = document.createElement('label')
 eixoRot.append('Eixo', eixoSeg.el)
 const poeCorte = controle(pc.pop, 'Posição (mm)', 0, -60, 60, v => { corte().pos = v }, .5, aplicaCorte)
 pc.pop.prepend(campo('Cortar', cortar), eixoRot)
-pc.pop.append(campo('Inverter lado', inverte))
+pc.pop.append(campo('Inverter lado', inverte), campo('Mostrar plano', mostraPlano))
+
+// overlays (como no Blender): arestas e vértices valem em qualquer modo de sombreamento
+const po = popover('Overlays'), ovArestas = marca(), ovVertices = marca()
+ovArestas.onchange = ovVertices.onchange = () => { config.arestas = ovArestas.checked; config.vertices = ovVertices.checked; setOverlays() }
+po.pop.append(campo('Arestas', ovArestas), campo('Vértices', ovVertices))
+
+// transparência das peças: vale em qualquer modo e fica recolhida
+const ptr = popover('Transparência')
+controle(ptr.pop, 'Transparência (%)', 0, 0, 100, v => setTransp(v / 100), 5, () => {})
 const cotasBtn = botao('Cotas', () => { mostrarCotas = !mostrarCotas; cotasBtn.classList.toggle('ativo', mostrarCotas); atualizaCotas() }, 'Mostrar cotas no modelo')
 
-// sombreamento: esferas como no Blender; no modo Arestas aparece o slider de transparência
-const esfs = document.createElement('div'), esfBtn = new Map<Modo, HTMLButtonElement>(), transp = document.createElement('div'), transpS = document.createElement('input')
+// sombreamento: esferas como no Blender
+const esfs = document.createElement('div'), esfBtn = new Map<Modo, HTMLButtonElement>()
 esfs.className = 'esfs'
-transp.className = 'transp'
-Object.assign(transpS, { type: 'range', min: 0, max: 1, step: .05, value: config.transp, title: 'Transparência dos objetos' })
-transpS.oninput = () => setTransp(+transpS.value)
-transp.append('Transparência', transpS)
-const marcaModo = (m: Modo) => { esfBtn.forEach((b, k) => b.classList.toggle('ativo', k === m)); transp.hidden = m !== 'arestas' }
+const marcaModo = (m: Modo) => esfBtn.forEach((b, k) => b.classList.toggle('ativo', k === m))
 for (const [v, t] of MODOS) { const b = botao('', () => { setModo(v); marcaModo(v) }, t); b.append(esfera(v)); esfBtn.set(v, b); esfs.append(b) }
-const dire = document.createElement('div')
-dire.className = 'dire'
-dire.append(transp, esfs)
 
 // elevação: slider vertical sempre à mostra na lateral esquerda da vista (só no passo 1)
 const elev = document.createElement('div'), elevV = document.createElement('span'), elevS = document.createElement('input')
@@ -172,9 +191,9 @@ elevS.oninput = () => { config.elevacao = +elevS.value; textoElev(); eleva() }
 textoElev()
 elev.append(elevV, elevS)
 
-barra.append(mostrarSeg.el, pc.b, cotasBtn, dire, pc.pop)
+barra.append(home, pv.b, pc.b, po.b, ptr.b, cotasBtn, esfs, pv.pop, pc.pop, po.pop, ptr.pop)
 $('vista').append(barra, elev)
-marcaModo(config.modo); mostrarSeg.marca(config.mostrar)
+marcaModo(config.modo)
 function sincronizaBarra(n: number) { // valores do corte da aba atual; itens do passo 1 só aparecem no passo 1
   const c = config.corte[n]
   cortar.checked = c.ativo; inverte.checked = c.inverte; eixoSeg.marca(c.eixo); poeCorte(c.pos)
@@ -182,6 +201,11 @@ function sincronizaBarra(n: number) { // valores do corte da aba atual; itens do
   elev.hidden = n !== 1
   for (const p of pops) p.classList.remove('aberto')
 }
+addEventListener('keydown', e => { // Home: volta à pose isométrica (nos campos de texto, Home continua sendo do campo)
+  if (e.key !== 'Home' || (e.target instanceof Element && e.target.closest('select, textarea, input:not([type=range])'))) return
+  e.preventDefault()
+  enquadra()
+})
 
 // passo 1: sistema (remonta ao trocar formato ou encaixe, porque rótulos e valores mudam)
 const TITULOS_SISTEMA = ['Célula', 'Encaixe', 'Pé do bloco', 'Ombro e nervura', 'Ímã', 'Grid']

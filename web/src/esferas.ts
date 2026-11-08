@@ -8,7 +8,6 @@ const CINZA = hex(0xd0d4d8), VERDE = hex(0x3fa34d), AMARELO = hex(0xf0dc4a), LAR
 const DEGRADE: Record<string, [number, string][]> = {
   solido: [[0, '#f3f0ea'], [.5, '#b8b4ac'], [1, '#3f3d39']],
   matcap: [[0, '#fff8ec'], [.45, '#c9b28c'], [1, '#2a2118']],
-  arestas: [[0, '#7b8088'], [1, '#2b2e33']],
 }
 
 /** Cor no ponto da esfera: sx à direita, sy para cima, sz para o observador (que olha de −y, com z para cima). */
@@ -34,17 +33,6 @@ export function esfera(modo: string): HTMLCanvasElement {
       if (r2 <= 1) img.data.set([...porPixel(modo, sx, sy, Math.sqrt(1 - r2)), 255], (j * N + i) * 4)
     }
     x.putImageData(img, 0, 0)
-  }
-  if (modo === 'arestas') { // aramado: meridianos e paralelos
-    x.save()
-    x.beginPath(); x.arc(R, R, R - 1, 0, 2 * Math.PI); x.clip()
-    x.strokeStyle = '#e8eaed'; x.lineWidth = 1.6
-    for (const s of [0, .5, .87, 1]) { x.beginPath(); x.ellipse(R, R, (R - 1) * s, R - 1, 0, 0, 2 * Math.PI); x.stroke() }
-    for (const s of [-.6, -.3, 0, .3, .6]) {
-      const rx = (R - 1) * Math.sqrt(1 - s * s)
-      x.beginPath(); x.ellipse(R, R - s * (R - 1), rx, rx * .28, 0, 0, 2 * Math.PI); x.stroke()
-    }
-    x.restore()
   }
   return cv
 }

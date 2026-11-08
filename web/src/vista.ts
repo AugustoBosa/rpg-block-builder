@@ -4,10 +4,11 @@ import { ViewHelper } from 'three/examples/jsm/helpers/ViewHelper.js'
 import { toCreasedNormals } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import type { Malha } from './bloco'
 import { criaRotulos, redimensionaRotulos, renderRotulos, reorienta } from './cotas'
+import { EIXO } from './esquema'
 
 // cena da prévia (z para cima, como no fatiador): renderer, câmera, luzes, gizmo e as duas peças
-export type Modo = 'solido' | 'inclinacao' | 'normais' | 'arestas' | 'matcap'
-export const MODOS: [Modo, string][] = [['solido', 'Sólido'], ['inclinacao', 'Inclinação'], ['normais', 'Normais'], ['arestas', 'Arestas'], ['matcap', 'Matcap']]
+export type Modo = 'solido' | 'inclinacao' | 'normais' | 'matcap'
+export const MODOS: [Modo, string][] = [['solido', 'Sólido'], ['inclinacao', 'Inclinação'], ['normais', 'Normais'], ['matcap', 'Matcap']]
 export interface Corte { ativo: boolean; eixo: 'x' | 'y' | 'z'; pos: number; inverte: boolean }
 // estado da vista: um corte por passo; passo 1 começa cortado em y = 0 (mostra o pé dentro do furo)
 export const config = {
@@ -15,7 +16,10 @@ export const config = {
   modo: 'solido' as Modo,
   elevacao: 0, // mm, só passo 1: sobe o bloco em relação ao grid
   mostrar: 'ambos' as 'ambos' | 'bloco' | 'grid', // só passo 1: quais peças aparecem
-  transp: .4, // modo Arestas: 0 = opaco, 1 = só as arestas
+  transp: 0, // transparência das peças em qualquer modo: 0 = opaco, 1 = invisível (só overlays)
+  arestas: false, // overlay (vale em qualquer modo, como no Blender): arestas vivas da malha
+  vertices: false, // overlay: vértices da malha
+  planoCorte: true, // mostra o plano do corte, na cor do eixo
   corte: {
     1: { ativo: true, eixo: 'y', pos: 0, inverte: false },
     2: { ativo: false, eixo: 'y', pos: 0, inverte: false },
@@ -88,7 +92,7 @@ export const aoMudarVer = (f: (v: Ver) => void) => { aoVer = f }
 const dv = new THREE.Vector3()
 function veMaisPerto() {
   cam.getWorldDirection(dv)
-  const a = [Math.abs(dv.x), Math.abs(dv.y), Math.abs(dv.z)], i = a.indexOf(Math.max(...a))
+  const a = [Math.abs(dv.x), Math.abs(dv.y), Math.abs(dv.z)], i = [1, 2, 0].reduce((m, e) => a[e] > a[m] + .03 ? e : m, 1) // quase empate (isométrica): a frontal
   if (VERES[i] !== ver && (!ver || a[i] > a[VERES.indexOf(ver)] * 1.1)) { ver = VERES[i]; aoVer(ver) } // 10 % de folga: não pisca na divisa
 }
 
@@ -130,7 +134,7 @@ function novoMaterial(i: number, modo: Modo): THREE.Material {
   const d = deslocamento(i)
   if (modo === 'matcap') return new THREE.MeshMatcapMaterial({ matcap: texturaMatcap(), ...d })
   if (modo === 'inclinacao' || modo === 'normais') return new THREE.MeshBasicMaterial({ vertexColors: true, ...d })
-  return new THREE.MeshStandardMaterial({ color: COR[i], roughness: .9, ...d }) // solido e arestas
+  return new THREE.MeshStandardMaterial({ color: COR[i], roughness: .9, ...d })
 }
 // cor por inclinação da normal com +Z: plano cinza, 0–45° verde→amarelo, 45–90° laranja, para baixo vermelho
 function corInclinacao(n: THREE.Vector3, out: THREE.Color) {
@@ -167,26 +171,42 @@ function refaz(i: number) {
   if (antiga !== base[i]) antiga.dispose()
   ;(fora.material as THREE.Material).dispose()
   fora.material = novoMaterial(i, config.modo)
-  const velha = p.getObjectByName('arestas') as THREE.LineSegments | undefined
-  if (velha) { velha.geometry.dispose(); (velha.material as THREE.Material).dispose(); p.remove(velha) }
+  for (const nome of ['arestas', 'vertices']) { // overlays (arestas e vértices) valem em qualquer modo
+    const velha = p.getObjectByName(nome) as THREE.LineSegments | THREE.Points | undefined
+    if (velha) { if (nome === 'arestas') velha.geometry.dispose(); (velha.material as THREE.Material).dispose(); p.remove(velha) } // os vértices usam a geometria da peça
+  }
   const tri = (base[i].index?.count ?? 0) / 3
-  if (config.modo === 'arestas' && tri > 0 && tri <= TRI_MAX_ARESTAS) {
-    const l = new THREE.LineSegments(new THREE.EdgesGeometry(base[i], 20), new THREE.LineBasicMaterial({ color: 0x15171a }))
-    l.name = 'arestas'
-    p.add(l)
+  if (tri > 0 && tri <= TRI_MAX_ARESTAS) {
+    if (config.arestas) {
+      const l = new THREE.LineSegments(new THREE.EdgesGeometry(base[i], 20), new THREE.LineBasicMaterial({ color: 0x15171a }))
+      l.name = 'arestas'
+      p.add(l)
+    }
+    if (config.vertices) {
+      const v = new THREE.Points(base[i], new THREE.PointsMaterial({ color: 0xffa31a, size: 4, sizeAttenuation: false })) // usa a posição da malha (sem copiar)
+      v.name = 'vertices'
+      p.add(v)
+    }
   }
   aplicaTransp()
 }
 const ESCURO = new THREE.Color(0x15171a), CLARO = new THREE.Color(0xd8dde3)
-/** Modo Arestas: faces (de fora e de dentro) com a transparência escolhida; as arestas clareiam para aparecer no fundo escuro. Outros modos: opaco. */
+/** Transparência das faces (de fora e de dentro) em qualquer modo; as arestas clareiam com ela para aparecerem no fundo escuro. */
 function aplicaTransp() {
-  const t = config.modo === 'arestas' ? config.transp : 0
+  const t = config.transp
   for (const p of pecas) for (const k of p.children) {
+    if (k.name === 'vertices') continue
     if (k.name === 'arestas') { ((k as THREE.LineSegments).material as THREE.LineBasicMaterial).color.copy(ESCURO).lerp(CLARO, t); continue }
     const m = (k as THREE.Mesh).material as THREE.Material
     if (m.transparent !== t > 0) m.needsUpdate = true
     m.transparent = t > 0; m.opacity = 1 - t; m.depthWrite = t === 0
   }
+}
+/** Liga ou desliga arestas e vértices, sem trocar o modo. */
+export function setOverlays() {
+  for (let i = 0; i < pecas.length; i++) refaz(i)
+  aplicaCorte()
+  atualizaInfo()
 }
 export function setTransp(v: number) { config.transp = v; aplicaTransp() }
 // bloco sobe com a elevação só no passo 1
@@ -194,7 +214,7 @@ const sobe = (i: number) => zBase[i] + (i === 0 && config.passo === 1 ? config.e
 
 function atualizaInfo() {
   const grande = base.some(g => (g.index?.count ?? 0) / 3 > TRI_MAX_ARESTAS)
-  const html = config.modo === 'inclinacao' ? LEGENDA : config.modo === 'arestas' && grande ? 'malha grande demais para arestas' : ''
+  const html = config.modo === 'inclinacao' ? LEGENDA : (config.arestas || config.vertices) && grande ? 'malha grande demais para arestas e vértices' : ''
   info.innerHTML = html
   info.style.display = html ? 'block' : 'none'
 }
@@ -209,7 +229,38 @@ export function aplicaCorte() {
   const c = config.corte[config.passo]
   const planos = c.ativo ? [planoDe(c)] : []
   for (const p of pecas) for (const k of p.children) ((k as THREE.Mesh).material as THREE.Material).clippingPlanes = planos
+  atualizaPlano()
   reorienta() // as cotas atrás da parte cortada voltam a aparecer
+}
+
+// plano do corte: quadro translúcido com borda, na cor do eixo (como no gizmo e nos esquemas), do tamanho das peças visíveis
+const planoCor = new THREE.MeshBasicMaterial({ transparent: true, opacity: .16, side: THREE.DoubleSide, depthWrite: false })
+const planoBorda = new THREE.LineBasicMaterial({})
+const plano = new THREE.Group()
+plano.add(new THREE.Mesh(new THREE.BufferGeometry(), planoCor), new THREE.LineLoop(new THREE.BufferGeometry(), planoBorda))
+plano.visible = false
+cena.add(plano)
+const caixaTmp = new THREE.Box3(), caixaPeca = new THREE.Box3()
+function atualizaPlano() {
+  const c = config.corte[config.passo]
+  caixaTmp.makeEmpty()
+  pecas.forEach((p, i) => {
+    if (!p.visible || !base[i].getAttribute('position')) return
+    base[i].computeBoundingBox()
+    caixaTmp.union(caixaPeca.copy(base[i].boundingBox!).translate(p.position))
+  })
+  plano.visible = c.ativo && config.planoCorte && !caixaTmp.isEmpty()
+  if (!plano.visible) return
+  const m = 4, ax = { x: 0, y: 1, z: 2 }[c.eixo], [u, v] = [0, 1, 2].filter(e => e !== ax) // eixos do plano; ax = normal
+  const lo = caixaTmp.min.toArray(), hi = caixaTmp.max.toArray()
+  const q = [[lo[u] - m, lo[v] - m], [hi[u] + m, lo[v] - m], [hi[u] + m, hi[v] + m], [lo[u] - m, hi[v] + m]]
+    .map(([a, b]) => { const r = [0, 0, 0]; r[ax] = c.pos; r[u] = a; r[v] = b; return r })
+  const pos = new THREE.Float32BufferAttribute(q.flat(), 3)
+  const [fill, borda] = plano.children as [THREE.Mesh, THREE.LineLoop]
+  fill.geometry.dispose(); borda.geometry.dispose()
+  fill.geometry = new THREE.BufferGeometry().setAttribute('position', pos).setIndex([0, 1, 2, 0, 2, 3])
+  borda.geometry = new THREE.BufferGeometry().setAttribute('position', pos)
+  planoCor.color.set(EIXO[c.eixo]); planoBorda.color.set(EIXO[c.eixo])
 }
 
 /** Põe a malha na peça i (z = base do encaixe; a elevação do passo 1 é somada). Sem malha: esvazia. */
@@ -236,6 +287,7 @@ export function aplicaVisivel() {
   const m = config.passo === 1 ? config.mostrar : 'ambos'
   pecas[0].visible = m !== 'grid'
   pecas[1].visible = m !== 'bloco'
+  atualizaPlano()
   reorienta()
 }
 /** Só move o bloco pela elevação (sem reconstruir malha). */
@@ -243,6 +295,7 @@ export function eleva() {
   pecas[0].position.z = sobe(0)
   const raiz = cena.children.find(c => c.userData.elevavel) // raiz das cotas (cotas.ts), se existir
   if (raiz) raiz.userData.elevavel.position.z = config.elevacao
+  atualizaPlano()
   reorienta()
 }
 
@@ -271,14 +324,15 @@ export function setModo(m: Modo) {
   atualizaInfo()
 }
 
-/** Câmera olhando a peça do passo, sem ler o estado do passo (quem chama passa o número). */
-export function enquadra(passo: number) {
+/** Câmera olhando a peça na pose isométrica (tecla Home). */
+export function enquadra() {
   const g = (pecas[0].children[0] as THREE.Mesh).geometry
   g.computeBoundingSphere()
   const { center: c, radius: r } = g.boundingSphere!
-  const dir = passo === 1 ? new THREE.Vector3(.25, -1, .3) : new THREE.Vector3(.6, -.8, .8)
+  anim = null
   ctl.target.set(c.x, c.y, c.z + pecas[0].position.z * .5)
-  cam.position.copy(ctl.target).addScaledVector(dir.normalize(), r * 3.6)
+  const meia = THREE.MathUtils.degToRad(cam.fov / 2), f = Math.min(meia, Math.atan(Math.tan(meia) * cam.aspect)) // a menor meia-abertura (vertical ou horizontal)
+  cam.position.copy(ctl.target).addScaledVector(new THREE.Vector3(1, -1, 1).normalize(), r / Math.sin(f) * 1.6) // 1,6: sobra para as cotas
 }
 
 function tamanho() {

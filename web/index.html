@@ -36,16 +36,15 @@
     .pop .seg button { padding: 4px 14px }
     @media (max-width: 1099px) { #abaDir { display: none } }
     /* sombreamento em esferas (como o Blender), transparência do modo Arestas e elevação vertical */
-    .dire { display: flex; gap: 10px; align-items: center; margin-left: auto }
-    .esfs { display: flex; gap: 4px }
+    .esfs { display: flex; gap: 4px; margin-left: auto }
+    .thumbs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px }
+    .pop label { grid-template-columns: 1fr auto }
     .barra .esfs button { width: 32px; height: 32px; padding: 2px; border-radius: 50% }
     .esfs canvas { width: 26px; height: 26px; display: block; margin: auto }
-    .transp { display: flex; align-items: center; gap: 6px; font-size: 12px }
-    .transp input { width: 90px; margin: 0 }
     [hidden] { display: none !important }
-    .elev { position: absolute; left: 8px; top: 56px; bottom: 140px; width: 44px; z-index: 4; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 6px 2px; font-size: 11px; background: rgba(29,31,34,.7); border-radius: 6px }
+    .elev { position: absolute; left: 8px; top: 56px; height: 150px; width: 44px; z-index: 4; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 6px 2px; font-size: 11px; background: rgba(29,31,34,.7); border-radius: 6px }
     .elev input[type=range] { flex: 1; width: 22px; height: auto; margin: 0; writing-mode: vertical-lr; direction: rtl }
-    @media (max-width: 700px) { .elev { top: 120px; bottom: 12px } }
+    @media (max-width: 700px) { .elev { top: 120px } }
     /* "Mostrar tudo" dos esquemas */
     dialog { background: #26292d; color: #ddd; border: 1px solid #555; border-radius: 8px; width: min(900px, 94vw); max-height: 90dvh; padding: 12px }
     dialog::backdrop { background: rgba(0,0,0,.65) }
