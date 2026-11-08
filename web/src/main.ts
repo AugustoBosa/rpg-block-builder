@@ -1,7 +1,7 @@
 import { GUIAS, padrao, PISO, SECAO_GUIAS, SECAO_PISO, type Opcoes } from './bloco'
 import { cancelaExporta, exporta, previa as pedePrevia } from './cliente'
 import { PEDRA, SECAO_PEDRA } from './pedra'
-import { aberturaNova, ladoBloco, paredeNova, paredesValidas, tracejado3D } from './aberturas'
+import { aberturaNova, ladoBloco, orfa, paredeNova, paredesValidas, tracejado3D } from './aberturas'
 import type { Abertura, Parede } from './parede'
 import { avisos, ENCAIXES, FORMATOS, fundo, regiao, SECAO, SISTEMA } from './sistema'
 import { cotas, limpaCotas } from './cotas'
@@ -283,6 +283,7 @@ function montaParedes() {
   o.paredes.forEach((p, i) => {
     const d = document.createElement('details'), sm = document.createElement('summary'), c = document.createElement('div')
     sm.textContent = `Parede ${i + 1} · ${p.ancora.tipo === 'aresta' ? 'em aresta' : 'em eixo'}`
+    if (orfa(o, p)) { sm.textContent += ' ⚠ lado inexistente, ignorada'; sm.style.color = '#e9a35a' }
     d.open = true; d.append(sm, c); div.append(d)
     escolha(c, 'Âncora', p.ancora.tipo, [['aresta', 'Lado do bloco'], ['eixo', 'Eixo (reta livre)']], v => {
       p.ancora = v === 'aresta' ? { tipo: 'aresta', celula: 0, lado: 0 } : { tipo: 'eixo', eixo: 'x', desloc: 0 }

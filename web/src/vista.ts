@@ -228,7 +228,11 @@ function planoDe(c: Corte) {
 export function aplicaCorte() {
   const c = config.corte[config.passo]
   const planos = c.ativo ? [planoDe(c)] : []
-  for (const p of pecas) for (const k of p.children) ((k as THREE.Mesh).material as THREE.Material).clippingPlanes = planos
+  for (const p of pecas) for (const k of p.children) {
+    const m = (k as THREE.Mesh).material as THREE.Material
+    if ((m.clippingPlanes?.length ?? 0) !== planos.length) m.needsUpdate = true // número de planos mudou: recompila o shader
+    m.clippingPlanes = planos
+  }
   atualizaPlano()
   reorienta() // as cotas atrás da parte cortada voltam a aparecer
 }
@@ -359,14 +363,16 @@ render.setAnimationLoop(() => {
   gizmo.render(render)
 })
 
-// tracejado das aberturas que caem fora da parede (pares de pontos xyz, em mm); fica por cima de tudo
-const tracejado = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineDashedMaterial({ color: 0xffa31a, dashSize: 1.5, gapSize: 1, depthTest: false }))
+// tracejado das aberturas que caem fora da parede (uma polilinha xyz por trecho contínuo, em mm); fica por cima de tudo
+const tracejado = new THREE.Group()
 tracejado.renderOrder = 10
-tracejado.visible = false
+const matTr = new THREE.LineDashedMaterial({ color: 0xffa31a, dashSize: 1.5, gapSize: 1, depthTest: false })
 cena.add(tracejado)
-export function mostraTracejado(pts: number[]) {
-  tracejado.geometry.dispose()
-  tracejado.geometry = new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute(pts, 3))
-  tracejado.computeLineDistances()
-  tracejado.visible = pts.length > 0
+export function mostraTracejado(linhas: number[][]) {
+  for (const k of tracejado.children) (k as THREE.Line).geometry.dispose()
+  tracejado.clear()
+  for (const pts of linhas) {
+    const l = new THREE.Line(new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute(pts, 3)), matTr)
+    l.computeLineDistances(); l.renderOrder = 10; tracejado.add(l)
+  }
 }

@@ -7,6 +7,7 @@ import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { fechada, final, padrao, piso, stl, type Malha } from './src/bloco'
 import { pedra } from './src/pedra'
 import { degrau, grid, malha, regiao } from './src/sistema'
+import { ladoBloco, orfa, paredesValidas } from './src/aberturas'
 import { aberturaNova, areaDentro, foraDaArea, paredeNova, parede, perfilAbertura, pisoComParedes, type OpcoesP, type Parede } from './src/parede'
 
 const op = (e: Record<string, unknown> = {}): OpcoesP => ({ ...padrao(), paredes: [], ...e }) as OpcoesP
@@ -88,6 +89,22 @@ for (const f of ['quadrado', 'hexagono'] as const) for (const [nome, mk] of D3)
     if (!fechada(m.pos, m.idx)) throw new Error('fechada: NÃO')
     return 'fechada: sim'
   })
+// uma parede em cada lado do contorno, comprimento pelo lado real (ladoBloco), em blocos multi-célula
+for (const f of ['quadrado', 'hexagono'] as const) for (const [l, c] of [[2, 2], [3, 2]] as const)
+  t('D3', `malha fechada: ${f} ${l}x${c}, contorno completo`, async () => {
+    const o = op({ formato: f, linhas: l, colunas: c })
+    const lados = [...Array(f === 'hexagono' ? 6 : 4).keys()].filter(i => ladoBloco(o, i))
+    if (lados.length !== (f === 'hexagono' ? 6 : 4)) throw new Error(`só ${lados.length} lados`)
+    const m = await pisoComParedes({ ...o, paredes: lados.map(i => paredeNova('a' + i, { tipo: 'aresta', celula: 0, lado: i }, +ladoBloco(o, i)!.L.toFixed(1))) })
+    if (!fechada(m.pos, m.idx)) throw new Error('fechada: NÃO')
+    return `fechada: sim (${lados.length} paredes)`
+  })
+t('D3', 'parede em lado inexistente (hexágono → quadrado) é ignorada e listada como órfã', () => {
+  const h = op({ formato: 'hexagono' }), p = paredeNova('a', { tipo: 'aresta', celula: 0, lado: 4 }, 10), q = { ...h, formato: 'quadrado' as const, paredes: [p] }
+  if (orfa(h, p) || paredesValidas({ ...h, paredes: [p] }).length !== 1) throw new Error('lado 4 deveria existir no hexágono')
+  if (!orfa(q, p) || paredesValidas(q).length !== 0) throw new Error('lado 4 deveria sumir no quadrado')
+  return 'ok'
+})
 t('D4', 'volume da parede lisa = comprimento × altura × espessura', () => {
   const o = op(), p = { ...paredeNova('a', { tipo: 'eixo', eixo: 'x', desloc: 0 }, 35), altura: 30, espessura: 6 }
   const e = err(volume(parede({ ...o, paredes: [p] }, p)), 35 * 30 * 6)
@@ -111,7 +128,7 @@ for (const tipo of ['porta', 'janela'] as const) for (const forma of ['reta', 'a
   })
 const reta = (pos: number, peitoril: number, largura = 12, altura = 16) => ({ ...aberturaNova('janela'), forma: 'reta' as const, pos, largura, altura, peitoril })
 const fora = (p: Parede, a = p.aberturas[0]) => foraDaArea(p, a)
-const dentroEstrito = (L: [number, number][][], c: number, h: number) => L.some(s => { const u = (s[0][0] + s[s.length - 1][0]) / 2, v = (s[0][1] + s[s.length - 1][1]) / 2; return u > 1e-6 && u < c - 1e-6 && v > 1e-6 && v < h - 1e-6 })
+const dentroEstrito = (L: [number, number][][], c: number, h: number) => L.some(s => s.slice(1).some((q, i) => { const u = (s[i][0] + q[0]) / 2, v = (s[i][1] + q[1]) / 2; return u > 1e-6 && u < c - 1e-6 && v > 1e-6 && v < h - 1e-6 }))
 const D7: [string, Parede, number | null][] = [ // [nome, parede, área dentro esperada (mm²) ou null = nada corta]
   ['toda fora (acima)', W({ aberturas: [reta(20, 40)] }), 0],
   ['toda fora (esquerda)', W({ aberturas: [reta(-20, 5)] }), 0],
@@ -150,8 +167,8 @@ t('D8', 'parede 30×6 com textura ≤ 120 mil triângulos', () => {
   if (n > 120000) throw new Error(`${n}`); return `${n} triângulos`
 })
 t('D10', 'exportar STL, piso 2×3 com 4 paredes: fechada e ≤ 60 s', async () => {
-  const o = op({ linhas: 2, colunas: 3 }), s = regiao(o, 2, 3).seg.length
-  const ps = [naAresta(o, 0, 'a'), naAresta(o, Math.floor(s / 2), 'b'), noEixo('x', 4, 'c'), noEixo('y', -6, 'd')]
+  const o = op({ linhas: 2, colunas: 3 }), la = (i: number, id: string) => paredeNova(id, { tipo: 'aresta', celula: 0, lado: i }, +ladoBloco(o, i)!.L.toFixed(1))
+  const ps = [la(0, 'a'), la(2, 'b'), noEixo('x', 4, 'c'), noEixo('y', -6, 'd')] // lados opostos do contorno
   const t0 = performance.now(), m = await pisoComParedes({ ...o, paredes: ps }), s_ = (performance.now() - t0) / 1000
   if (!fechada(m.pos, m.idx)) throw new Error('fechada: NÃO')
   if (s_ > 60) throw new Error(`${s_.toFixed(1)} s`); return `${s_.toFixed(1)} s, fechada: sim`

@@ -9,7 +9,9 @@ export const paredeNova = (id: string, ancora: Ancora, comprimento: number): Par
 
 /** Lado `i` do contorno do bloco (4 no quadrado, 6 no hexágono; `i` = direção da normal): a reta externa mais afastada, do primeiro ao último ponto das células. */
 export function ladoBloco(o: Opcoes, i: number) {
-  const k = regiao(o, o.linhas, o.colunas).seg, n0 = k.find((g, j) => j >= 0 && Math.abs(Math.atan2(g[5], g[4]) - Math.atan2(celula(o).n[i][1], celula(o).n[i][0])) < 1e-6)
+  const nc = celula(o).n[i]
+  if (!nc) return null // lado além do formato atual (ex.: lado 4 num quadrado)
+  const k = regiao(o, o.linhas, o.colunas).seg, n0 = k.find(g => Math.abs(Math.atan2(g[5], g[4]) - Math.atan2(nc[1], nc[0])) < 1e-6)
   if (!n0) return null
   const n: [number, number] = [n0[4], n0[5]], off = (g: number[]) => g[0] * n[0] + g[1] * n[1]
   const m = Math.max(...k.filter(g => g[4] === n0[4] && g[5] === n0[5]).map(off))
@@ -40,11 +42,10 @@ export function quadro(o: Opcoes, p: Parede, dl = 0) {
   return { d, n, s, o1: a1 - dl, o2: a2 + dl, pt }
 }
 
-/** Tracejado 3D das aberturas fora da área: pares de pontos xyz (segmentos), no meio da espessura; o pé da parede fica em z = altura do piso. */
-export function tracejado3D(o: Opcoes, p: Parede): number[] {
-  const { pt, o1, o2 } = quadro(o, p), w = (o1 + o2) / 2, out: number[] = []
-  for (const ab of p.aberturas) for (const [A, B] of foraDaArea(p, ab)) out.push(...pt(A[0], w), o.altura + A[1], ...pt(B[0], w), o.altura + B[1])
-  return out
+/** Tracejado 3D das aberturas fora da área: uma polilinha (xyz achatado) por trecho contínuo, no meio da espessura; o pé da parede fica em z = altura do piso. */
+export function tracejado3D(o: Opcoes, p: Parede): number[][] {
+  const { pt, o1, o2 } = quadro(o, p), w = (o1 + o2) / 2
+  return p.aberturas.flatMap(ab => foraDaArea(p, ab)).map(l => l.flatMap(([u, v]) => [...pt(u, w), o.altura + v]))
 }
 
 const N = 24 // segmentos por arco (semicírculo)
@@ -94,12 +95,17 @@ export function foraDaArea(p: Parede, a: Abertura): Linha[] {
       if (pp === 0) { if (qq < 0) { t0 = 1; t1 = 0 } } else { const t = qq / pp; if (pp < 0) t0 = Math.max(t0, t); else t1 = Math.min(t1, t) }
     }
     const trechos = t0 > t1 ? [[0, 1]] : [[0, t0], [t1, 1]]
-    for (const [s, e] of trechos) if (e - s > 1e-9) out.push([[q[0] + dx * s, q[1] + dy * s], [q[0] + dx * e, q[1] + dy * e]])
+    for (const [s, e] of trechos) if (e - s > 1e-9) {
+      const A: [number, number] = [q[0] + dx * s, q[1] + dy * s], B: [number, number] = [q[0] + dx * e, q[1] + dy * e], ult = out[out.length - 1]
+      const fim = ult?.[ult.length - 1]
+      if (fim && Math.hypot(fim[0] - A[0], fim[1] - A[1]) < 1e-9) ult.push(B) // continua a polilinha anterior (tracejado sem quebra de fase)
+      else out.push([A, B])
+    }
   })
   return out
 }
 
 /** Paredes cuja âncora existe no bloco atual (uma aresta some se linhas, colunas ou formato mudam): as outras são ignoradas. */
-export const paredesValidas = (o: Opcoes) => {
-  return o.paredes.filter(p => p.ancora.tipo !== 'aresta' || ladoBloco(o, p.ancora.lado))
-}
+export const paredesValidas = (o: Opcoes) => o.paredes.filter(p => !orfa(o, p))
+/** Parede em aresta cujo lado não existe mais no bloco atual (ignorada na prévia, no STL e no esquema). */
+export const orfa = (o: Opcoes, p: Parede) => p.ancora.tipo === 'aresta' && !ladoBloco(o, p.ancora.lado)
