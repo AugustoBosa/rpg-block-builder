@@ -4,10 +4,10 @@ import { PEDRA, SECAO_PEDRA } from './pedra'
 import { aberturaNova, ladoBloco, orfa, paredeNova, paredesValidas, tracejado3D } from './aberturas'
 import type { Abertura, Parede } from './parede'
 import { avisos, ENCAIXES, FORMATOS, fundo, regiao, SECAO, SISTEMA } from './sistema'
-import { cotas, limpaCotas } from './cotas'
+import { cotas, estilo, limpaCotas } from './cotas'
 import { EIXO, esquema } from './esquema'
 import { esfera } from './esferas'
-import { aoMudarVer, aplicaCorte, aplicaVisivel, cena, config, type Corte, enquadra, eleva, MODOS, mostra, type Modo, setModo, setOverlays, mostraTracejado, setPixelRatioMax, setTransp, type Ver } from './vista'
+import { aoMudarVer, aplicaCorte, aplicaVisivel, cena, config, type Corte, enquadra, eleva, MODOS, mostra, type Modo, setModo, setCor, setOverlays, mostraTracejado, setPixelRatioMax, setTransp, type Ver } from './vista'
 
 // nada é salvo: cada abertura começa do padrão
 const o: Opcoes = padrao()
@@ -30,9 +30,11 @@ function previa(res = resRapida()) {
     const eu = ++geracao, passo = config.passo, snap = structuredClone(o), p = peca()
     snap.paredes = paredesValidas(snap) // aresta que não existe mais no bloco atual é ignorada
     gerando.hidden = false
+    const lento = setTimeout(() => hudPerf('ruim', 'lento…'), 2 * perf.orcamento + 1000) // ainda gerando bem depois do orçamento: sobrecarga
     try {
       const r = await pedePrevia({ tipo: 'previa', passo, peca: p, o: snap, res })
       if (eu !== geracao) return
+      hudPerf(r.ms > 1.5 * perf.orcamento ? 'ruim' : r.ms > perf.orcamento ? 'atencao' : 'ok', `${r.ms.toFixed(0)} ms`)
       if (passo === 1) { // bloco liso assentado num grid 1 × 1, cortado ao meio (a elevação é somada pela vista)
         mostra(0, r.m[0], fundo(snap) + snap.folga_fundo)
         mostra(1, r.m[1])
@@ -52,19 +54,19 @@ function previa(res = resRapida()) {
       atualizaCotas()
       redesenhaEsquema()
       if (enquadrar) { enquadra(mostrarCotas); enquadrar = false }
-    } catch (e) { if (e !== 'cancelado') { $('estado').textContent = `Erro: ${e}`; console.error(e) } }
-    finally { if (eu === geracao) gerando.hidden = true }
+    } catch (e) { if (e !== 'cancelado') { hudPerf('ruim', 'erro'); $('estado').textContent = `Erro: ${e}`; console.error(e) } }
+    finally { clearTimeout(lento); if (eu === geracao) gerando.hidden = true }
   }, 60)
 }
 // painel de esquemas: isométrica com os planos + a vista 2D mais próxima da câmera; "Mostrar tudo" abre todas
 function redesenhaEsquema() {
-  $('dirc').innerHTML = esquema(o, config.passo, sel3.value, config.mostrar, ver)
+  $('dirc').innerHTML = esquema(o, config.passo, sel3.value, config.mostrar, ver, config.elevacao)
   const dir = $('dir'), mini = $('dirc').querySelector<HTMLElement>('.thumbs')
   if (mini && esquemas.open && dir.scrollHeight > dir.clientHeight) mini.hidden = true // as miniaturas só entram se sobrar espaço
 }
 aoMudarVer(v => { ver = v; redesenhaEsquema() })
 const tudo = $('tudo') as HTMLDialogElement
-$('verTudo').onclick = () => { $('tudoc').innerHTML = esquema(o, config.passo, sel3.value, config.mostrar, 'tudo'); tudo.showModal() }
+$('verTudo').onclick = () => { $('tudoc').innerHTML = esquema(o, config.passo, sel3.value, config.mostrar, 'tudo', config.elevacao); tudo.showModal() }
 $('fechaTudo').onclick = () => tudo.close()
 tudo.onclick = e => { if (e.target === tudo) tudo.close() } // clique fora da caixa
 
@@ -128,11 +130,14 @@ const opcoes = (sel: HTMLSelectElement, itens: [string, string][]) => sel.append
 const formato = document.createElement('select'), encaixe = document.createElement('select')
 const campo = (texto: string, sel: HTMLElement) => { const l = document.createElement('label'); l.append(texto, sel); return l }
 
-// barra "Vista 3D" sobre a vista, como o cabeçalho do Blender: peças (passo 1), corte, elevação (passo 1), cotas e sombreamento.
-// Os popovers abrem sob o botão; o corte é um por aba, então a barra se resincroniza ao trocar de aba.
-const barra = document.createElement('div')
-barra.className = 'barra'
-const pops: HTMLElement[] = []
+// cards sobre a vista: Vista (Home e olhos) e Desempenho à esquerda; Aparência, Corte e Cotas à direita; elevação (passo 1) no meio da lateral esquerda.
+// O corte é um por aba, então os cards se resincronizam ao trocar de aba.
+/** Card recolhível: `d` é o <details>, `s` o título (summary) e `c` o corpo. */
+function cartao(titulo: string, aberto = false) {
+  const d = document.createElement('details'), s = document.createElement('summary'), c = document.createElement('div')
+  d.className = 'card'; d.open = aberto; s.textContent = titulo; d.append(s, c)
+  return { d, s, c }
+}
 const botao = (texto: string, clique: (e: MouseEvent) => void, titulo = '') => {
   const b = document.createElement('button')
   b.textContent = texto; b.title = titulo; b.onclick = clique
@@ -146,27 +151,28 @@ function segmentos(itens: [string, string][], muda: (v: string) => void) {
   for (const [v, t] of itens) { const b = botao(t, () => { muda(v); marca(v) }, t); bs.set(v, b); el.append(b) }
   return { el, marca }
 }
-/** Botão com painel flutuante embaixo dele; abrir um fecha os outros. */
-function popover(texto: string) {
-  const pop = document.createElement('div'), b = botao(texto + ' ▾', () => {
-    const abrir = !pop.classList.contains('aberto')
-    for (const p of pops) p.classList.remove('aberto')
-    pop.classList.toggle('aberto', abrir)
-    pop.style.left = Math.min(b.offsetLeft, Math.max(0, barra.clientWidth - 230)) + 'px'
-  })
-  pop.className = 'pop'
-  pops.push(pop)
-  return { b, pop }
-}
-addEventListener('click', e => { if (!(e.target as Element).closest('.barra, .pop')) for (const p of pops) p.classList.remove('aberto') })
-
 const corte = () => config.corte[config.passo]
 const marca = () => Object.assign(document.createElement('input'), { type: 'checkbox' })
 
-const home = botao('⌂', () => enquadra(mostrarCotas), 'Início: pose isométrica (tecla Home)')
-// visibilidade (passo 1): um check para o bloco e outro para o grid
-const pv = popover('Visibilidade'), verBloco = marca(), verGrid = marca()
+// card Vista: Home e a visibilidade de Bloco e Grid, um abaixo do outro
+const cVista = cartao('Vista', true)
+const home = botao('', () => enquadra(mostrarCotas), 'Início: pose isométrica (tecla Home)')
+home.classList.add('olho'); home.append(Object.assign(document.createElement('span'), { textContent: '⌂' }), 'Home')
+// visibilidade (passo 1): um check para o bloco e outro para o grid, direto na barra
+const verBloco = marca(), verGrid = marca()
 verBloco.checked = verGrid.checked = true
+// olho aberto e colorido = visível; olho fechado e apagado = oculto (o checkbox só guarda o estado)
+const OLHO = (a: boolean) => `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${a
+  ? '<path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3" fill="currentColor"/>'
+  : '<path d="M2 10c3 5 7 7 10 7s7-2 10-7"/><path d="M6 15l-2 3M12 17v3M18 15l2 3"/>'}</svg>`
+function olho(texto: string, el: HTMLInputElement, cor: string) {
+  const b = botao('', () => { el.checked = !el.checked; el.dispatchEvent(new Event('change')) }, texto)
+  const ico = document.createElement('span')
+  const pinta = () => { ico.innerHTML = OLHO(el.checked); b.style.color = el.checked ? cor : '#6b7077'; b.title = `${texto}: ${el.checked ? 'visível' : 'oculto'}`; b.setAttribute('aria-pressed', String(el.checked)) }
+  el.addEventListener('change', pinta); pinta()
+  b.classList.add('olho', 'so1'); b.append(ico, texto)
+  return b
+}
 const mudaVis = (quem: HTMLInputElement) => {
   if (!verBloco.checked && !verGrid.checked) quem.checked = true // ao menos uma peça fica visível
   config.mostrar = verBloco.checked && verGrid.checked ? 'ambos' : verBloco.checked ? 'bloco' : 'grid'
@@ -174,11 +180,9 @@ const mudaVis = (quem: HTMLInputElement) => {
 }
 verBloco.onchange = () => mudaVis(verBloco)
 verGrid.onchange = () => mudaVis(verGrid)
-pv.pop.append(campo('Bloco', verBloco), campo('Grid', verGrid))
-pv.b.classList.add('so1')
 
 // corte: eixo nas cores do gizmo; o plano do corte aparece na cor do eixo
-const pc = popover('Corte'), cortar = marca(), inverte = marca(), mostraPlano = marca()
+const cCorte = cartao('Corte'), corpoCorte = cCorte.c, cortar = marca(), inverte = marca(), mostraPlano = marca()
 mostraPlano.checked = config.planoCorte
 cortar.onchange = () => { corte().ativo = cortar.checked; aplicaCorte() }
 inverte.onchange = () => { corte().inverte = inverte.checked; aplicaCorte() }
@@ -187,20 +191,15 @@ const eixoSeg = segmentos([['x', 'X'], ['y', 'Y'], ['z', 'Z']], v => { corte().e
 ;(['x', 'y', 'z'] as const).forEach((e, i) => { (eixoSeg.el.children[i] as HTMLElement).style.color = EIXO[e] })
 const eixoRot = document.createElement('label')
 eixoRot.append('Eixo', eixoSeg.el)
-const poeCorte = controle(pc.pop, 'Posição (mm)', 0, -60, 60, v => { corte().pos = v }, .5, aplicaCorte)
-pc.pop.prepend(campo('Cortar', cortar), eixoRot)
-pc.pop.append(campo('Inverter lado', inverte), campo('Mostrar plano', mostraPlano))
+const poeCorte = controle(corpoCorte, 'Posição (mm)', 0, -60, 60, v => { corte().pos = v }, .5, aplicaCorte)
+corpoCorte.prepend(campo('Cortar', cortar), eixoRot)
+corpoCorte.append(campo('Inverter lado', inverte), campo('Mostrar plano', mostraPlano))
 
-// overlays (como no Blender): arestas e vértices valem em qualquer modo de sombreamento
-const po = popover('Overlays'), ovArestas = marca(), ovVertices = marca()
+// card "Aparência": materiais (esferas), overlays e transparência (valem em qualquer modo) e, em Avançado, a cor dos objetos
+const cApar = cartao('Aparência', true), cardCorpo = cApar.c, ovArestas = marca(), ovVertices = marca()
 ovArestas.onchange = ovVertices.onchange = () => { config.arestas = ovArestas.checked; config.vertices = ovVertices.checked; setOverlays() }
-po.pop.append(campo('Arestas', ovArestas), campo('Vértices', ovVertices))
-
-// transparência das peças: vale em qualquer modo e fica recolhida
-const ptr = popover('Transparência')
-controle(ptr.pop, 'Transparência (%)', 0, 0, 100, v => setTransp(v / 100), 5, () => {})
 // desempenho (aba Blocos): resolução da prévia na tela; a malha do STL é separada e não depende dela
-const pd = popover('Desempenho'), refinaCk = marca(), modoPerf = segmentos([['auto', 'Auto'], ['manual', 'Manual']], v => { perf.auto = v === 'auto'; previa() })
+const cDesemp = cartao('Desempenho'), pd = { pop: cDesemp.c }, hud = Object.assign(document.createElement('span'), { className: 'hud', textContent: '—' }), refinaCk = marca(), modoPerf = segmentos([['auto', 'Auto'], ['manual', 'Manual']], v => { perf.auto = v === 'auto'; previa() })
 const pixels = segmentos([['1', '1×'], ['1.5', '1,5×'], ['2', '2×']], v => setPixelRatioMax(+v))
 pixels.marca('2')
 const pixRot = document.createElement('label')
@@ -216,32 +215,55 @@ controle(pd.pop, 'Manual (mm)', perf.manual, .25, 2, v => { perf.manual = v }, .
 controle(pd.pop, 'Orçamento Auto (ms)', perf.orcamento, 100, 1500, v => { perf.orcamento = v }, 50)
 pd.pop.append(campo('Refinar ao parar', refinaCk), infoPerf, tituloExp)
 controle(pd.pop, 'Malha do STL (mm)', o.resolucao, .1, .5, v => { o.resolucao = v }, .025, () => {})
-const cotasBtn = botao('Cotas', () => { mostrarCotas = !mostrarCotas; cotasBtn.classList.toggle('ativo', mostrarCotas); atualizaCotas() }, 'Mostrar cotas no modelo')
+cDesemp.s.append(hud)
+/** Mini HUD do Desempenho (visível com o card recolhido): verde dentro do orçamento, amarelo até 1,5×, vermelho com ⚠ acima disso, lento ou com erro. */
+function hudPerf(nivel: 'ok' | 'atencao' | 'ruim', texto: string) {
+  hud.className = 'hud ' + nivel; hud.textContent = (nivel === 'ruim' ? '⚠ ' : '● ') + texto
+  cDesemp.d.classList.toggle('alerta', nivel === 'ruim')
+}
+
+// card Cotas: liga/desliga e estilo (tamanho, fonte, afastamento, cor); qualquer mudança refaz as cotas
+const cCotas = cartao('Cotas'), mostraCotas = marca(), fonteSel = document.createElement('select'), corCotas = Object.assign(document.createElement('input'), { type: 'color', value: estilo.cor })
+mostraCotas.onchange = () => { mostrarCotas = mostraCotas.checked; atualizaCotas() }
+opcoes(fonteSel, [['sans-serif', 'Sem serifa'], ['serif', 'Com serifa'], ['monospace', 'Monoespaçada']])
+fonteSel.onchange = () => { estilo.fonte = fonteSel.value; atualizaCotas() }
+corCotas.oninput = () => { estilo.cor = corCotas.value; atualizaCotas() }
+cCotas.c.append(campo('Mostrar cotas', mostraCotas))
+controle(cCotas.c, 'Tamanho do texto (px)', estilo.tam, 8, 24, v => { estilo.tam = v }, 1, atualizaCotas)
+cCotas.c.append(campo('Fonte', fonteSel))
+controle(cCotas.c, 'Afastamento (%)', estilo.afast * 100, 50, 250, v => { estilo.afast = v / 100 }, 10, atualizaCotas)
+cCotas.c.append(campo('Cor', corCotas))
 
 // sombreamento: esferas como no Blender
 const esfs = document.createElement('div'), esfBtn = new Map<Modo, HTMLButtonElement>()
 esfs.className = 'esfs'
 const marcaModo = (m: Modo) => esfBtn.forEach((b, k) => b.classList.toggle('ativo', k === m))
 for (const [v, t] of MODOS) { const b = botao('', () => { setModo(v); marcaModo(v) }, t); b.append(esfera(v)); esfBtn.set(v, b); esfs.append(b) }
+cardCorpo.append(esfs, campo('Arestas', ovArestas), campo('Vértices', ovVertices))
+controle(cardCorpo, 'Transparência (%)', 0, 0, 100, v => setTransp(v / 100), 5, () => {})
+const avancado = secao(cardCorpo, 'Avançado'), cor = (i: number, hex: string) => Object.assign(document.createElement('input'), { type: 'color', value: hex, oninput(this: HTMLInputElement) { setCor(i, this.value) } })
+avancado.append(campo('Cor do bloco / piso', cor(0, '#b8b4ac')), campo('Cor do grid', cor(1, '#6f8fa8')))
 
 // elevação: slider vertical sempre à mostra na lateral esquerda da vista (só no passo 1)
 const elev = document.createElement('div'), elevV = document.createElement('span'), elevS = document.createElement('input')
 elev.className = 'elev'; elev.title = 'Elevação do bloco sobre o grid (0 = assentado)'
 Object.assign(elevS, { type: 'range', min: 0, max: 30, step: .5, value: config.elevacao })
 const textoElev = () => { elevV.textContent = String(config.elevacao).replace('.', ',') + ' mm' }
-elevS.oninput = () => { config.elevacao = +elevS.value; textoElev(); eleva() }
+elevS.oninput = () => { config.elevacao = +elevS.value; textoElev(); eleva(); redesenhaEsquema() } // os esquemas seguem o deslocamento
 textoElev()
 elev.append(elevV, elevS)
 
-barra.append(home, pv.b, pc.b, po.b, ptr.b, pd.b, cotasBtn, esfs, pv.pop, pc.pop, po.pop, ptr.pop, pd.pop)
-$('vista').append(barra, elev, gerando)
+cVista.c.append(home, olho('Bloco', verBloco, '#d9b36c'), olho('Grid', verGrid, '#6fa8dc'))
+const colunas = [['cards esq', [cVista.d]], ['cards', [cApar.d, cCorte.d, cCotas.d]]] as const // esquerda-topo e direita-topo
+for (const [cls, ds] of colunas) { const col = document.createElement('div'); col.className = cls; col.append(...ds); $('vista').append(col) }
+cDesemp.d.classList.add('desemp') // esquerda-baixo
+$('vista').append(cDesemp.d, elev, gerando)
 marcaModo(config.modo)
 function sincronizaBarra(n: number) { // valores do corte da aba atual; itens do passo 1 só aparecem no passo 1
   const c = config.corte[n]
   cortar.checked = c.ativo; inverte.checked = c.inverte; eixoSeg.marca(c.eixo); poeCorte(c.pos)
-  barra.dataset.passo = String(n)
+  $('vista').dataset.passo = String(n)
   elev.hidden = n !== 1
-  for (const p of pops) p.classList.remove('aberto')
 }
 addEventListener('keydown', e => { // Home: volta à pose isométrica (nos campos de texto, Home continua sendo do campo)
   if (e.key !== 'Home' || (e.target instanceof Element && e.target.closest('select, textarea, input:not([type=range])'))) return

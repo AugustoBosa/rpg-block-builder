@@ -51,16 +51,16 @@ function noCorte(cs: P2[], k: 0 | 1): P2[] {
 }
 
 /** `mostrar` só vale no sistema (bloco sobre grid): filtra grid e/ou bloco. */
-function modelo(o: Opcoes, cs: P2[], modo: Modo, mostrar = 'ambos'): Modelo {
+function modelo(o: Opcoes, cs: P2[], modo: Modo, mostrar = 'ambos', elev = 0): Modelo {
   const M = medidas(o), G = alturaGrid(o), zf = M.fundoReal + o.folga_fundo
   const T = modo === 'degrau' ? Math.max(o.altura_degrau, G + M.assento + 1) : G // topo do grid (ou do degrau)
-  const zb = modo === 'degrau' ? 0 : zf // base do pé: o bloco assenta em zf sobre o grid
+  const zb = modo === 'degrau' ? 0 : zf + elev // base do pé: o bloco assenta em zf sobre o grid, mais a elevação da tela (só no sistema)
   const pf = M.perfilFuro.map(([z, d]) => [z + (T - G), d])
   const comGrid = modo !== 'bloco' || mostrar !== 'bloco', comBloco = modo !== 'grade' && (modo !== 'bloco' || mostrar !== 'grid')
   return {
     M, c: celula(o), cs, modo, G, T, zb, f: M.fundoReal,
     plate: modo === 'degrau' || !comGrid ? null : [[0, 0], [G, 0]],
-    pe: comBloco ? [...M.perfilPe.map(([z, d]) => [z + zb, d]), [modo === 'degrau' ? T : G + 6, 0]] : null,
+    pe: comBloco ? [...M.perfilPe.map(([z, d]) => [z + zb, d]), [modo === 'degrau' ? T : G + 6 + elev, 0]] : null,
     furo: comGrid ? recorte(pf, Math.max(pf[0][0], 0), T) : null,
   }
 }
@@ -181,7 +181,7 @@ function corte(o: Opcoes, m: Modelo, k: 0 | 1, mini = false): string {
   const cot: Cota[] = []
   if (furo) cot.push(vz(xr, 0, T, 30, `${modo === 'degrau' ? 'altura' : 'grid'} ${f0(T)}`))
   if (modo === 'grade' && f > 0) cot.push(vz(xl, 0, f, -14, `fundo ${f0(f)}`))
-  if (modo === 'bloco' && furo && pe && o.folga_fundo > 0) cot.push(vz(xl, f, zb, -14, `folga ${f0(o.folga_fundo)}`))
+  if (modo === 'bloco' && furo && pe && zb - f > 1e-6) cot.push(vz(xl, f, zb, -14, `folga ${f0(zb - f)}`)) // folga de fundo + elevação
   if (pe) {
     const h = M.hPe, zs = M.assento, uc = uMax
     cot.push(vz(xr, zb, zb + h, 14, `pé ${f0(h)}`), vz(xr, zb + h, zb + zs, 14, `ombro ${f0(zs - h)}`))
@@ -233,9 +233,9 @@ export type Quais = 'planta' | 'frontal' | 'lateral' | 'tudo'
 /** Esquema do passo 1 (bloco sobre grid 1×1; `mostrar` filtra grid e bloco) ou do passo 2 (grid ou degrau N × M).
  *  Painel: a isométrica com os planos, a vista pedida em tamanho cheio e, em miniatura (`.thumbs`), as outras duas.
  *  `tudo` (diálogo): as quatro em duas colunas, todas com cotas. */
-export function esquema(o: Opcoes, passo: number, peca: string, mostrar: string, ver: Quais): string {
+export function esquema(o: Opcoes, passo: number, peca: string, mostrar: string, ver: Quais, elev = 0): string {
   if (passo === 3) return esquemaPiso(o)
-  const m = passo === 1 ? modelo(o, [[0, 0]], 'bloco', mostrar) : modelo(o, centros(celula(o), o.grid_linhas, o.grid_colunas), peca === 'degrau' ? 'degrau' : 'grade')
+  const m = passo === 1 ? modelo(o, [[0, 0]], 'bloco', mostrar, elev) : modelo(o, centros(celula(o), o.grid_linhas, o.grid_colunas), peca === 'degrau' ? 'degrau' : 'grade')
   const vistas = { planta: (mini: boolean) => planta(o, m, mini), frontal: (mini: boolean) => corte(o, m, 0, mini), lateral: (mini: boolean) => corte(o, m, 1, mini) }
   if (ver === 'tudo') return `<div style="${CAIXA.replace('minmax(0,1fr)', 'repeat(2,minmax(0,1fr))')}">${[isometrica(m), vistas.planta(false), vistas.frontal(false), vistas.lateral(false)].join('')}</div>`
   const outras = (['planta', 'frontal', 'lateral'] as const).filter(v => v !== ver)

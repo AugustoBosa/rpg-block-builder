@@ -25,27 +25,32 @@
     #abaDir { position: absolute; top: 50%; right: 340px; transform: translateY(-50%); width: 24px; height: 104px; padding: 0; margin: 0; z-index: 6; writing-mode: vertical-rl; font-size: 12px; border-radius: 6px 0 0 6px }
     #meio.sem-dir aside#dir { display: none }
     #meio.sem-dir #abaDir { right: 0 }
-    /* barra "Vista 3D" sobre a vista (como o cabeçalho do Blender) */
-    .barra { position: absolute; top: 0; left: 0; right: 0; z-index: 5; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 6px 8px; background: rgba(29,31,34,.82) }
-    .barra button { width: auto; margin: 0; padding: 4px 9px; font-size: 12px; font-weight: 500 }
-    .barra button.ativo, .pop button.ativo { background: #5a6b7d; border-color: #8aa }
-    .seg { display: flex } .seg button { border-radius: 0; margin-left: -1px } .seg button:first-child { border-radius: 4px 0 0 4px; margin-left: 0 } .seg button:last-child { border-radius: 0 4px 4px 0 }
-    .barra[data-passo="2"] .so1, .barra[data-passo="3"] .so1 { display: none }
+    /* cards sobre a vista: esquerda-topo (Vista), esquerda-baixo (Desempenho), direita (Aparência, Corte, Cotas); 8 px de folga das bordas */
+    .seg { display: flex } .seg button { border-radius: 0; margin-left: -1px; padding: 4px 14px; width: auto } .seg button:first-child { border-radius: 4px 0 0 4px; margin-left: 0 } .seg button:last-child { border-radius: 0 4px 4px 0 }
+    .card .seg button.ativo { background: #5a6b7d; border-color: #8aa }
+    #vista[data-passo="2"] .so1, #vista[data-passo="3"] .so1 { display: none }
     .gerando { position: absolute; right: 10px; bottom: 10px; z-index: 5; padding: 3px 9px; font-size: 12px; border-radius: 10px; background: rgba(29,31,34,.82); pointer-events: none }
-    .pop { display: none; position: absolute; top: 100%; z-index: 7; width: 220px; padding: 4px 10px 8px; background: #26292d; border: 1px solid #555; border-radius: 0 0 6px 6px }
-    .pop.aberto { display: block }
-    .pop .seg button { padding: 4px 14px }
     @media (max-width: 1099px) { #abaDir { display: none } }
-    /* sombreamento em esferas (como o Blender), transparência do modo Arestas e elevação vertical */
-    .esfs { display: flex; gap: 4px; margin-left: auto }
+    .cards { position: absolute; top: 8px; right: 8px; z-index: 6; width: 208px; display: flex; flex-direction: column; gap: 6px; max-height: calc(100% - 16px); overflow-y: auto }
+    .cards.esq { right: auto; left: 8px; width: 132px }
+    .card { padding: 0 10px 6px; background: rgba(29,31,34,.92); border: 1px solid #444; border-radius: 6px }
+    .card.desemp { position: absolute; left: 8px; bottom: 8px; z-index: 6; width: 224px; max-height: 70%; overflow-y: auto }
+    .card.alerta { border-color: #ff5a4d }
+    .card summary { margin: 6px 0; font-size: 12px }
+    .card label { grid-template-columns: 1fr auto; margin: 4px 0; font-size: 12px }
+    .card input[type=color] { width: 40px; height: 22px; padding: 0; border: 1px solid #555; background: none }
+    .card details > summary { font-weight: 500; color: #aab }
+    .hud { margin-left: 6px; font-weight: 700 } .hud.ok { color: #5fc16f } .hud.atencao { color: #e6c14a } .hud.ruim { color: #ff5a4d }
+    .card button.olho { display: flex; align-items: center; gap: 6px; width: 100%; margin: 2px 0; padding: 3px 4px; font-size: 12px; font-weight: 500; background: transparent; border-color: transparent; text-align: left }
+    .card button.olho:hover { background: #3a3f45 }
     .thumbs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px }
-    .pop label { grid-template-columns: 1fr auto }
-    .barra .esfs button { width: 32px; height: 32px; padding: 2px; border-radius: 50% }
+    .esfs { display: flex; gap: 4px; justify-content: center; margin: 4px 0 }
+    .esfs button { width: 32px; height: 32px; padding: 2px; margin: 0; border-radius: 50% }
+    .esfs button.ativo { background: #5a6b7d; border-color: #8aa }
     .esfs canvas { width: 26px; height: 26px; display: block; margin: auto }
     [hidden] { display: none !important }
-    .elev { position: absolute; left: 8px; top: 56px; height: 150px; width: 44px; z-index: 4; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 6px 2px; font-size: 11px; background: rgba(29,31,34,.7); border-radius: 6px }
+    .elev { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); height: 150px; width: 44px; z-index: 4; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 6px 2px; font-size: 11px; background: rgba(29,31,34,.7); border-radius: 6px }
     .elev input[type=range] { flex: 1; width: 22px; height: auto; margin: 0; writing-mode: vertical-lr; direction: rtl }
-    @media (max-width: 700px) { .elev { top: 120px } }
     /* "Mostrar tudo" dos esquemas */
     dialog { background: #26292d; color: #ddd; border: 1px solid #555; border-radius: 8px; width: min(900px, 94vw); max-height: 90dvh; padding: 12px }
     dialog::backdrop { background: rgba(0,0,0,.65) }

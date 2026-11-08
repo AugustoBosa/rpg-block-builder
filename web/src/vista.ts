@@ -14,7 +14,7 @@ export interface Corte { ativo: boolean; eixo: 'x' | 'y' | 'z'; pos: number; inv
 export const config = {
   passo: 1,
   modo: 'solido' as Modo,
-  elevacao: 0, // mm, só passo 1: sobe o bloco em relação ao grid
+  elevacao: 10, // mm, só passo 1: sobe o bloco em relação ao grid (padrão 10)
   mostrar: 'ambos' as 'ambos' | 'bloco' | 'grid', // só passo 1: quais peças aparecem
   transp: 0, // transparência das peças em qualquer modo: 0 = opaco, 1 = invisível (só overlays)
   arestas: false, // overlay (vale em qualquer modo, como no Blender): arestas vivas da malha
@@ -98,7 +98,7 @@ function veMaisPerto() {
 
 // legenda e aviso sobre a vista (só aparecem em certos modos)
 const info = document.createElement('div')
-info.style.cssText = 'position:absolute;left:8px;bottom:8px;max-width:260px;font-size:12px;color:#ddd;background:rgba(0,0,0,.55);padding:6px 8px;border-radius:4px;pointer-events:none;display:none'
+info.style.cssText = 'position:absolute;left:50%;transform:translateX(-50%);bottom:8px;max-width:260px;font-size:12px;color:#ddd;background:rgba(0,0,0,.55);padding:6px 8px;border-radius:4px;pointer-events:none;display:none'
 vista.appendChild(info)
 const LEGENDA = [['#d0d4d8', 'topo plano (0°)'], ['linear-gradient(90deg,#3fa34d,#f0dc4a)', '0–45°'], ['#f08a24', '45–90° (parede)'], ['#d83a3a', 'normal para baixo']]
   .map(([c, t]) => `<div><span style="display:inline-block;width:14px;height:10px;background:${c};margin-right:6px;vertical-align:middle"></span>${t}</div>`).join('')
@@ -201,6 +201,13 @@ function aplicaTransp() {
     if (m.transparent !== t > 0) m.needsUpdate = true
     m.transparent = t > 0; m.opacity = 1 - t; m.depthWrite = t === 0
   }
+}
+/** Cor do objeto `i` (0 = bloco/piso, 1 = grid) no modo Sólido; a face de dentro (seção do corte) usa a mesma cor mais escura. */
+export function setCor(i: number, hex: string) {
+  COR[i] = new THREE.Color(hex).getHex()
+  ;((pecas[i].children[1] as THREE.Mesh).material as THREE.MeshBasicMaterial).color.set(COR[i]).multiplyScalar(.55)
+  refaz(i)
+  aplicaCorte()
 }
 /** Liga ou desliga arestas e vértices, sem trocar o modo. */
 export function setOverlays() {

@@ -119,8 +119,8 @@ export async function pisoComParedes(o: OpcoesP, previa = false, cortes?: Float6
   const c = piso(o, cortes), base: Malha = previa ? { pos: c.pos, idx: c.idx } : await final(c)
   if (!o.paredes.length) return base
   const z0 = o.altura - RELEVO - AFUNDA - .05 // a base entra na laje (zt − 0,6) e passa 0,05 mm dela: fundo coplanar gerava triângulos de área zero
-  // ponytail: cada parede cresce dl (0,02 mm × índice) em todas as direções: sem faces coplanares com o piso nem entre paredes (a booleana gerava triângulos de área zero)
-  const ws = o.paredes.map((p, i) => solido(o, p, RELEVO + AFUNDA + .05, .02 * (i + 1), !previa).translate(0, 0, z0))
+  // paredes exatas (sem engordar): faces coplanares entre paredes e com o piso se fundem na união (sem degrau de 0,02 mm); `desentorta` limpa triângulos de área ~0
+  const ws = o.paredes.map(p => solido(o, p, RELEVO + AFUNDA + .05, 0, !previa).translate(0, 0, z0))
   const f = new Manifold(new Mesh({ numProp: 3, vertProperties: base.pos, triVerts: base.idx }))
   const u = Manifold.union([f, ...ws]), r = paraMalha(u)
   for (const x of [u, f, ...ws]) x.delete()

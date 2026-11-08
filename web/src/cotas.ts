@@ -4,6 +4,8 @@ import { CSS2DObject, CSS2DRenderer } from 'three/examples/jsm/renderers/CSS2DRe
 import type { Opcoes } from './bloco'
 import { celula, centros, contorno, fundo, medidas, type Celula } from './sistema'
 
+/** Estilo das cotas (card Cotas): tamanho e fonte do texto, cor, e fator de afastamento das linhas (1 = padrão). Mudou: refazer as cotas (`cotas()`). */
+export const estilo = { tam: 11, fonte: 'sans-serif', cor: '#ffb000', afast: 1 }
 // sem clippingPlanes: o corte das peças não corta as cotas
 const LINHA = new THREE.LineBasicMaterial({ color: 0xffb000, depthTest: false })
 const OFF = 6 // mm: cota horizontal afastada da peça
@@ -65,10 +67,10 @@ class Desenho {
     const el = document.createElement('div')
     el.className = 'cota'
     el.textContent = texto
-    el.style.cssText = 'font:11px sans-serif;color:#ffb000;pointer-events:none;white-space:nowrap;text-shadow:0 0 3px #000'
+    el.style.cssText = `font:${estilo.tam}px ${estilo.fonte};color:${estilo.cor};pointer-events:none;white-space:nowrap;text-shadow:0 0 3px #000`
     const r = new CSS2DObject(el)
     this.g.add(r)
-    this.itens.push({ a, b, dist, txt: texto, r, ...extra })
+    this.itens.push({ a, b, dist: dist * estilo.afast, txt: texto, r, ...extra })
   }
   /** Altura (z0 a z1) numa quina do contorno encolhido de `inset` mm. */
   altura(inset: number, z0: number, z1: number, texto: string) { this.cota([0, 0, z0], [0, 0, z1], DV, texto, { inset }) }
@@ -80,8 +82,8 @@ class Desenho {
     type Geo = { a: V; b: V; v: V; dist: number; dA: V; dB: V; lab: V; ret: Ret }
     const geo = (it: Item, a: V, b: V, v: V, dist: number): Geo => {
       const dA = soma(a, v, dist), dB = soma(b, v, dist), lab = soma(meio(dA, dB), v, 3)
-      const [x, y] = cx.proj(mundo(lab)), w = it.txt.length * 6.4 + 8
-      return { a, b, v, dist, dA, dB, lab, ret: [x - w / 2, y - 8, x + w / 2, y + 8] }
+      const [x, y] = cx.proj(mundo(lab)), e = estilo.tam / 11, w = it.txt.length * 6.4 * e + 8 // largura e altura do rótulo crescem com o tamanho da fonte
+      return { a, b, v, dist, dA, dB, lab, ret: [x - w / 2, y - 8 * e, x + w / 2, y + 8 * e] }
     }
     const livre = (g: Geo) => g.ret[0] > 0 && g.ret[2] < cx.lw && g.ret[1] > 0 && g.ret[3] < cx.lh && !cx.ret.some(q => cruza(q, g.ret)) // dentro da vista e sem bater em outro rótulo
     const fora = (g: Geo) => Math.max(0, -g.ret[0]) + Math.max(0, g.ret[2] - cx.lw) + Math.max(0, -g.ret[1]) + Math.max(0, g.ret[3] - cx.lh) // px para fora da vista
@@ -135,7 +137,7 @@ class Desenho {
         const ordem = [0, 1].sort((i, j) => carga[i] - carga[j]) // começa pelo lado menos carregado
         const tenta = (lado: number, col: number, dentro = 0) => {
           const p = lados[lado], vx = p.x - this.centro[0], vy = p.y - this.centro[1], l = Math.hypot(vx, vy) || 1
-          return geo(it, [p.x, p.y, it.a[2]], [p.x, p.y, it.b[2]], [vx / l, vy / l, 0], it.dist + it.inset! + col * COL + dentro) // a coluna fica `DV` mm além da quina real, mesmo com a quina encolhida; `dentro` < 0 põe a linha sobre a peça
+          return geo(it, [p.x, p.y, it.a[2]], [p.x, p.y, it.b[2]], [vx / l, vy / l, 0], it.dist + it.inset! + col * COL * estilo.afast + dentro) // a coluna fica `DV` mm além da quina real, mesmo com a quina encolhida; `dentro` < 0 põe a linha sobre a peça
         }
         let escolhida: { g: Geo; lado: number } | null = null
         for (let col = 0; col < 6 && !escolhida; col++) {
@@ -202,6 +204,7 @@ function grade(o: Opcoes, peca: string, fixa: Desenho, k: Caixa) {
 /** Cotas do passo: cada chamada troca as anteriores. O grupo devolvido vai para a cena; `userData.elevavel` é o que sobe com a elevação do passo 1. */
 export function cotas(passo: 1 | 2 | 3, o: Opcoes, peca: string, mostrar = 'ambos'): THREE.Group {
   limpaCotas()
+  LINHA.color.set(estilo.cor)
   const h = passo === 3 ? o.altura : medidas(o).alturaGrid, c: V = [0, 0, h / 2] // centro aproximado da peça: as cotas saem para fora dele
   const cel = celula(o), k = passo === 1 ? caixa(cel, 1, 1) : passo === 2 ? caixa(cel, o.grid_linhas, o.grid_colunas) : caixa(cel, o.linhas, o.colunas)
   const poli = passo === 1 ? (i: number) => contorno(cel, i) : retangulo(k)
