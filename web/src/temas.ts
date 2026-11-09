@@ -17,10 +17,11 @@ export const TEMAS: Record<string, Tema> = {
   forja: T('Forja', 13, 13, .3, 10),
 }
 
-/** Grava desgaste e tamanho da pedra em `o`. Devolve as texturas efetivas (piso e parede) para quem já souber usá-las. */
+/** Grava desgaste, tamanho da pedra e texturas de piso e parede em `o`. Devolve as texturas efetivas (piso e parede) para quem já souber usá-las. */
 export function aplicaTema(o: Opcoes, t: Tema) {
   o.desgaste = t.desgaste; o.tamanho_pedra = t.tamanho_pedra
   const piso = texturaDe(t.piso), parede = texturaDe(t.parede)
-  o.textura = piso as Opcoes['textura'] // uma só textura por bloco: a do piso vale também para a parede
+  o.textura = piso as Opcoes['textura']
+  o.texturaParede = parede === piso ? '' : parede as Opcoes['textura']
   return { piso, parede }
 }

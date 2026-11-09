@@ -1,7 +1,8 @@
 // Check das texturas Lisa, Lajota e Tijolo (Rodada E1): `npx tsx check_texturas.ts` imprime PASS/FAIL e o valor medido.
-import { fechada, final, padrao, piso, type Malha, type Opcoes } from './src/bloco'
+import { fechada, final, padrao, piso, stl, type Malha, type Opcoes } from './src/bloco'
 import { ladoBloco } from './src/aberturas'
-import { paredeNova, pisoComParedes } from './src/parede'
+import { createHash } from 'node:crypto'
+import { paredeNova, parede, pisoComParedes } from './src/parede'
 import { regiao } from './src/sistema'
 import { profTex, TEX, type TexId } from './src/textura'
 
@@ -60,6 +61,19 @@ for (const t of NOVAS) {
   const o = op({ textura: t }), p = { ...paredeNova('a', { tipo: 'aresta', celula: 0, lado: 0 }, +ladoBloco(o, 0)!.L.toFixed(1)), lado: 'dentro' as const }
   const w = await pisoComParedes({ ...o, paredes: [p] }), f = fechada(w.pos, w.idx)
   confere(`(d) ${t}: parede unida ao piso fecha a malha`, f, `fechada: ${f ? 'sim' : 'NÃO'}, ${w.idx.length / 3} triângulos`)
+}
+// textura separada na parede (Rodada E2a): hash do STL da parede texturizada
+const hashP = (e: Partial<Opcoes>) => {
+  const o = op(e), p = { ...paredeNova('a', { tipo: 'aresta', celula: 0, lado: 0 }, +ladoBloco(o, 0)!.L.toFixed(1)), lado: 'dentro' as const }
+  return createHash('sha256').update(Buffer.from(stl(parede({ ...o, paredes: [p] }, p, true)))).digest('hex')
+}
+const hLT = hashP({ textura: 'lajota', texturaParede: 'tijolo' }), hT = hashP({ textura: 'tijolo' }), hL = hashP({ textura: 'lajota' })
+confere('(f) parede: piso lajota + parede tijolo = parede com textura tijolo (hash)', hLT === hT && hLT !== hL, hLT.slice(0, 12) + ' = ' + hT.slice(0, 12))
+confere("(f) parede: texturaParede '' = texturaParede igual ao piso (hash)", hL === hashP({ textura: 'lajota', texturaParede: 'lajota' }), hL.slice(0, 12))
+{
+  const o = op({ textura: 'lajota', texturaParede: 'tijolo' }), p = { ...paredeNova('a', { tipo: 'aresta', celula: 0, lado: 0 }, +ladoBloco(o, 0)!.L.toFixed(1)), lado: 'dentro' as const }
+  const w = await pisoComParedes({ ...o, paredes: [p] }), f = fechada(w.pos, w.idx)
+  confere('(f) piso lajota + parede tijolo: malha unida fecha', f, `fechada: ${f ? 'sim' : 'NÃO'}, ${w.idx.length / 3} triângulos`)
 }
 console.log(`\n${falhas ? 'FAIL' : 'PASS'}: ${falhas} falha(s)`)
 process.exit(falhas ? 1 : 0)

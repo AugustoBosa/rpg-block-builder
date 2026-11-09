@@ -18,7 +18,13 @@ confere('temas que alteram desgaste ou tamanho (>= 9)', mudam.length >= 9, `${mu
 const pares = new Set(ids.map(id => `${TEMAS[id].desgaste}/${TEMAS[id].tamanho_pedra}`))
 confere('combinações únicas de desgaste/tamanho (>= 10)', pares.size >= 10, String(pares.size))
 
-confere('aplicar tema só mexe em desgaste, tamanho_pedra e textura', ids.every(id => { const o = padrao(); aplicaTema(o, TEMAS[id]); o.desgaste = base.desgaste; o.tamanho_pedra = base.tamanho_pedra; o.textura = base.textura; return JSON.stringify(o) === json0 }), 'ok')
+confere('aplicar tema só mexe em desgaste, tamanho_pedra, textura e texturaParede', ids.every(id => { const o = padrao(); aplicaTema(o, TEMAS[id]); o.desgaste = base.desgaste; o.tamanho_pedra = base.tamanho_pedra; o.textura = base.textura; o.texturaParede = base.texturaParede; return JSON.stringify(o) === json0 }), 'ok')
+confere('padrao(): texturaParede vazia (igual ao piso)', base.texturaParede === '', JSON.stringify(base.texturaParede))
+const tp = (id: string) => { const o = padrao(); aplicaTema(o, TEMAS[id]); return `${o.textura}/${o.texturaParede || '(igual)'}` }
+confere('castelo = lajota/tijolo', tp('castelo') === 'lajota/tijolo', tp('castelo'))
+confere('dungeon = pedra, parede igual ao piso', tp('dungeon') === 'pedra/(igual)', tp('dungeon'))
+confere('taverna: piso e parede iguais gravam texturaParede vazia (indisponível cai para pedra)', tp('taverna') === 'pedra/(igual)', tp('taverna'))
+confere('cripta (lajota + parede indisponível) = lajota/pedra', tp('cripta') === 'lajota/pedra', tp('cripta'))
 confere('padrao() não mudou depois dos temas', JSON.stringify(padrao()) === json0 && base.desgaste === .5 && base.tamanho_pedra === 10, `desgaste ${base.desgaste}, tamanho ${base.tamanho_pedra}`)
 confere('texturas dos temas existem', ids.every(id => TEXTURAS.includes(TEMAS[id].piso) && TEXTURAS.includes(TEMAS[id].parede)), `${TEXTURAS.length} ids`)
 const fb = ids.filter(id => TEXTURAS_DISPONIVEIS.includes(TEMAS[id].piso) !== (texturaDe(TEMAS[id].piso) === TEMAS[id].piso))

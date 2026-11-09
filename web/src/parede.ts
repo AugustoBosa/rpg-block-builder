@@ -3,7 +3,7 @@
 import Module from 'manifold-3d'
 import { fechada, final, piso, RELEVO, type Malha, type Opcoes } from './bloco'
 import { perfilAbertura, quadro } from './aberturas'
-import { profTex } from './textura'
+import { profTex, texParede } from './textura'
 
 // ponytail: instância própria do WASM (sistema.ts não exporta o Manifold); piso e paredes são unidos aqui dentro
 const wasm = await Module()
@@ -67,7 +67,7 @@ function solido(o: OpcoesP, p: Parede, baixo: number, dl = 0, tex = false) {
   // F3: Pedra (pedra.ts) nas duas faces grandes e no topo: a malha é subdividida e cada vértice dessas faces recua pelo relevo (0..teto, limitado à metade da espessura)
   const r = m.refineToLength(.5); m.delete()
   const ds = o.semente * 13.7, prof = o.profundidade * o.junta_piso, cap = Math.max(Math.min(o.teto, e / 2 - .3), 0), topo = baixo + p.altura
-  const rel = (a: number, b: number, k: number) => Math.min(profTex(o, a, b + k, ds, prof), cap)
+  const rel = (a: number, b: number, k: number) => Math.min(profTex(o, a, b + k, ds, prof, texParede(o)), cap)
   const w = r.warp(v => {
     const dx = v[0] - s[0], dy = v[1] - s[1], u = dx * d[0] + dy * d[1] - p.inicio, ww = dx * n[0] + dy * n[1], z = v[2], alto = Math.abs(z - topo) < 1e-4
     if (Math.abs(ww - o1) < 1e-4) { const t = rel(u, z, 0); v[0] += n[0] * t; v[1] += n[1] * t } // face de trás: recua para +n

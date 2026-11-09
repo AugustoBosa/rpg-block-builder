@@ -1,6 +1,6 @@
 import { GUIAS, padrao, PISO, SECAO_GUIAS, SECAO_PISO, type Opcoes } from './bloco'
 import { cancelaExporta, exporta, previa as pedePrevia } from './cliente'
-import { TEX, type TexId } from './textura'
+import { TEX, texParede, type TexId } from './textura'
 import { paredesValidas, tracejado3D } from './aberturas'
 import { avisos, ENCAIXES, FORMATOS, fundo, SECAO, SISTEMA } from './sistema'
 import { esquema } from './esquema'
@@ -99,16 +99,16 @@ const poePiso = grupo(PISO, o, SECAO_PISO, dPiso, ['resolucao'])
 const paredesDiv = dPiso['Paredes']
 montaParedes(paredesDiv, o, previa)
 // tema: grava textura, desgaste e tamanho da pedra nos controles; sem tema escolhido, nada muda
-const temaSel = document.createElement('select'), texSel = document.createElement('select')
+const temaSel = document.createElement('select'), texSel = document.createElement('select'), texParSel = document.createElement('select')
 // ajustes avançados: um bloco por textura, só o da textura escolhida fica visível
 const avancado = Object.fromEntries(Object.entries(TEX).map(([id, t]) => {
   const w = document.createElement('div')
-  w.hidden = id !== o.textura
+  w.hidden = id !== o.textura && id !== texParede(o)
   $('pedra').append(w)
   grupo(t.knobs, o[id as TexId], t.secao, secoes(w, [...new Set(Object.values(t.secao))]))
   return [id, w]
 }))
-const mostraTextura = () => { texSel.value = o.textura; for (const id in avancado) avancado[id].hidden = id !== o.textura }
+const mostraTextura = () => { texSel.value = o.textura; texParSel.value = o.texturaParede; for (const id in avancado) avancado[id].hidden = id !== o.textura && id !== texParede(o) }
 opcoes(temaSel, [['', '—'], ...Object.entries(TEMAS).map(([k, t]) => [k, t.nome] as [string, string])])
 temaSel.onchange = () => {
   if (!temaSel.value) return
@@ -118,7 +118,9 @@ temaSel.onchange = () => {
 }
 opcoes(texSel, Object.entries(TEX).map(([k, t]) => [k, t.nome] as [string, string]))
 texSel.onchange = () => { o.textura = texSel.value as TexId; mostraTextura(); previa() }
-$('gerais').prepend(campo('Tema', temaSel), campo('Textura', texSel))
+opcoes(texParSel, [['', 'Igual ao piso'], ...Object.entries(TEX).map(([k, t]) => [k, t.nome] as [string, string])])
+texParSel.onchange = () => { o.texturaParede = texParSel.value as Opcoes['texturaParede']; mostraTextura(); previa() }
+$('gerais').prepend(campo('Tema', temaSel), campo('Textura', texSel), campo('Textura da parede', texParSel))
 grupo(GUIAS, o, SECAO_GUIAS, secoes($('op-guias'), ['Dimensões']))
 const sel3 = $('peca3') as HTMLSelectElement
 const peca = () => config.passo === 3 ? 'piso' : sel3.value

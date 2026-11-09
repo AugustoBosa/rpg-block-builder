@@ -15,5 +15,7 @@ export const TEX = {
 export type TexId = keyof typeof TEX
 
 /** Profundidade da textura escolhida em `o` no ponto (x, y) global; z = fatia da semente; prof = profundidade da junta (mm). */
-export const profTex = (o: Opcoes, x: number, y: number, z: number, prof: number) =>
-  (TEX[o.textura].fn as (...a: any[]) => number)(x, y, z, o.tamanho_pedra, prof, o.desgaste, o[o.textura])
+export const profTex = (o: Opcoes, x: number, y: number, z: number, prof: number, id: TexId = o.textura) =>
+  (TEX[id].fn as (...a: any[]) => number)(x, y, z, o.tamanho_pedra, prof, o.desgaste, o[id])
+/** Textura da parede: '' (padrão) = a mesma do piso. */
+export const texParede = (o: Opcoes): TexId => o.texturaParede || o.textura

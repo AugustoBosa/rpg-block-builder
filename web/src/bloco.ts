@@ -35,9 +35,9 @@ export const SECAO_PISO = {
 } as const
 export const SECAO_GUIAS = { grid_linhas: 'Dimensões', grid_colunas: 'Dimensões', altura_degrau: 'Dimensões' } as const
 type Num<T> = { -readonly [k in keyof T]: number }
-export type Opcoes = Sistema & Num<typeof PISO> & Num<typeof GUIAS> & { textura: TexId; pedra: KnobsPedra; lisa: KnobsLisa; lajota: KnobsLajota; tijolo: KnobsTijolo; paredes: Parede[] }
+export type Opcoes = Sistema & Num<typeof PISO> & Num<typeof GUIAS> & { textura: TexId; texturaParede: TexId | ''; pedra: KnobsPedra; lisa: KnobsLisa; lajota: KnobsLajota; tijolo: KnobsTijolo; paredes: Parede[] }
 const ini = (t: object) => Object.fromEntries(Object.entries(t).map(([k, v]) => [k, v[0]]))
-export const padrao = (): Opcoes => ({ ...ini(SISTEMA), ...ini(PISO), ...ini(GUIAS), formato: 'quadrado', textura: 'pedra', pedra: ini(PEDRA), lisa: ini(LISA), lajota: ini(LAJOTA), tijolo: ini(TIJOLO), paredes: [] } as any)
+export const padrao = (): Opcoes => ({ ...ini(SISTEMA), ...ini(PISO), ...ini(GUIAS), formato: 'quadrado', textura: 'pedra', texturaParede: '', pedra: ini(PEDRA), lisa: ini(LISA), lajota: ini(LAJOTA), tijolo: ini(TIJOLO), paredes: [] } as any)
 
 /** Rede do topo da laje: xy por ponto, triângulos e o contorno de cada célula (anti-horário).
  *  Todas as células caem na mesma rede global, então os pontos dos lados comuns são os mesmos. */

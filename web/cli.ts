@@ -14,6 +14,7 @@ for (let i = 0; i < args.length; i += 2) {
   if (k === 'peca') peca = v
   else if (k === 'formato') o.formato = v as typeof o.formato
   else if (k === 'textura') { if (!(v in TEX)) throw new Error(`textura desconhecida: ${v}`); o.textura = v as TexId }
+  else if (k === 'textura_parede') { if (!(v in TEX)) throw new Error(`textura desconhecida: ${v}`); o.texturaParede = v as TexId }
   else if (/^(pedra|lisa|lajota|tijolo)_/.test(k)) (o as any)[k.split('_')[0]][k.slice(k.indexOf('_') + 1)] = +v // ex.: --pedra_vao 0.8, --lajota_lado 1
   else if (k in o) (o as any)[k] = +v
   else throw new Error(`opção desconhecida: ${k}`)
