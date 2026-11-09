@@ -60,9 +60,9 @@ Risco de copyright (avisado ao usuário): medidas configuráveis reduzem o risco
 | # | Textura | Como ela é | Ajustes | Onde | Web |
 |---|---|---|---|---|---|
 | 0 | Pedra | Pedras irregulares, vão com cascalho, rachaduras, lascas | 13 | piso e parede | ✅ piso |
-| 1 | Lajota | Placas quadradas, cantos lascados | 11 | ambos | ⏳ |
+| 1 | Lajota | Placas quadradas, cantos lascados | 11 | ambos | ✅ |
 | 2 | Rachado | Lajota grande quebrada em cacos | 6 | ambos | ⏳ |
-| 3 | Tijolo | Fiadas, argamassa, quinas quebradas, tijolos faltando | 12 | ambos | ⏳ |
+| 3 | Tijolo | Fiadas, argamassa, quinas quebradas, tijolos faltando | 12 | ambos | ✅ |
 | 4 | Tábuas | Fresta, empeno, veio, nós, pregos | 12 | ambos | ⏳ |
 | 5 | Terra | Torrões e pedrinhas | 7 | ambos | ⏳ |
 | 6 | Areia | Ondulações e dunas | 6 | ambos | ⏳ |
@@ -73,8 +73,10 @@ Risco de copyright (avisado ao usuário): medidas configuráveis reduzem o risco
 | 11 | Caverna | Rocha em lajes, fendas, rugas | 11 | ambos | ⏳ |
 | 12 | Casco | Tábuas de navio sobrepostas, cavilhas | 13 | ambos | ⏳ |
 | 13 | Metal | Chapas, costura, rebites, amassados, corrosão | 12 | ambos | ⏳ |
-| 14 | Lisa | Quase plana, placas grandes | 3 | ambos | ⏳ |
+| 14 | Lisa | Quase plana, placas grandes | 3 | ambos | ✅ |
 | — | Relevo | Teto e ganho da junta, para todas | 3 | todas | ✅ |
+
+Rodada E1: Lisa, Lajota e Tijolo estão ✅ no piso e na parede (`web/src/lisa.ts`, `lajota.ts`, `tijolo.ts`, auxiliares em `grade.ts`, registro em `textura.ts`, check em `web/check_texturas.ts`). Falta portar as outras 11.
 
 Funções comuns do Blender que as texturas usam (portar junto): `grade` (fiadas), `junta_perfil`, `seixos` (Voronoi 2D), `lasca`, `grao`, `distorce`, `_mancha`.
 

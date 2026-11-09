@@ -18,7 +18,7 @@ confere('temas que alteram desgaste ou tamanho (>= 9)', mudam.length >= 9, `${mu
 const pares = new Set(ids.map(id => `${TEMAS[id].desgaste}/${TEMAS[id].tamanho_pedra}`))
 confere('combinações únicas de desgaste/tamanho (>= 10)', pares.size >= 10, String(pares.size))
 
-confere('aplicar tema só mexe em desgaste e tamanho_pedra', ids.every(id => { const o = padrao(); aplicaTema(o, TEMAS[id]); o.desgaste = base.desgaste; o.tamanho_pedra = base.tamanho_pedra; return JSON.stringify(o) === json0 }), 'ok')
+confere('aplicar tema só mexe em desgaste, tamanho_pedra e textura', ids.every(id => { const o = padrao(); aplicaTema(o, TEMAS[id]); o.desgaste = base.desgaste; o.tamanho_pedra = base.tamanho_pedra; o.textura = base.textura; return JSON.stringify(o) === json0 }), 'ok')
 confere('padrao() não mudou depois dos temas', JSON.stringify(padrao()) === json0 && base.desgaste === .5 && base.tamanho_pedra === 10, `desgaste ${base.desgaste}, tamanho ${base.tamanho_pedra}`)
 confere('texturas dos temas existem', ids.every(id => TEXTURAS.includes(TEMAS[id].piso) && TEXTURAS.includes(TEMAS[id].parede)), `${TEXTURAS.length} ids`)
 const fb = ids.filter(id => TEXTURAS_DISPONIVEIS.includes(TEMAS[id].piso) !== (texturaDe(TEMAS[id].piso) === TEMAS[id].piso))

@@ -179,7 +179,8 @@ t('D10', 'prévia (piso cru 0,5 mm) com 4 paredes ≤ 3 s', async () => {
   if (s > 3) throw new Error(`${s.toFixed(1)} s`); return `${s.toFixed(2)} s`
 })
 const TELHADO_F0 = 0 // ocorrências de "telhado" em web/src no F0 (medido); não pode crescer
-t('D11', '"telhado" em web/src não cresce', () => {
+t('D11', '"telhado" em web/src não cresce; textura padrão = Pedra', () => {
+  if (padrao().textura !== 'pedra') throw new Error(`padrão = ${padrao().textura}`)
   const n = readdirSync('src').filter(f => f.endsWith('.ts')).reduce((s, f) => s + (readFileSync('src/' + f, 'utf8').match(/telhado/gi)?.length ?? 0), 0)
   if (n > TELHADO_F0) throw new Error(`${n} > ${TELHADO_F0}`); return `${n} ocorrências`
 })
@@ -192,7 +193,7 @@ for (const [id, nome, fn] of T) {
   catch (e) { falhas++; console.log(`FAIL ${id.padEnd(3)} ${nome} — ${String(e instanceof Error ? e.message : e).split('\n')[0]}`) }
 }
 console.log(`\nTODO (só no navegador): D9 (3 paredes + 1 fora, tracejado na vista 3D e no esquema, 0 erros no console, sem rolagem horizontal em 1024/700/375 px); D10-UI (prévia com 4 paredes ≤ 3 s no app)`)
-console.log(`TODO (manual): D11 nenhuma textura além da Pedra; sem código GPL`)
+console.log(`TODO (manual): D11 padrão = Pedra; sem código GPL (texturas Lisa, Lajota e Tijolo em check_texturas.ts)`)
 console.log(`
 ${nPass}/${nPass + falhas} PASS, ${falhas} FAIL`)
 process.exit(falhas ? 1 : 0)

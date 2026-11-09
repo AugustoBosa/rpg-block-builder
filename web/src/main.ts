@@ -1,6 +1,6 @@
 import { GUIAS, padrao, PISO, SECAO_GUIAS, SECAO_PISO, type Opcoes } from './bloco'
 import { cancelaExporta, exporta, previa as pedePrevia } from './cliente'
-import { PEDRA, SECAO_PEDRA } from './pedra'
+import { TEX, type TexId } from './textura'
 import { paredesValidas, tracejado3D } from './aberturas'
 import { avisos, ENCAIXES, FORMATOS, fundo, SECAO, SISTEMA } from './sistema'
 import { esquema } from './esquema'
@@ -94,21 +94,31 @@ formato.onchange = () => { o.formato = formato.value as Opcoes['formato']; monta
 encaixe.onchange = () => { Object.assign(o, ENCAIXES[encaixe.value as keyof typeof ENCAIXES][1]); montaSistema() }
 
 // aba Blocos (peça de piso e Pedra avançada) e aba Grids (grid e degrau). As duas leem as medidas do Sistema.
-const dPiso = secoes($('gerais'), ['Peça', 'Paredes', 'Textura Pedra', 'Borda'], ['Peça'])
+const dPiso = secoes($('gerais'), ['Peça', 'Paredes', 'Textura', 'Borda'], ['Peça'])
 const poePiso = grupo(PISO, o, SECAO_PISO, dPiso, ['resolucao'])
 const paredesDiv = dPiso['Paredes']
 montaParedes(paredesDiv, o, previa)
-// tema: grava desgaste e tamanho da pedra nos controles (a textura só entra quando existir); sem tema escolhido, nada muda
-const temaSel = document.createElement('select')
+// tema: grava textura, desgaste e tamanho da pedra nos controles; sem tema escolhido, nada muda
+const temaSel = document.createElement('select'), texSel = document.createElement('select')
+// ajustes avançados: um bloco por textura, só o da textura escolhida fica visível
+const avancado = Object.fromEntries(Object.entries(TEX).map(([id, t]) => {
+  const w = document.createElement('div')
+  w.hidden = id !== o.textura
+  $('pedra').append(w)
+  grupo(t.knobs, o[id as TexId], t.secao, secoes(w, [...new Set(Object.values(t.secao))]))
+  return [id, w]
+}))
+const mostraTextura = () => { texSel.value = o.textura; for (const id in avancado) avancado[id].hidden = id !== o.textura }
 opcoes(temaSel, [['', '—'], ...Object.entries(TEMAS).map(([k, t]) => [k, t.nome] as [string, string])])
 temaSel.onchange = () => {
   if (!temaSel.value) return
-  aplicaTema(o, TEMAS[temaSel.value])
+  aplicaTema(o, TEMAS[temaSel.value]); mostraTextura()
   poePiso.desgaste(o.desgaste); poePiso.tamanho_pedra(o.tamanho_pedra)
   previa()
 }
-$('gerais').prepend(campo('Tema', temaSel))
-grupo(PEDRA, o.pedra, SECAO_PEDRA, secoes($('pedra'), ['Avançado — Forma das pedras', 'Avançado — Superfície', 'Avançado — Desgaste']))
+opcoes(texSel, Object.entries(TEX).map(([k, t]) => [k, t.nome] as [string, string]))
+texSel.onchange = () => { o.textura = texSel.value as TexId; mostraTextura(); previa() }
+$('gerais').prepend(campo('Tema', temaSel), campo('Textura', texSel))
 grupo(GUIAS, o, SECAO_GUIAS, secoes($('op-guias'), ['Dimensões']))
 const sel3 = $('peca3') as HTMLSelectElement
 const peca = () => config.passo === 3 ? 'piso' : sel3.value
@@ -128,7 +138,7 @@ const estado = $('estado'), baixar = $('baixar') as HTMLButtonElement, cancela =
 baixar.onclick = async () => { // roda num worker; os parâmetros ficam congelados no clique
   const t = performance.now(), p = peca(), s = structuredClone(o), f = FORMATOS[s.formato]
   s.paredes = paredesValidas(s)
-  const nome = p === 'piso' ? `Piso Pedra ${f} ${s.linhas}x${s.colunas} s${s.semente}` : `${p === 'grid' ? 'Grid' : 'Degrau'} ${f} ${s.grid_linhas}x${s.grid_colunas}`
+  const nome = p === 'piso' ? `Piso ${TEX[s.textura].nome} ${f} ${s.linhas}x${s.colunas} s${s.semente}` : `${p === 'grid' ? 'Grid' : 'Degrau'} ${f} ${s.grid_linhas}x${s.grid_colunas}`
   baixar.disabled = true; cancela.hidden = false
   estado.textContent = 'Gerando...'
   try {

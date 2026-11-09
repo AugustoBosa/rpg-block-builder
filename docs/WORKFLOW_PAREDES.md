@@ -77,7 +77,7 @@ Executável: `cd web && npx tsx check_paredes.ts` (imprime PASS/FAIL e o valor m
 | D8 | Textura: relevo das faces dentro de [0, `teto`] do campo da Pedra; campo do piso inalterado (p50 1,509, p95 1,895); parede 30×6 gera ≤ 120 mil triângulos | limites |
 | D9 | Navegador: criar 3 paredes (1 em aresta, 1 em eixo, 1 solta), cada uma com 1 abertura, e 1 abertura toda fora (tracejada) → tracejado visível na vista 3D e no esquema; 0 erros no console; sem rolagem horizontal em 1024, 700 e 375 px | 0 erros, 3/3 tamanhos |
 | D10 | Exportar STL com 4 paredes num piso 2×3: conclui, malha fechada, ≤ 60 s; prévia com 4 paredes responde em ≤ 3 s | limites |
-| D11 | `grep -ri telhado web/src` sem código novo; nenhuma textura além da Pedra; sem código GPL | 0 |
+| D11 | `grep -ri telhado web/src` sem código novo; textura padrão = Pedra (D11 original, "nenhuma textura além da Pedra", superado pela Rodada E1); sem código GPL | 0 |
 
 Parada: um critério que falha por **resíduo em pose extrema de câmera** (não de geometria) pode ser aceito como limitação conhecida — só o Claude decide.
 

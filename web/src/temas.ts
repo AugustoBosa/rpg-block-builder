@@ -4,7 +4,7 @@ import type { Opcoes } from './bloco'
 export const TEXTURAS = ['pedra', 'lajota', 'rachado', 'tijolo', 'tabuas', 'terra', 'areia', 'agua', 'lava', 'nichos', 'glifos', 'caverna', 'casco', 'metal', 'lisa'] as const // ids 0..14 do gerar.py
 export type Textura = typeof TEXTURAS[number]
 /** Texturas que a web já sabe gerar. Quem pede outra cai para 'pedra'. */
-export const TEXTURAS_DISPONIVEIS: readonly Textura[] = ['pedra']
+export const TEXTURAS_DISPONIVEIS: readonly Textura[] = ['pedra', 'lisa', 'lajota', 'tijolo']
 export const texturaDe = (t: Textura): Textura => TEXTURAS_DISPONIVEIS.includes(t) ? t : 'pedra'
 
 type Tema = { nome: string; piso: Textura; parede: Textura; desgaste: number; tamanho_pedra: number }
@@ -20,5 +20,7 @@ export const TEMAS: Record<string, Tema> = {
 /** Grava desgaste e tamanho da pedra em `o`. Devolve as texturas efetivas (piso e parede) para quem já souber usá-las. */
 export function aplicaTema(o: Opcoes, t: Tema) {
   o.desgaste = t.desgaste; o.tamanho_pedra = t.tamanho_pedra
-  return { piso: texturaDe(t.piso), parede: texturaDe(t.parede) }
+  const piso = texturaDe(t.piso), parede = texturaDe(t.parede)
+  o.textura = piso as Opcoes['textura'] // uma só textura por bloco: a do piso vale também para a parede
+  return { piso, parede }
 }

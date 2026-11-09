@@ -3,7 +3,11 @@
 // sem mexer na borda nem no encaixe.
 import { MeshoptSimplifier } from 'meshoptimizer'
 import { mapa, ruido } from './ruido'
-import { pedra, PEDRA, type KnobsPedra } from './pedra'
+import { PEDRA, type KnobsPedra } from './pedra'
+import { LISA, type KnobsLisa } from './lisa'
+import { LAJOTA, type KnobsLajota } from './lajota'
+import { TIJOLO, type KnobsTijolo } from './tijolo'
+import { profTex, type TexId } from './textura'
 import type { Parede } from './parede'
 import { corpos, distBorda, distSeg, malha, regiao, SISTEMA, type Malha, type Regiao, type Sistema } from './sistema'
 export type { Malha }
@@ -26,14 +30,14 @@ export const GUIAS = { // grid e degrau (aba própria)
 // seções das abas Blocos e Grids (chave → título; as tuplas acima não mudam)
 export const SECAO_PISO = {
   linhas: 'Peça', colunas: 'Peça', altura: 'Peça', posicao_x: 'Peça', posicao_y: 'Peça',
-  semente: 'Textura Pedra', desgaste: 'Textura Pedra', tamanho_pedra: 'Textura Pedra', profundidade: 'Textura Pedra', teto: 'Textura Pedra', junta_piso: 'Textura Pedra',
+  semente: 'Textura', desgaste: 'Textura', tamanho_pedra: 'Textura', profundidade: 'Textura', teto: 'Textura', junta_piso: 'Textura',
   quina_largura: 'Borda', quina_gasto: 'Borda', lateral_largura: 'Borda', lateral_gasto: 'Borda', ruido_borda: 'Borda',
 } as const
 export const SECAO_GUIAS = { grid_linhas: 'Dimensões', grid_colunas: 'Dimensões', altura_degrau: 'Dimensões' } as const
 type Num<T> = { -readonly [k in keyof T]: number }
-export type Opcoes = Sistema & Num<typeof PISO> & Num<typeof GUIAS> & { pedra: KnobsPedra; paredes: Parede[] }
+export type Opcoes = Sistema & Num<typeof PISO> & Num<typeof GUIAS> & { textura: TexId; pedra: KnobsPedra; lisa: KnobsLisa; lajota: KnobsLajota; tijolo: KnobsTijolo; paredes: Parede[] }
 const ini = (t: object) => Object.fromEntries(Object.entries(t).map(([k, v]) => [k, v[0]]))
-export const padrao = (): Opcoes => ({ ...ini(SISTEMA), ...ini(PISO), ...ini(GUIAS), formato: 'quadrado', pedra: ini(PEDRA), paredes: [] } as any)
+export const padrao = (): Opcoes => ({ ...ini(SISTEMA), ...ini(PISO), ...ini(GUIAS), formato: 'quadrado', textura: 'pedra', pedra: ini(PEDRA), lisa: ini(LISA), lajota: ini(LAJOTA), tijolo: ini(TIJOLO), paredes: [] } as any)
 
 /** Rede do topo da laje: xy por ponto, triângulos e o contorno de cada célula (anti-horário).
  *  Todas as células caem na mesma rede global, então os pontos dos lados comuns são os mesmos. */
@@ -87,13 +91,13 @@ function rede(o: Opcoes, r: Regiao, res: number) {
 /** O relevo de cada ponto da rede depende só das coordenadas do ponto: dá para calcular em partes, em paralelo. */
 function relevo(o: Opcoes, r: Regiao, XY: number[]) {
   const ox = o.posicao_x * r.c.passo[0], oy = o.posicao_y * r.c.passo[1], ds = o.semente * 13.7
-  const prof = Math.max(o.profundidade, .4) * o.junta_piso, des = o.desgaste, tam = o.tamanho_pedra
+  const prof = Math.max(o.profundidade, .4) * o.junta_piso, des = o.desgaste
   return {
     rn: (L: number) => ruido(XY[L * 2] + ox, XY[L * 2 + 1] + oy, ds, o.ruido_borda, 3, .5, 9),
     corte: (L: number, rn: number) => { // profundidade do corte do topo no ponto L
       const x = XY[L * 2], y = XY[L * 2 + 1]
       const quina = mapa(distBorda(r, x, y), 0, o.quina_largura, 1, 0) * (.25 + des * .8) * (.6 + rn * .8) * o.quina_gasto
-      return Math.min(Math.min(pedra(x + ox, y + oy, ds, tam, prof, des, o.pedra), o.teto) + quina, o.teto)
+      return Math.min(Math.min(profTex(o, x + ox, y + oy, ds, prof), o.teto) + quina, o.teto)
     },
   }
 }
