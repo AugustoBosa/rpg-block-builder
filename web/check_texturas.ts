@@ -1,4 +1,4 @@
-// Check das texturas Lisa, Lajota e Tijolo (Rodada E1): `npx tsx check_texturas.ts` imprime PASS/FAIL e o valor medido.
+// Check de todas as texturas de TEX (Rodadas E1 e E2b): `npx tsx check_texturas.ts` imprime PASS/FAIL e o valor medido.
 import { fechada, final, padrao, piso, stl, type Malha, type Opcoes } from './src/bloco'
 import { ladoBloco } from './src/aberturas'
 import { createHash } from 'node:crypto'
@@ -6,7 +6,7 @@ import { paredeNova, parede, pisoComParedes } from './src/parede'
 import { regiao } from './src/sistema'
 import { profTex, TEX, type TexId } from './src/textura'
 
-const NOVAS: TexId[] = ['lisa', 'lajota', 'tijolo']
+const NOVAS = (Object.keys(TEX) as TexId[]).filter(t => t !== 'pedra')
 const op = (e: Partial<Opcoes>): Opcoes => ({ ...padrao(), ...e })
 let falhas = 0
 const confere = (nome: string, ok: boolean, medido: string) => { if (!ok) falhas++; console.log(`${ok ? 'PASS' : 'FAIL'} ${nome} — ${medido}`) }
@@ -39,7 +39,7 @@ function campo(t: TexId) {
 const stats: Record<string, { media: number; desvio: number }> = {}
 for (const t of ['pedra', ...NOVAS] as TexId[]) {
   const c = campo(t); stats[t] = c
-  console.log(`MEDIA ${TEX[t].nome.padEnd(7)} média ${c.media.toFixed(3)} mm, desvio ${c.desvio.toFixed(3)} mm`)
+  console.log(`MEDIA ${TEX[t].nome.padEnd(8)} média ${c.media.toFixed(3)} mm, desvio ${c.desvio.toFixed(3)} mm`)
   if (t === 'pedra') continue
   confere(`(c) ${t}: profundidade entre 0 e o teto`, c.min >= 0 && c.max <= c.teto + 1e-9, `mín ${c.min.toFixed(3)}, máx ${c.max.toFixed(3)}, teto ${c.teto}`)
   // decisão do usuário: a Lisa pode ter relevo < 0,4 mm; para ela basta a média ser > 0 (e menor que 2,5)

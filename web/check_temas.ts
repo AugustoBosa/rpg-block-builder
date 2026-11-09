@@ -23,7 +23,10 @@ confere('padrao(): texturaParede vazia (igual ao piso)', base.texturaParede === 
 const tp = (id: string) => { const o = padrao(); aplicaTema(o, TEMAS[id]); return `${o.textura}/${o.texturaParede || '(igual)'}` }
 confere('castelo = lajota/tijolo', tp('castelo') === 'lajota/tijolo', tp('castelo'))
 confere('dungeon = pedra, parede igual ao piso', tp('dungeon') === 'pedra/(igual)', tp('dungeon'))
-confere('taverna: piso e parede iguais gravam texturaParede vazia (indisponível cai para pedra)', tp('taverna') === 'pedra/(igual)', tp('taverna'))
+confere('taverna = tabuas/tabuas (piso e parede iguais: texturaParede vazia)', tp('taverna') === 'tabuas/(igual)', tp('taverna'))
+confere('ruina = rachado/tijolo', tp('ruina') === 'rachado/tijolo', tp('ruina'))
+confere('pantano = terra/tijolo', tp('pantano') === 'terra/tijolo', tp('pantano'))
+confere('deserto = areia/tijolo', tp('deserto') === 'areia/tijolo', tp('deserto'))
 confere('cripta (lajota + parede indisponível) = lajota/pedra', tp('cripta') === 'lajota/pedra', tp('cripta'))
 confere('padrao() não mudou depois dos temas', JSON.stringify(padrao()) === json0 && base.desgaste === .5 && base.tamanho_pedra === 10, `desgaste ${base.desgaste}, tamanho ${base.tamanho_pedra}`)
 confere('texturas dos temas existem', ids.every(id => TEXTURAS.includes(TEMAS[id].piso) && TEXTURAS.includes(TEMAS[id].parede)), `${TEXTURAS.length} ids`)

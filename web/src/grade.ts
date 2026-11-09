@@ -5,9 +5,10 @@ import { mapa, rnd, ruido } from './ruido'
 /** Resultado de `grade` (objeto reaproveitado: sem alocar por ponto). */
 export const G = { dist: 0, du: 0, dv: 0, fu: 0, fv: 0, bw: 0, r0: 0, r1: 0, r2: 0 }
 
-/** Peças em fiadas: fiada = altura h, comprimento bw; fiadas ímpares deslocadas `desloc`·bw (+ folga aleatória de ±0,1·bw). */
-export function grade(u: number, v: number, ds: number, bw: number, h: number, desloc: number) {
+/** Peças em fiadas: fiada = altura h, comprimento bw (× 1 ± vari/2 por fiada, se vari > 0); fiadas ímpares deslocadas `desloc`·bw (+ folga aleatória de ±0,1·bw). G.bw = comprimento efetivo. */
+export function grade(u: number, v: number, ds: number, bw: number, h: number, desloc: number, vari = 0) {
   const fila = Math.floor(v / h), s = Math.floor(ds)
+  if (vari > 0) bw *= 1 - vari / 2 + rnd(fila, 8, s, 31) * vari
   const off = (((fila % 2) + 2) % 2) * desloc * bw + (rnd(fila, 7, s, 31) - .5) * .2 * bw
   const uu = u + off, col = Math.floor(uu / bw), fu = uu - col * bw, fv = v - fila * h
   G.du = Math.min(fu, bw - fu); G.dv = Math.min(fv, h - fv); G.dist = Math.min(G.du, G.dv)

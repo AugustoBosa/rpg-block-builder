@@ -4,7 +4,7 @@ import type { Opcoes } from './bloco'
 export const TEXTURAS = ['pedra', 'lajota', 'rachado', 'tijolo', 'tabuas', 'terra', 'areia', 'agua', 'lava', 'nichos', 'glifos', 'caverna', 'casco', 'metal', 'lisa'] as const // ids 0..14 do gerar.py
 export type Textura = typeof TEXTURAS[number]
 /** Texturas que a web já sabe gerar. Quem pede outra cai para 'pedra'. */
-export const TEXTURAS_DISPONIVEIS: readonly Textura[] = ['pedra', 'lisa', 'lajota', 'tijolo']
+export const TEXTURAS_DISPONIVEIS: readonly Textura[] = ['pedra', 'lisa', 'lajota', 'tijolo', 'terra', 'areia', 'rachado', 'tabuas']
 export const texturaDe = (t: Textura): Textura => TEXTURAS_DISPONIVEIS.includes(t) ? t : 'pedra'
 
 type Tema = { nome: string; piso: Textura; parede: Textura; desgaste: number; tamanho_pedra: number }

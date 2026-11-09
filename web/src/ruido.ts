@@ -69,6 +69,20 @@ export function voronoi(x: number, y: number, z: number, escala: number, out: Vo
   return out
 }
 
+export interface Vor2 { dist: number; r0: number; r1: number; r2: number }
+/** Voronoi 2D (F1): distância ao centro mais próximo (nas coordenadas escaladas) e cor 0..1 da célula. Para pedrinhas: o 3D com z fixo quase não corta centros. */
+export function voronoi2(x: number, y: number, escala: number, out: Vor2) {
+  const qx = x * escala, qy = y * escala, cx = Math.floor(qx), cy = Math.floor(qy), fx = qx - cx, fy = qy - cy
+  let best = 1e9, bi = 0, bj = 0
+  for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) {
+    const rx = i + rnd(cx + i, cy + j, 0, 41) - fx, ry = j + rnd(cx + i, cy + j, 0, 42) - fy, d = rx * rx + ry * ry
+    if (d < best) { best = d; bi = i; bj = j }
+  }
+  const a = cx + bi, b = cy + bj
+  out.dist = Math.sqrt(best); out.r0 = rnd(a, b, 0, 43); out.r1 = rnd(a, b, 0, 44); out.r2 = rnd(a, b, 0, 45)
+  return out
+}
+
 /** Mapa a..b → c..d com suavização (smoothstep), preso nas pontas. */
 export function mapa(v: number, a: number, b: number, c: number, d: number) {
   let t = (v - a) / (b - a)
