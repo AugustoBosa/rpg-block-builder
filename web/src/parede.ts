@@ -103,7 +103,7 @@ export async function pisoComParedes(o: OpcoesP, previa = false, cortes?: Float6
   if (fundido) { // afunda 0,3 mm no topo das paredes
     const s = solidoTelhado(o, !previa); ws.push(s.translate(0, 0, geoTelhado(o).zb - .3)); s.delete()
   }
-  const f =new Manifold(new Mesh({ numProp: 3, vertProperties: base.pos, triVerts: base.idx }))
+  const f = new Manifold(new Mesh({ numProp: 3, vertProperties: base.pos, triVerts: base.idx }))
   const u = Manifold.union([f, ...ws]), r = paraMalha(u)
   for (const x of [u, f, ...ws]) x.delete()
   desentorta(r)

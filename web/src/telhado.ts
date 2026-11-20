@@ -1,7 +1,7 @@
 // Telhado sobre as paredes (docs/superpowers/specs/2026-11-20-telhado-design.md): sólido maciço por CSG, base em z = 0;
 // cada água é um plano z ≤ c + a·x + b·y aparando uma caixa. Removível (STL próprio, com saia) ou fundido ao bloco (parede.ts).
 import type { Malha, Opcoes } from './bloco'
-import { paredesValidas, pilares } from './aberturas'
+import { paredesValidas, pilares, quadro } from './aberturas'
 import { regiao } from './sistema'
 import { profTex } from './textura'
 import { desentorta, Manifold, paraMalha } from './wasm'
@@ -15,7 +15,7 @@ export function geoTelhado(o: Opcoes) {
   const r = regiao(o, o.linhas, o.colunas), xs = r.seg.flatMap(g => [g[0], g[2]]), ys = r.seg.flatMap(g => [g[1], g[3]])
   const bx0 = Math.min(...xs), bx1 = Math.max(...xs), by0 = Math.min(...ys), by1 = Math.max(...ys), bl = o.telhado_beiral
   const x0 = bx0 - bl, x1 = bx1 + bl, y0 = by0 - bl, y1 = by1 + bl, xc = (x0 + x1) / 2, yc = (y0 + y1) / 2
-  const ps = paredesValidas(o), pil = o.pilar && pilares(o, ps).length ? o.pilar_sobe : 0 // pilares passam do topo das paredes: o telhado apoia neles
+  const ps = paredesValidas(o), pil = o.telhado_modo === 'removivel' && o.pilar && pilares(o, ps).length ? o.pilar_sobe : 0 // removível apoia nos pilares que passam do topo; no fundido a união absorve os pilares
   const zb = o.altura + (ps.length ? Math.max(...ps.map(p => p.altura)) + pil : 30)
   const tg = Math.tan(o.telhado_angulo * Math.PI / 180), b = o.telhado_borda, f = o.telhado_forma
   const P: [number, number, number][] = [] // [a, b, c]: z ≤ c + a·x + b·y
@@ -47,7 +47,7 @@ export function solidoTelhado(o: Opcoes, tex = false, saia = false): Solido {
     if (mh > 0) {
       let anel = sub(caixa(x0, x1, y0, y1, 2.9, 3 + mh), caixa(x0 + me, x1 - me, y0 + me, y1 - me, 2, 4 + mh))
       if (o.ameias) for (const [a0, a1, ao] of [[x0 + me + 2, x1 - me - 2, 'x'], [y0 + me + 2, y1 - me - 2, 'y']] as const)
-        for (let s = a0; s + 4 <= a1; s += 8)
+        for (let s = a0 + ((a1 - a0 - 4) % 8) / 2; s + 4 <= a1; s += 8)
           anel = sub(anel, ao === 'x' ? caixa(s, s + 4, y0 - 1, y1 + 1, 3 + mh / 2, 4 + mh) : caixa(x0 - 1, x1 + 1, s, s + 4, 3 + mh / 2, 4 + mh))
       m = uni(m, anel)
     }
@@ -64,7 +64,7 @@ export function solidoTelhado(o: Opcoes, tex = false, saia = false): Solido {
       const [x, y, z] = v, t = g.topo(x, y)
       if (Math.abs(z - t) > 1e-4) return
       let u = x, w = y // plano: textura em x, y no topo da laje, fora da mureta
-      if (o.telhado_forma === 'plano') { if (x < x0 + me || x > x1 - me || y < y0 + me || y > y1 - me) return }
+      if (o.telhado_forma === 'plano') { if (x <= x0 + me || x >= x1 - me || y <= y0 + me || y >= y1 - me) return }
       else { // água ativa: u ao longo da cumeeira (horizontal no plano), w = distância horizontal / cos (comprimento real na água)
         const [a, bb, c] = P.reduce((p, q) => q[2] + q[0] * x + q[1] * y < p[2] + p[0] * x + p[1] * y ? q : p)
         const h = Math.hypot(a, bb); u = (-bb * x + a * y) / h; w = (c + a * x + bb * y - g.b) / (g.tg * cos) // w cresce para a cumeeira
@@ -76,7 +76,15 @@ export function solidoTelhado(o: Opcoes, tex = false, saia = false): Solido {
   if (saia && g.ps.length && o.saia_altura > 0) {
     const pil = o.pilar && pilares(o, g.ps).length ? 2 * o.pilar_saliencia : 0 // o pilar entra até espessura + 2 × saliência
     const e = Math.max(...g.ps.map(p => p.espessura)) + pil + o.saia_folga, i = e + 1.2
-    const s = sub(caixa(g.bx0 + e, g.bx1 - e, g.by0 + e, g.by1 - e, -o.saia_altura, .5), caixa(g.bx0 + i, g.bx1 - i, g.by0 + i, g.by1 - i, -o.saia_altura - 1, 1))
+    let s = sub(caixa(g.bx0 + e, g.bx1 - e, g.by0 + e, g.by1 - e, -o.saia_altura, .5), caixa(g.bx0 + i, g.bx1 - i, g.by0 + i, g.by1 - i, -o.saia_altura - 1, 1))
+    // a saia não atravessa paredes em eixo (que cruzam o interior): subtrai a planta delas, engordada pela folga
+    for (const p of g.ps.filter(p => p.ancora.tipo === 'eixo')) {
+      const { pt, o1, o2 } = quadro(o, p, o.saia_folga), dl = o.saia_folga
+      const poly = [pt(-dl, o1), pt(p.comprimento + dl, o1), pt(p.comprimento + dl, o2), pt(-dl, o2)]
+      const A = poly.reduce((q, [x, y], i) => q + x * poly[(i + 1) % 4][1] - poly[(i + 1) % 4][0] * y, 0)
+      const ext = Manifold.extrude([A > 0 ? poly : poly.reverse()], o.saia_altura + 2), c = ext.translate([0, 0, -o.saia_altura - 1])
+      ext.delete(); s = sub(s, c)
+    }
     m = uni(m, s) // o topo da saia entra 0,5 mm no telhado: sem faces coplanares
   }
   return m

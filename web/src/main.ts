@@ -40,6 +40,7 @@ function previa(res = resRapida()) {
       const ar = document.getElementById('avisoRampa')
       const semApoio = temTelhado(snap) && !snap.paredes.length
       if (ar) ar.textContent = snap.inclinacao > 0 && o.paredes.length ? '⚠ Paredes desligadas na rampa (inclinação > 0).'
+        : snap.telhado_forma !== 'nenhum' && !temTelhado(snap) ? '⚠ Telhado só no bloco quadrado e sem rampa (ignorado).'
         : semApoio ? (snap.telhado_modo === 'fundido' ? '⚠ Telhado fundido precisa de paredes (ignorado).' : '⚠ Telhado sem paredes para apoiar.') : ''
       $('baixarTelhado').hidden = !(passo === 3 && temTelhado(snap) && snap.telhado_modo === 'removivel')
       if (passo === 3) {
@@ -158,12 +159,12 @@ function vaiPara(n: number) {
 }
 for (const i of [1, 2, 3]) $('ir' + i).onclick = () => vaiPara(i)
 
-const estado = $('estado'), baixar = $('baixar') as HTMLButtonElement, cancela = $('cancela')
+const estado = $('estado'), baixar = $('baixar') as HTMLButtonElement, cancela = $('cancela'), baixarTelhado = $('baixarTelhado') as HTMLButtonElement
 baixar.onclick = async () => { // roda num worker; os parâmetros ficam congelados no clique
   const t = performance.now(), p = peca(), s = structuredClone(o), f = FORMATOS[s.formato]
   s.paredes = paredesValidas(s)
   const nome = p === 'piso' ? `Piso ${TEX[s.textura].nome} ${f} ${s.linhas}x${s.colunas} s${s.semente}` : `${p === 'grid' ? 'Grid' : 'Degrau'} ${f} ${s.grid_linhas}x${s.grid_colunas}`
-  baixar.disabled = true; cancela.hidden = false
+  baixar.disabled = true; baixarTelhado.disabled = true; cancela.hidden = false
   estado.textContent = 'Gerando...'
   try {
     const r = await exporta({ tipo: 'exporta', peca: p, o: s }, e => { estado.textContent = e })
@@ -173,18 +174,20 @@ baixar.onclick = async () => { // roda num worker; os parâmetros ficam congelad
     a.click()
     estado.textContent = `${r.tri} triângulos em ${((performance.now() - t) / 1000).toFixed(1)} s`
   } catch (e) { estado.textContent = e === 'cancelado' ? 'Cancelado.' : `Erro: ${e}` }
-  finally { baixar.disabled = false; cancela.hidden = true }
+  finally { baixar.disabled = false; baixarTelhado.disabled = false; cancela.hidden = true }
 }
-$('baixarTelhado').onclick = async () => {
+baixarTelhado.onclick = async () => {
   const s = structuredClone(o); s.paredes = paredesValidas(s)
+  baixar.disabled = true; baixarTelhado.disabled = true; cancela.hidden = false
   estado.textContent = 'Gerando o telhado...'
   try {
     const r = await exporta({ tipo: 'exporta', peca: 'telhado', o: s }, e => { estado.textContent = e })
     const a = document.createElement('a')
     a.href = URL.createObjectURL(new Blob([r.stl], { type: 'model/stl' }))
-    a.download = `Telhado ${s.telhado_forma} ${s.linhas}x${s.colunas}.stl`; a.click()
+    a.download = `Telhado ${s.telhado_forma} ${TEX[s.texturaTelhado].nome} ${s.linhas}x${s.colunas} s${s.semente}.stl`; a.click()
     estado.textContent = `Telhado: ${r.tri} triângulos`
   } catch (e) { estado.textContent = e === 'cancelado' ? 'Cancelado.' : `Erro: ${e}` }
+  finally { baixar.disabled = false; baixarTelhado.disabled = false; cancela.hidden = true }
 }
 cancela.onclick = cancelaExporta
 montaSistema()

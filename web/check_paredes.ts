@@ -287,6 +287,36 @@ t('D15', 'saia por dentro dos pilares (folga)', () => {
   for (let i = 0; i < m.pos.length; i += 3) if (m.pos[i + 2] < -.01) { mx = Math.max(mx, m.pos[i]); my = Math.max(my, m.pos[i + 1]) }
   if (mx > lim + .01 || my > lim + .01) throw new Error(`saia até ${mx.toFixed(2)}, ${my.toFixed(2)} (limite ${lim})`); return `saia até ${Math.max(mx, my).toFixed(2)} ≤ ${lim}`
 })
+t('D15', 'uma água eixo y: sobe para +y', () => {
+  const o = comCanto({ telhado_forma: 'uma', telhado_eixo: 'y' }), g = geoTelhado(o), m = telhadoMalha(o)
+  let k = 0; for (let i = 2; i < m.pos.length; i += 3) if (m.pos[i] > m.pos[k * 3 + 2]) k = (i - 2) / 3
+  if (m.pos[k * 3 + 1] < g.y1 - .01) throw new Error(`topo em y = ${m.pos[k * 3 + 1].toFixed(2)} (y1 ${g.y1})`); return `topo em y = ${m.pos[k * 3 + 1].toFixed(2)}`
+})
+t('D15', 'fundido com pilar: topo das paredes dentro do telhado', async () => {
+  const o = comCanto({ telhado_forma: 'duas', telhado_modo: 'fundido', pilar: true })
+  if (Math.abs(geoTelhado(o).zb - (o.altura + 30)) > 1e-6) throw new Error(`zb ${geoTelhado(o).zb} vs ${o.altura + 30}`)
+  const m = await pisoComParedes(o); if (!fechada(m.pos, m.idx)) throw new Error('fechada: NÃO'); return 'zb sem pilar_sobe, fechada'
+})
+for (const forma of ['uma', 'duas', 'quatro', 'plano'] as const)
+  t('D15', `textura aplicada no telhado ${forma}`, () => {
+    const o = comCanto({ telhado_forma: forma }), g = geoTelhado(o), m = telhadoSolto(o)
+    let n = 0, afund = 0
+    for (let i = 0; i < m.pos.length; i += 3) {
+      const x = m.pos[i], y = m.pos[i + 1], d = g.topo(x, y) - m.pos[i + 2]
+      if (Math.abs(x) < 10 && Math.abs(y) < 10 && d >= -1e-3 && d < 3) { n++; if (d > .05) afund++ }
+    }
+    if (!n || afund < n / 2) throw new Error(`${afund}/${n} vértices afundados`); return `${afund}/${n} afundados`
+  })
+t('D15', 'saia não atravessa parede em eixo', () => {
+  const b = comCanto({ telhado_forma: 'duas' }), o = { ...b, paredes: [...b.paredes, { ...noEixo('x', 0, 'e', 35), inicio: -17.5 }] }, m = telhadoSolto(o)
+  const band = 3 + o.saia_folga - .01 // vértice ou triângulo da saia (z < −0,01) dentro/atravessando a faixa da parede em eixo
+  for (let i = 0; i < m.pos.length; i += 3) if (m.pos[i + 2] < -.01 && Math.abs(m.pos[i + 1]) < band) throw new Error(`vértice da saia em y = ${m.pos[i + 1].toFixed(2)}`)
+  for (let i = 0; i < m.idx.length; i += 3) {
+    const ys = [0, 1, 2].map(k => m.pos[m.idx[i + k] * 3 + 1]), zs = [0, 1, 2].map(k => m.pos[m.idx[i + k] * 3 + 2])
+    if (Math.min(...zs) < -.01 && Math.min(...ys) < -band && Math.max(...ys) > band) throw new Error('triângulo da saia atravessa a parede em eixo')
+  }
+  if (!fechada(m.pos, m.idx)) throw new Error('fechada: NÃO'); return 'ok'
+})
 for (const forma of ['uma', 'duas', 'quatro', 'plano'] as const) for (const [l, c] of [[1, 1], [2, 3]] as const)
   t('D15', `telhado ${forma} fundido ${l}x${c}: piso unido fecha e sobe`, async () => {
     const o = comCanto({ linhas: l, colunas: c, telhado_forma: forma, telhado_modo: 'fundido' }), m = await pisoComParedes(o)
