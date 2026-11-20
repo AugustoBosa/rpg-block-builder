@@ -78,7 +78,11 @@ Leia este arquivo primeiro. Comandos: `USO.md`. Visão: `README.md`. Inventário
 ## Rodada G (2026-11-20, `docs/WORKFLOW_RODADA_G.md`): pendências só de código
 - **G1:** tudo publicado (D, E1, E2 já estavam no `origin/main`; as notas "sem push" abaixo estão velhas). CI roda `check_temas.ts` + `check_paredes.ts D2` (5 hashes, ~40 s) antes do build. Emenda entre peças 2×3 vizinhas medida: 0,0000 mm (Pedra e Tábuas; hexágono não medido, a emenda não é reta). Tábuas em pé na parede. `.gitignore` sem as exceções inúteis do graphify. Tempos locais: `check_texturas.ts` 4 min 42 s, `check_paredes.ts` completo 4 min 41 s.
 - **Decisão:** borda do grid hexagonal fica em zigue-zague (é o que deixa dois grids hex encaixarem).
-- **Próximo:** G2 (Caverna, Casco, Metal) → G3 (Água, Lava) → G4 (facetas) → telhado/canto.
+- **G2 (`bb46df0`): Caverna, Casco, Metal.** Média/desvio (mm): Caverna 1,575/0,670; Casco 0,567/0,301; Metal 0,797/0,275. `perlin` em `ruido.ts` reaproveita hashes entre cantos (valores idênticos). Na Caverna o z da Voronoi não é distorcido (no Blender é), para caber no tempo.
+- **G3 (`b12f4db`): Água e Lava.** Água 2,096/0,302; Lava 1,679/0,424. Teto da Água = `o.teto + 0,5` (`tetoDe` em `textura.ts`; decisão "teto maior só na Água"). Na parede, Água e Lava viram Pedra (`texParede`). Check da emenda olha a laje inteira (3,2 mm) porque a Água fica abaixo do topo.
+- **Verificado (orquestrador):** `check_texturas` 0 falha com as 13 (6 min 52 s; médias antigas idênticas), `check_paredes` 42/42, `check_temas` PASS, navegador 1024 e 375 px (sem estouro, texturas distintas).
+- **Pendência:** Lava leva 2,6–2,9 s no 1×1 (Pedra 2,2–2,3 s na mesma hora; meta era 2,5 s). Cripta e templo seguem parciais (Nichos e Glifos dependem do jurídico).
+- **Próximo:** G4 (facetas) → telhado/canto.
 
 ## Pendências conhecidas (web)
 - **Verificado em 2026-11-08 após `c0288de`:** HUD de Desempenho vermelho (borda e ⚠ ao passar do orçamento), tracejado das aberturas no 3D, `check_paredes.ts` completo (42/42 PASS). **Ainda não verificado:** vista em tela cheia real (só emulada). **Achado (resolvido na rodada A):** a 375 px os cards abertos cobriam o modelo; agora começam recolhidos no celular.
