@@ -287,7 +287,22 @@ t('D15', 'saia por dentro dos pilares (folga)', () => {
   for (let i = 0; i < m.pos.length; i += 3) if (m.pos[i + 2] < -.01) { mx = Math.max(mx, m.pos[i]); my = Math.max(my, m.pos[i + 1]) }
   if (mx > lim + .01 || my > lim + .01) throw new Error(`saia até ${mx.toFixed(2)}, ${my.toFixed(2)} (limite ${lim})`); return `saia até ${Math.max(mx, my).toFixed(2)} ≤ ${lim}`
 })
-t('D11', 'textura padrão = Pedra', () => { if (padrao().textura !== 'pedra') throw new Error(`padrão = ${padrao().textura}`); return 'pedra' })
+for (const forma of ['uma', 'duas', 'quatro', 'plano'] as const) for (const [l, c] of [[1, 1], [2, 3]] as const)
+  t('D15', `telhado ${forma} fundido ${l}x${c}: piso unido fecha e sobe`, async () => {
+    const o = comCanto({ linhas: l, colunas: c, telhado_forma: forma, telhado_modo: 'fundido' }), m = await pisoComParedes(o)
+    if (!fechada(m.pos, m.idx)) throw new Error('fechada: NÃO')
+    if (bbox(m).hi[2] < geoTelhado(o).zb + 1) throw new Error('telhado não entrou'); return 'fechada, com telhado'
+  })
+t('D15', 'telhado ignorado na rampa, no hexágono e fundido sem paredes', async () => {
+  const f = { telhado_forma: 'duas', telhado_modo: 'fundido' }
+  for (const [nome, a, b] of [
+    ['rampa', { ...comCanto({ inclinacao: 20 }), ...f }, comCanto({ inclinacao: 20 })],
+    ['hexágono', op({ formato: 'hexagono', ...f }), op({ formato: 'hexagono' })],
+    ['sem paredes', op(f), op()],
+  ] as [string, OpcoesP, OpcoesP][]) if (hash(await pisoComParedes(a)) !== hash(await pisoComParedes(b))) throw new Error(nome)
+  return 'iguais'
+})
+t('D11', 'textura padrão = Pedra',() => { if (padrao().textura !== 'pedra') throw new Error(`padrão = ${padrao().textura}`); return 'pedra' })
 
 let falhas = 0, nPass = 0
 const filtro = process.argv.slice(2).filter(a => !a.startsWith('--'))

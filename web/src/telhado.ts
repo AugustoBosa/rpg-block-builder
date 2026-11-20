@@ -28,8 +28,10 @@ export function geoTelhado(o: Opcoes) {
   return { bx0, bx1, by0, by1, x0, x1, y0, y1, zb, tg, b, P, topo, ps }
 }
 
-const caixa = (x0: number, x1: number, y0: number, y1: number, z0: number, z1: number) =>
-  Manifold.cube([x1 - x0, y1 - y0, z1 - z0]).translate([x0, y0, z0])
+const caixa = (x0: number, x1: number, y0: number, y1: number, z0: number, z1: number) => {
+  const c = Manifold.cube([x1 - x0, y1 - y0, z1 - z0]), t = c.translate([x0, y0, z0])
+  c.delete(); return t
+}
 
 // Operações que liberam os operandos (a prévia chama isto a cada ajuste: sem vazar WASM).
 const sub = (a: Solido, b: Solido) => { const n = a.subtract(b); a.delete(); b.delete(); return n }
