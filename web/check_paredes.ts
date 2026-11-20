@@ -281,6 +281,12 @@ t('D15', 'saia por dentro das paredes do canto (folga)', () => {
   for (let i = 0; i < m.pos.length; i += 3) if (m.pos[i + 2] < -.01) { mx = Math.max(mx, m.pos[i]); my = Math.max(my, m.pos[i + 1]) }
   if (mx > lim + .01 || my > lim + .01) throw new Error(`saia até ${mx.toFixed(2)}, ${my.toFixed(2)} (limite ${lim})`); return `saia até ${Math.max(mx, my).toFixed(2)} ≤ ${lim}`
 })
+t('D15', 'saia por dentro dos pilares (folga)', () => {
+  const o = comCanto({ telhado_forma: 'duas', pilar: true }), m = telhadoSolto(o), lim = 17.5 - 6 - 2 * o.pilar_saliencia - o.saia_folga
+  let mx = -1e9, my = -1e9
+  for (let i = 0; i < m.pos.length; i += 3) if (m.pos[i + 2] < -.01) { mx = Math.max(mx, m.pos[i]); my = Math.max(my, m.pos[i + 1]) }
+  if (mx > lim + .01 || my > lim + .01) throw new Error(`saia até ${mx.toFixed(2)}, ${my.toFixed(2)} (limite ${lim})`); return `saia até ${Math.max(mx, my).toFixed(2)} ≤ ${lim}`
+})
 t('D11', 'textura padrão = Pedra', () => { if (padrao().textura !== 'pedra') throw new Error(`padrão = ${padrao().textura}`); return 'pedra' })
 
 let falhas = 0, nPass = 0

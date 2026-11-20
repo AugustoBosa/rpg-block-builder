@@ -31,6 +31,10 @@ export function geoTelhado(o: Opcoes) {
 const caixa = (x0: number, x1: number, y0: number, y1: number, z0: number, z1: number) =>
   Manifold.cube([x1 - x0, y1 - y0, z1 - z0]).translate([x0, y0, z0])
 
+// Operações que liberam os operandos (a prévia chama isto a cada ajuste: sem vazar WASM).
+const sub = (a: Solido, b: Solido) => { const n = a.subtract(b); a.delete(); b.delete(); return n }
+const uni = (a: Solido, b: Solido) => { const n = a.add(b); a.delete(); b.delete(); return n }
+
 /** Sólido do telhado com base em z = 0. `tex`: textura nas águas (ou no topo da laje do plano). `saia`: anel por dentro das paredes. */
 export function solidoTelhado(o: Opcoes, tex = false, saia = false): Solido {
   const g = geoTelhado(o), { x0, x1, y0, y1, P } = g
@@ -39,20 +43,21 @@ export function solidoTelhado(o: Opcoes, tex = false, saia = false): Solido {
     const me = o.mureta_espessura, mh = o.mureta_altura
     m = caixa(x0, x1, y0, y1, 0, 3)
     if (mh > 0) {
-      let anel = caixa(x0, x1, y0, y1, 2.9, 3 + mh).subtract(caixa(x0 + me, x1 - me, y0 + me, y1 - me, 2, 4 + mh))
+      let anel = sub(caixa(x0, x1, y0, y1, 2.9, 3 + mh), caixa(x0 + me, x1 - me, y0 + me, y1 - me, 2, 4 + mh))
       if (o.ameias) for (const [a0, a1, ao] of [[x0 + me + 2, x1 - me - 2, 'x'], [y0 + me + 2, y1 - me - 2, 'y']] as const)
         for (let s = a0; s + 4 <= a1; s += 8)
-          anel = anel.subtract(ao === 'x' ? caixa(s, s + 4, y0 - 1, y1 + 1, 3 + mh / 2, 4 + mh) : caixa(x0 - 1, x1 + 1, s, s + 4, 3 + mh / 2, 4 + mh))
-      m = m.add(anel)
+          anel = sub(anel, ao === 'x' ? caixa(s, s + 4, y0 - 1, y1 + 1, 3 + mh / 2, 4 + mh) : caixa(x0 - 1, x1 + 1, s, s + 4, 3 + mh / 2, 4 + mh))
+      m = uni(m, anel)
     }
   } else {
     m = caixa(x0, x1, y0, y1, 0, g.b + g.tg * Math.max(x1 - x0, y1 - y0) + 1)
-    for (const [a, bb, c] of P) { const k = Math.hypot(a, bb, 1); m = m.trimByPlane([a / k, bb / k, -1 / k], -c / k) } // fica z ≤ c + a·x + b·y
+    for (const [a, bb, c] of P) { const k = Math.hypot(a, bb, 1), n = m.trimByPlane([a / k, bb / k, -1 / k], -c / k); m.delete(); m = n } // fica z ≤ c + a·x + b·y
   }
   if (tex) {
     const cos = Math.cos(o.telhado_angulo * Math.PI / 180), ds = o.semente * 13.7, prof = o.profundidade * o.junta_piso
     const cap = Math.min(o.teto, Math.max(g.b - .5, .3)), me = o.mureta_espessura
     const r = m.refineToLength(.5)
+    m.delete()
     m = r.warp(v => {
       const [x, y, z] = v, t = g.topo(x, y)
       if (Math.abs(z - t) > 1e-4) return
@@ -67,9 +72,10 @@ export function solidoTelhado(o: Opcoes, tex = false, saia = false): Solido {
     r.delete()
   }
   if (saia && g.ps.length && o.saia_altura > 0) {
-    const e = Math.max(...g.ps.map(p => p.espessura)) + o.saia_folga, i = e + 1.2
-    const s = caixa(g.bx0 + e, g.bx1 - e, g.by0 + e, g.by1 - e, -o.saia_altura, .5).subtract(caixa(g.bx0 + i, g.bx1 - i, g.by0 + i, g.by1 - i, -o.saia_altura - 1, 1))
-    m = m.add(s) // o topo da saia entra 0,5 mm no telhado: sem faces coplanares
+    const pil = o.pilar && pilares(o, g.ps).length ? 2 * o.pilar_saliencia : 0 // o pilar entra até espessura + 2 × saliência
+    const e = Math.max(...g.ps.map(p => p.espessura)) + pil + o.saia_folga, i = e + 1.2
+    const s = sub(caixa(g.bx0 + e, g.bx1 - e, g.by0 + e, g.by1 - e, -o.saia_altura, .5), caixa(g.bx0 + i, g.bx1 - i, g.by0 + i, g.by1 - i, -o.saia_altura - 1, 1))
+    m = uni(m, s) // o topo da saia entra 0,5 mm no telhado: sem faces coplanares
   }
   return m
 }
