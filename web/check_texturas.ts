@@ -4,7 +4,7 @@ import { ladoBloco } from './src/aberturas'
 import { createHash } from 'node:crypto'
 import { paredeNova, parede, pisoComParedes } from './src/parede'
 import { regiao } from './src/sistema'
-import { profTex, TEX, type TexId } from './src/textura'
+import { profTex, TEX, tetoDe, type TexId } from './src/textura'
 
 const NOVAS = (Object.keys(TEX) as TexId[]).filter(t => t !== 'pedra')
 const op = (e: Partial<Opcoes>): Opcoes => ({ ...padrao(), ...e })
@@ -12,11 +12,11 @@ let falhas = 0
 const confere = (nome: string, ok: boolean, medido: string) => { if (!ok) falhas++; console.log(`${ok ? 'PASS' : 'FAIL'} ${nome} — ${medido}`) }
 const pisoFinal = (o: Opcoes) => final(piso(o))
 
-// emenda (mesmo método do emenda.py): topo na borda x = +a do bloco 0 contra x = −a do bloco 1 (posicao_x 0 e 1, sem gasto de borda), por y
+// emenda (mesmo método do emenda.py; janela de 3,2 mm = a laje, a Água fica até 3 mm abaixo do topo): topo na borda x = +a do bloco 0 contra x = −a do bloco 1 (posicao_x 0 e 1, sem gasto de borda), por y
 const topoBorda = (m: Malha, x: number, H: number) => {
   const z = new Map<number, number>()
   for (let i = 0; i < m.pos.length; i += 3)
-    if (Math.abs(m.pos[i] - x) < 1e-3 && m.pos[i + 2] > H - 2 && m.pos[i + 2] <= H + .01) { const y = Math.round(m.pos[i + 1] * 1000); z.set(y, Math.max(z.get(y) ?? -1e9, m.pos[i + 2])) }
+    if (Math.abs(m.pos[i] - x) < 1e-3 && m.pos[i + 2] > H - 3.2 && m.pos[i + 2] <= H + .01) { const y = Math.round(m.pos[i + 1] * 1000); z.set(y, Math.max(z.get(y) ?? -1e9, m.pos[i + 2])) }
   return z
 }
 async function emenda(t: TexId, linhas = 1, colunas = 1) { // vizinho à direita: posicao_x desloca `colunas` células
@@ -31,9 +31,9 @@ async function emenda(t: TexId, linhas = 1, colunas = 1) { // vizinho à direita
 function campo(t: TexId) {
   const o = op({ textura: t }), d: number[] = []
   for (let j = 0; j <= 600; j++) for (let i = 0; i <= 600; i++)
-    d.push(Math.min(profTex(o, -100 + i / 3, -100 + j / 3, o.semente * 13.7, o.profundidade * o.junta_piso), o.teto))
+    d.push(Math.min(profTex(o, -100 + i / 3, -100 + j / 3, o.semente * 13.7, o.profundidade * o.junta_piso), tetoDe(o)))
   const media = d.reduce((s, v) => s + v, 0) / d.length
-  return { min: d.reduce((a, b) => Math.min(a, b), 1e9), max: d.reduce((a, b) => Math.max(a, b), -1e9), teto: o.teto, media, desvio: Math.sqrt(d.reduce((s, v) => s + (v - media) ** 2, 0) / d.length) }
+  return { min: d.reduce((a, b) => Math.min(a, b), 1e9), max: d.reduce((a, b) => Math.max(a, b), -1e9), teto: tetoDe(o), media, desvio: Math.sqrt(d.reduce((s, v) => s + (v - media) ** 2, 0) / d.length) }
 }
 
 const stats: Record<string, { media: number; desvio: number }> = {}

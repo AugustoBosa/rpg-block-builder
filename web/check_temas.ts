@@ -1,6 +1,7 @@
 // Check dos temas: `npx tsx check_temas.ts`. Imprime PASS/FAIL e o valor medido.
 import { padrao, PISO } from './src/bloco'
 import { aplicaTema, TEMAS, TEXTURAS, TEXTURAS_DISPONIVEIS, texturaDe } from './src/temas'
+import { texParede } from './src/textura'
 
 let falhas = 0
 const confere = (nome: string, ok: boolean, medido: string) => { if (!ok) falhas++; console.log(`${ok ? 'PASS' : 'FAIL'} ${nome}: ${medido}`) }
@@ -29,6 +30,7 @@ confere('pantano = terra/tijolo', tp('pantano') === 'terra/tijolo', tp('pantano'
 confere('deserto = areia/tijolo', tp('deserto') === 'areia/tijolo', tp('deserto'))
 confere('cripta (lajota + parede indisponível) = lajota/pedra', tp('cripta') === 'lajota/pedra', tp('cripta'))
 confere('caverna = caverna/caverna, navio = tabuas/casco, forja = metal/metal', tp('caverna') === 'caverna/(igual)' && tp('navio') === 'tabuas/casco' && tp('forja') === 'metal/(igual)', `${tp('caverna')} ${tp('navio')} ${tp('forja')}`)
+confere('inundada = agua/pedra, vulcao = lava/pedra; parede de agua/lava cai para pedra', tp('inundada') === 'agua/pedra' && tp('vulcao') === 'lava/pedra' && texParede({ ...padrao(), textura: 'agua' }) === 'pedra' && texParede({ ...padrao(), textura: 'lava' }) === 'pedra' && texParede({ ...padrao(), textura: 'agua', texturaParede: 'lava' }) === 'pedra' && texParede({ ...padrao(), textura: 'agua', texturaParede: 'tijolo' }) === 'tijolo', `${tp('inundada')} ${tp('vulcao')}`)
 confere('padrao() não mudou depois dos temas', JSON.stringify(padrao()) === json0 && base.desgaste === .5 && base.tamanho_pedra === 10, `desgaste ${base.desgaste}, tamanho ${base.tamanho_pedra}`)
 confere('texturas dos temas existem', ids.every(id => TEXTURAS.includes(TEMAS[id].piso) && TEXTURAS.includes(TEMAS[id].parede)), `${TEXTURAS.length} ids`)
 const fb = ids.filter(id => TEXTURAS_DISPONIVEIS.includes(TEMAS[id].piso) !== (texturaDe(TEMAS[id].piso) === TEMAS[id].piso))

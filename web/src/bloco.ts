@@ -14,7 +14,9 @@ import type { KnobsTabuas } from './tabuas'
 import type { KnobsCaverna } from './caverna'
 import type { KnobsCasco } from './casco'
 import type { KnobsMetal } from './metal'
-import { profTex, TEX, type TexId } from './textura'
+import type { KnobsAgua } from './agua'
+import type { KnobsLava } from './lava'
+import { profTex, TEX, tetoDe, type TexId } from './textura'
 import type { Parede } from './parede'
 import { corpos, distBorda, distSeg, malha, regiao, SISTEMA, type Malha, type Regiao, type Sistema } from './sistema'
 export type { Malha }
@@ -42,7 +44,7 @@ export const SECAO_PISO = {
 } as const
 export const SECAO_GUIAS = { grid_linhas: 'Dimensões', grid_colunas: 'Dimensões', altura_degrau: 'Dimensões' } as const
 type Num<T> = { -readonly [k in keyof T]: number }
-export type Opcoes = Sistema & Num<typeof PISO> & Num<typeof GUIAS> & { textura: TexId; texturaParede: TexId | ''; pedra: KnobsPedra; lisa: KnobsLisa; lajota: KnobsLajota; tijolo: KnobsTijolo; terra: KnobsTerra; areia: KnobsAreia; rachado: KnobsRachado; tabuas: KnobsTabuas; caverna: KnobsCaverna; casco: KnobsCasco; metal: KnobsMetal; paredes: Parede[] }
+export type Opcoes = Sistema & Num<typeof PISO> & Num<typeof GUIAS> & { textura: TexId; texturaParede: TexId | ''; pedra: KnobsPedra; lisa: KnobsLisa; lajota: KnobsLajota; tijolo: KnobsTijolo; terra: KnobsTerra; areia: KnobsAreia; rachado: KnobsRachado; tabuas: KnobsTabuas; caverna: KnobsCaverna; casco: KnobsCasco; metal: KnobsMetal; agua: KnobsAgua; lava: KnobsLava; paredes: Parede[] }
 const ini = (t: object) => Object.fromEntries(Object.entries(t).map(([k, v]) => [k, v[0]]))
 export const padrao = (): Opcoes => ({ ...ini(SISTEMA), ...ini(PISO), ...ini(GUIAS), formato: 'quadrado', textura: 'pedra', texturaParede: '', ...Object.fromEntries(Object.entries(TEX).map(([id, t]) => [id, ini(t.knobs)])), paredes: [] } as any)
 
@@ -104,7 +106,8 @@ function relevo(o: Opcoes, r: Regiao, XY: number[]) {
     corte: (L: number, rn: number) => { // profundidade do corte do topo no ponto L
       const x = XY[L * 2], y = XY[L * 2 + 1]
       const quina = mapa(distBorda(r, x, y), 0, o.quina_largura, 1, 0) * (.25 + des * .8) * (.6 + rn * .8) * o.quina_gasto
-      return Math.min(Math.min(profTex(o, x + ox, y + oy, ds, prof), o.teto) + quina, o.teto)
+      const teto = tetoDe(o)
+      return Math.min(Math.min(profTex(o, x + ox, y + oy, ds, prof), teto) + quina, teto)
     },
   }
 }

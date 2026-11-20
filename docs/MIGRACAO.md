@@ -66,8 +66,8 @@ Risco de copyright (avisado ao usuário): medidas configuráveis reduzem o risco
 | 4 | Tábuas | Fresta, empeno, veio, nós, pregos | 12 | ambos | ✅ |
 | 5 | Terra | Torrões e pedrinhas | 7 | ambos | ✅ |
 | 6 | Areia | Ondulações e dunas | 6 | ambos | ✅ |
-| 7 | Água | Pedra com poças, ondas, pedras saindo | 5 + Pedra | só piso | ⏳ (teto maior) |
-| 8 | Lava | Pedra com rio de lava, fluxo e crosta | 6 + Pedra | só piso | ⏳ |
+| 7 | Água | Pedra com poças, ondas, pedras saindo | 5 + Pedra | só piso | ✅ (teto +0,5 mm) |
+| 8 | Lava | Pedra com rio de lava, fluxo e crosta | 6 + Pedra | só piso | ✅ |
 | 9 | Nichos | Nichos em arco; parte com caveira ou pote | 9 | ambos | 🔁 revisar visual (copyright) |
 | 10 | Glifos | Painel rebaixado com símbolos | 8 | ambos | 🔁 revisar visual (copyright) |
 | 11 | Caverna | Rocha em lajes, fendas, rugas | 11 | ambos | ✅ |
@@ -79,6 +79,7 @@ Risco de copyright (avisado ao usuário): medidas configuráveis reduzem o risco
 
 Rodada E2: piso e parede têm textura separada (`Opcoes.texturaParede`, vazio = igual ao piso). Rodada E2b: Rachado, Tábuas, Terra e Areia ✅ no piso e na parede (na parede as Tábuas ficam na horizontal; no Blender giram). Faltam 7: Água, Lava, Nichos, Glifos, Caverna, Casco, Metal.
 Rodada G2: Caverna, Casco e Metal ✅ no piso e na parede (`web/src/caverna.ts`, `casco.ts`, `metal.ts`; Casco e Metal usam u = ao longo da parede e z = altura). Faltam 4: Água, Lava, Nichos, Glifos.
+Rodada G3: Água e Lava ✅ só no piso (`web/src/agua.ts`, `lava.ts`; fora da mancha usam a Pedra com `o.pedra`; na parede caem para Pedra em `texParede`). Teto da Água = `teto` + 0,5 mm (`tetoDe` em `textura.ts`). Faltam 2: Nichos, Glifos.
 Rodada E1: Lisa, Lajota e Tijolo estão ✅ no piso e na parede (`web/src/lisa.ts`, `lajota.ts`, `tijolo.ts`, auxiliares em `grade.ts`, registro em `textura.ts`, check em `web/check_texturas.ts`). Falta portar as outras 11.
 
 Funções comuns do Blender que as texturas usam (portar junto): `grade` (fiadas), `junta_perfil`, `seixos` (Voronoi 2D), `lasca`, `grao`, `distorce`, `_mancha`.
