@@ -1,10 +1,10 @@
 // Seção "Paredes" da aba Blocos: lista recolhível; cada parede com âncora, medidas, lado e aberturas. Nada é salvo.
 import type { Opcoes } from './bloco'
-import { aberturaNova, ladoBloco, orfa, paredeNova } from './aberturas'
+import { aberturaNova, canto, ladoBloco, orfa, paredeNova } from './aberturas'
 import type { Abertura, Parede } from './parede'
 import { botao, campo, controle, escolha, marca } from './ui'
 
-let nParede = 0
+let nParede = 0, quina = 0
 export function montaParedes(div: HTMLElement, o: Opcoes, previa: () => void) {
   const hex = o.formato === 'hexagono'
   div.replaceChildren()
@@ -52,6 +52,10 @@ export function montaParedes(div: HTMLElement, o: Opcoes, previa: () => void) {
     })
     c.append(botao('+ Abertura', () => { const ab = aberturaNova('porta'); ab.pos = p.comprimento / 2; p.aberturas.push(ab); refaz() }), botao('− Parede', () => { o.paredes.splice(i, 1); refaz() }))
   })
+  if (!hex) {
+    escolha(div, 'Quina do canto', String(quina), [['0', '+X +Y'], ['1', '−X +Y'], ['2', '−X −Y'], ['3', '+X −Y']], v => { quina = +v })
+    div.append(botao('+ Canto', () => { o.paredes.push(...canto(o, quina, () => 'p' + ++nParede)); refaz() }))
+  }
   div.append(botao('+ Parede', () => {
     o.paredes.push(paredeNova('p' + ++nParede, { tipo: 'aresta', celula: 0, lado: 0 }, +ladoBloco(o, 0)!.L.toFixed(1))); refaz()
   }))

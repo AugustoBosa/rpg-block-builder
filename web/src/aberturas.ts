@@ -109,3 +109,7 @@ export function foraDaArea(p: Parede, a: Abertura): Linha[] {
 export const paredesValidas = (o: Opcoes) => o.inclinacao > 0 ? [] : o.paredes.filter(p => !orfa(o, p))
 /** Parede em aresta cujo lado não existe mais no bloco atual (ignorada na prévia, no STL e no esquema). */
 export const orfa = (o: Opcoes, p: Parede) => p.ancora.tipo === 'aresta' && !ladoBloco(o, p.ancora.lado)
+
+/** Atalho de canto (só quadrado): 2 paredes nos lados inteiros `quina` e `quina + 1`, espessura para dentro. */
+export const canto = (o: Opcoes, quina: number, id: (i: number) => string): Parede[] =>
+  [quina, (quina + 1) % 4].map((lado, i) => paredeNova(id(i), { tipo: 'aresta', celula: 0, lado }, +ladoBloco(o, lado)!.L.toFixed(1)))

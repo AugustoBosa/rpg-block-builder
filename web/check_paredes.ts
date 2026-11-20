@@ -7,7 +7,7 @@ import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { fechada, final, padrao, piso, stl, subida, type Malha } from './src/bloco'
 import { pedra } from './src/pedra'
 import { degrau, grid, malha, regiao } from './src/sistema'
-import { ladoBloco, orfa, paredesValidas } from './src/aberturas'
+import { canto, ladoBloco, orfa, paredesValidas } from './src/aberturas'
 import { aberturaNova, areaDentro, foraDaArea, paredeNova, parede, perfilAbertura, pisoComParedes, type OpcoesP, type Parede } from './src/parede'
 
 const op = (e: Record<string, unknown> = {}): OpcoesP => ({ ...padrao(), paredes: [], ...e }) as OpcoesP
@@ -199,6 +199,16 @@ t('D12', 'rampa: piso 1×1 ≤ tempo sem rampa + 10 %', async () => {
   const a = await med({}), b = await med({ inclinacao: 30 })
   if (b > a * 1.1 + 50) throw new Error(`${b.toFixed(0)} ms vs ${a.toFixed(0)} ms`); return `${b.toFixed(0)} ms vs ${a.toFixed(0)} ms`
 })
+// ---- D13: atalho de canto ----
+for (const [l, c] of [[1, 1], [2, 3]] as const) for (const q of [0, 1, 2, 3])
+  t('D13', `canto na quina ${q}, ${l}x${c}: 2 paredes do lado inteiro, malha fecha`, async () => {
+    const o = op({ linhas: l, colunas: c }), ps = canto(o, q, i => 'c' + i)
+    if (ps.length !== 2) throw new Error(`${ps.length} paredes`)
+    for (const p of ps) { const L = ladoBloco(o, (p.ancora as { lado: number }).lado)!.L; if (Math.abs(p.comprimento - L) > .06 || p.lado !== 'dentro') throw new Error(`comprimento ${p.comprimento} vs ${L}, lado ${p.lado}`) }
+    const m = await pisoComParedes({ ...o, paredes: ps })
+    if (!fechada(m.pos, m.idx)) throw new Error('fechada: NÃO')
+    return 'fechada: sim'
+  })
 const TELHADO_F0 = 0 // ocorrências de "telhado" em web/src no F0 (medido); não pode crescer
 t('D11', '"telhado" em web/src não cresce; textura padrão = Pedra', () => {
   if (padrao().textura !== 'pedra') throw new Error(`padrão = ${padrao().textura}`)
