@@ -7,6 +7,9 @@ import { terra, TERRA } from './terra'
 import { areia, AREIA } from './areia'
 import { rachado, RACHADO } from './rachado'
 import { tabuas, TABUAS } from './tabuas'
+import { caverna, CAVERNA } from './caverna'
+import { casco, CASCO } from './casco'
+import { metal, METAL } from './metal'
 import type { Opcoes } from './bloco'
 
 const secao = (t: object, titulo: string) => Object.fromEntries(Object.keys(t).map(k => [k, titulo]))
@@ -19,6 +22,9 @@ export const TEX = {
   areia: { nome: 'Areia', fn: areia, knobs: AREIA, secao: secao(AREIA, 'Avançado — Areia') },
   rachado: { nome: 'Rachado', fn: rachado, knobs: RACHADO, secao: secao(RACHADO, 'Avançado — Rachado') },
   tabuas: { nome: 'Tábuas', fn: tabuas, knobs: TABUAS, secao: secao(TABUAS, 'Avançado — Tábuas') },
+  caverna: { nome: 'Caverna', fn: caverna, knobs: CAVERNA, secao: secao(CAVERNA, 'Avançado — Caverna') },
+  casco: { nome: 'Casco', fn: casco, knobs: CASCO, secao: secao(CASCO, 'Avançado — Casco') },
+  metal: { nome: 'Metal', fn: metal, knobs: METAL, secao: secao(METAL, 'Avançado — Metal') },
 }
 export type TexId = keyof typeof TEX
 

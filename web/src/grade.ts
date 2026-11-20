@@ -24,6 +24,7 @@ export const juntaPerfil = (dist: number, meia: number, bisel: number, prof: num
   mapa(dist, meia, meia + bisel, 1, 0) * prof * (1 - .35 * ruido(x, y, z, .6, 2, .5, 3))
 /** Lascas nas bordas: manchas de ruído só perto da junta. */
 export function lasca(dist: number, x: number, y: number, z: number, desg: number, larg: number, fundo: number) {
+  if (dist >= larg) return 0 // fora da faixa: sem ruído
   const lim = .66 - desg * .14
   return mapa(dist, 0, larg, 1, 0) * mapa(ruido(x, y, z, .45, 3, .5, 5), lim, lim + .06, 0, 1) * fundo
 }

@@ -22,7 +22,10 @@ function perlin(x: number, y: number, z: number, s: number) {
   const X = Math.floor(x), Y = Math.floor(y), Z = Math.floor(z)
   x -= X; y -= Y; z -= Z
   const u = fade(x), v = fade(y), w = fade(z)
-  const g = (i: number, j: number, k: number) => grad(hash(X + i, Y + j, Z + k, s), x - i, y - j, z - k)
+  // mesmo valor de hash(X+i, Y+j, Z+k, s), com as camadas de h32 compartilhadas entre os 8 cantos (15 em vez de 32)
+  const hs = h32(s | 0), hk = [h32((Z | 0) + hs), h32(((Z + 1) | 0) + hs)]
+  const hj = [h32((Y | 0) + hk[0]), h32(((Y + 1) | 0) + hk[0]), h32((Y | 0) + hk[1]), h32(((Y + 1) | 0) + hk[1])]
+  const g = (i: number, j: number, k: number) => grad(h32(((X + i) | 0) + hj[k * 2 + j]), x - i, y - j, z - k)
   return lerp(lerp(lerp(g(0, 0, 0), g(1, 0, 0), u), lerp(g(0, 1, 0), g(1, 1, 0), u), v),
     lerp(lerp(g(0, 0, 1), g(1, 0, 1), u), lerp(g(0, 1, 1), g(1, 1, 1), u), v), w)
 }

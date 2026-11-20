@@ -70,14 +70,15 @@ Risco de copyright (avisado ao usuário): medidas configuráveis reduzem o risco
 | 8 | Lava | Pedra com rio de lava, fluxo e crosta | 6 + Pedra | só piso | ⏳ |
 | 9 | Nichos | Nichos em arco; parte com caveira ou pote | 9 | ambos | 🔁 revisar visual (copyright) |
 | 10 | Glifos | Painel rebaixado com símbolos | 8 | ambos | 🔁 revisar visual (copyright) |
-| 11 | Caverna | Rocha em lajes, fendas, rugas | 11 | ambos | ⏳ |
-| 12 | Casco | Tábuas de navio sobrepostas, cavilhas | 13 | ambos | ⏳ |
-| 13 | Metal | Chapas, costura, rebites, amassados, corrosão | 12 | ambos | ⏳ |
+| 11 | Caverna | Rocha em lajes, fendas, rugas | 11 | ambos | ✅ |
+| 12 | Casco | Tábuas de navio sobrepostas, cavilhas | 13 | ambos | ✅ |
+| 13 | Metal | Chapas, costura, rebites, amassados, corrosão | 12 | ambos | ✅ |
 | 14 | Lisa | Quase plana, placas grandes | 3 | ambos | ✅ |
 | — | Relevo | Teto e ganho da junta, para todas | 3 | todas | ✅ |
 
 
 Rodada E2: piso e parede têm textura separada (`Opcoes.texturaParede`, vazio = igual ao piso). Rodada E2b: Rachado, Tábuas, Terra e Areia ✅ no piso e na parede (na parede as Tábuas ficam na horizontal; no Blender giram). Faltam 7: Água, Lava, Nichos, Glifos, Caverna, Casco, Metal.
+Rodada G2: Caverna, Casco e Metal ✅ no piso e na parede (`web/src/caverna.ts`, `casco.ts`, `metal.ts`; Casco e Metal usam u = ao longo da parede e z = altura). Faltam 4: Água, Lava, Nichos, Glifos.
 Rodada E1: Lisa, Lajota e Tijolo estão ✅ no piso e na parede (`web/src/lisa.ts`, `lajota.ts`, `tijolo.ts`, auxiliares em `grade.ts`, registro em `textura.ts`, check em `web/check_texturas.ts`). Falta portar as outras 11.
 
 Funções comuns do Blender que as texturas usam (portar junto): `grade` (fiadas), `junta_perfil`, `seixos` (Voronoi 2D), `lasca`, `grao`, `distorce`, `_mancha`.
