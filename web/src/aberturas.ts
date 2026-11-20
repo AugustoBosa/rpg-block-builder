@@ -114,15 +114,15 @@ export const orfa = (o: Opcoes, p: Parede) => p.ancora.tipo === 'aresta' && !lad
 export const canto = (o: Opcoes, quina: number, id: (i: number) => string): Parede[] =>
   [quina, (quina + 1) % 4].map((lado, i) => paredeNova(id(i), { tipo: 'aresta', celula: 0, lado }, +ladoBloco(o, lado)!.L.toFixed(1)))
 
-const EIXOS: [number, 'x' | 'y' | 'h60' | 'h120'][] = [[0, 'x'], [90, 'y'], [60, 'h60'], [120, 'h120']]
-/** Pilares de canto: onde as linhas centrais de 2 paredes não paralelas se cruzam a até max(espessuras) de uma ponta de cada.
+const EIXOS: [number, 'x' | 'y' | 'h60' | 'h120'][] = [[0, 'x'], [90, 'y'], [60, 'h60'], [120, 'h120'], [180, 'x']]
+/** Pilares de canto: onde as linhas centrais de 2 paredes perpendiculares (quina de 90°) se cruzam a até max(espessuras) de uma ponta de cada.
  *  Cada pilar é uma Parede quadrada (âncora eixo alinhada à 1ª parede) com id 'pilar…'; pilares a < 0,5 mm viram um. */
 export function pilares(o: Opcoes, ps: Parede[]): Parede[] {
   const out: Parede[] = [], cs: [number, number][] = []
   const cx = (a: [number, number], b: [number, number]) => a[0] * b[1] - a[1] * b[0]
   for (let i = 0; i < ps.length; i++) for (let j = i + 1; j < ps.length; j++) {
     const A = quadro(o, ps[i]), B = quadro(o, ps[j]), det = cx(A.d, B.d)
-    if (Math.abs(det) < .1) continue
+    if (Math.abs(det) < .99) continue // só quinas de 90°: um pilar quadrado numa quina de 120° (hexágono) passaria do contorno
     const a0 = A.pt(0, (A.o1 + A.o2) / 2), b0 = B.pt(0, (B.o1 + B.o2) / 2), w: [number, number] = [b0[0] - a0[0], b0[1] - a0[1]]
     const ta = cx(w, B.d) / det, tb = cx(w, A.d) / det, e = Math.max(ps[i].espessura, ps[j].espessura)
     const ponta = (t: number, c: number) => Math.abs(t) <= e || Math.abs(t - c) <= e

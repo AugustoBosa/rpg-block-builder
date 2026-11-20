@@ -186,7 +186,10 @@ for (const [nome, e] of [['1x1 quadrado', {}], ['2x3 quadrado', { linhas: 2, col
       const o = op({ ...e, inclinacao: ang, inclinacao_dir: dir }), m = await pisoComParedes(o), b = bbox(m), alto = o.altura + subida(o)
       if (!fechada(m.pos, m.idx)) throw new Error('fechada: NÃO')
       if (b.hi[2] > alto + .05 || b.hi[2] < alto - 4) throw new Error(`topo ${b.hi[2].toFixed(2)}, esperado ≤ ${alto.toFixed(2)} e > ${(alto - 4).toFixed(2)}`)
-      return `fechada, topo ${b.hi[2].toFixed(2)} (≤ ${alto.toFixed(2)})`
+      let i = 0; for (let v = 1; v < m.pos.length / 3; v++) if (m.pos[v * 3 + 2] > m.pos[i * 3 + 2]) i = v // vértice de maior z
+      const coord = m.pos[i * 3 + (dir[1] === 'x' ? 0 : 1)]
+      if ((dir[0] === '-' ? -coord : coord) <= 0) throw new Error('rampa sobe para o lado errado')
+      return `fechada, topo ${b.hi[2].toFixed(2)} (≤ ${alto.toFixed(2)}), sobe para ${dir}`
     })
 t('D12', 'rampa ignora as paredes (mesmo hash que sem paredes)', async () => {
   const o = op({ inclinacao: 20 }), com = { ...o, paredes: [naAresta(o, 0, 'a')] }
@@ -240,6 +243,20 @@ t('D14', 'paralelas e em T não geram pilar; pilar desligado não muda o hash', 
   const ps = canto(op(), 0, i => 'c' + i)
   if (hash(await pisoComParedes({ ...op(), paredes: ps })) !== hash(await pisoComParedes({ ...op({ pilar: false, pilar_saliencia: 3 }), paredes: ps }))) throw new Error('pilar desligado mudou o STL')
   return 'ok'
+})
+t('D14', 'hexágono 1x1, paredes nos lados 0 e 1 com pilar: 0 pilares, malha fecha', async () => {
+  const o = op({ formato: 'hexagono', pilar: true }), ps = [0, 1].map(i => paredeNova('h' + i, { tipo: 'aresta', celula: 0, lado: i }, +ladoBloco(o, i)!.L.toFixed(1)))
+  if (pilares(o, ps).length !== 0) throw new Error(`${pilares(o, ps).length} pilares no canto de 120°`)
+  const m = await pisoComParedes({ ...o, paredes: ps })
+  if (!fechada(m.pos, m.idx)) throw new Error('fechada: NÃO'); return 'fechada: sim, 0 pilares'
+})
+t('D14', 'L em eixo (lado centro) com pilar: 1 pilar, fecha, não aumenta o bbox', async () => {
+  const o = op({ pilar: true }), ps = [{ ...noEixo('x', 0, 'a', 30), inicio: 0 }, { ...noEixo('y', 0, 'b', 30), inicio: 0 }], pl = pilares(o, ps)
+  if (pl.length !== 1) throw new Error(`${pl.length} pilares`)
+  const m = await pisoComParedes({ ...o, paredes: ps }), b = bbox(m), b0 = bbox(await pisoComParedes({ ...op(), paredes: ps }))
+  if (!fechada(m.pos, m.idx)) throw new Error('fechada: NÃO')
+  for (const k of [0, 1]) if (b.lo[k] < b0.lo[k] - .01 || b.hi[k] > b0.hi[k] + .01) throw new Error('pilar aumenta a área além do L sem pilar')
+  return `fechada, dentro do bbox, pilar ${pl[0].comprimento.toFixed(1)} mm`
 })
 const TELHADO_F0 = 0 // ocorrências de "telhado" em web/src no F0 (medido); não pode crescer
 t('D11', '"telhado" em web/src não cresce; textura padrão = Pedra', () => {
