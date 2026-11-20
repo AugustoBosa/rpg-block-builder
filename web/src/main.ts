@@ -7,6 +7,7 @@ import { esquema } from './esquema'
 import { aoMudarVer, config, enquadra, mostra, mostraTracejado, type Ver } from './vista'
 import { gerando, hudPerf, infoPerf, montaCards, perf, RES, resRapida } from './cards'
 import { montaParedes } from './paredes'
+import { temTelhado } from './telhado'
 import { aplicaTema, TEMAS } from './temas'
 import { $, aoMudar, campo, controle, escolha, grupo, opcoes, secoes } from './ui'
 
@@ -33,11 +34,14 @@ function previa(res = resRapida()) {
         $('aviso').textContent = avisos(snap).join(' ')
       } else {
         mostra(0, r.m[0])
-        mostra(1, null)
+        mostra(1, r.m[1])
       }
       mostraTracejado(passo === 3 ? snap.paredes.flatMap(w => tracejado3D(snap, w)) : [])
       const ar = document.getElementById('avisoRampa')
-      if (ar) ar.textContent = snap.inclinacao > 0 && o.paredes.length ? '⚠ Paredes desligadas na rampa (inclinação > 0).' : ''
+      const semApoio = temTelhado(snap) && !snap.paredes.length
+      if (ar) ar.textContent = snap.inclinacao > 0 && o.paredes.length ? '⚠ Paredes desligadas na rampa (inclinação > 0).'
+        : semApoio ? (snap.telhado_modo === 'fundido' ? '⚠ Telhado fundido precisa de paredes (ignorado).' : '⚠ Telhado sem paredes para apoiar.') : ''
+      $('baixarTelhado').hidden = !(passo === 3 && temTelhado(snap) && snap.telhado_modo === 'removivel')
       if (passo === 3) {
         const nk = r.ms * res ** 2
         perf.k = perf.k ? (perf.k + nk) / 2 : nk
@@ -96,11 +100,26 @@ formato.onchange = () => { o.formato = formato.value as Opcoes['formato']; monta
 encaixe.onchange = () => { Object.assign(o, ENCAIXES[encaixe.value as keyof typeof ENCAIXES][1]); montaSistema() }
 
 // aba Blocos (peça de piso e Pedra avançada) e aba Grids (grid e degrau). As duas leem as medidas do Sistema.
-const dPiso = secoes($('gerais'), ['Peça', 'Paredes', 'Textura', 'Borda'], ['Peça'])
+const dPiso = secoes($('gerais'), ['Peça', 'Paredes', 'Telhado', 'Textura', 'Borda'], ['Peça'])
 const poePiso = grupo(PISO, o, SECAO_PISO, dPiso, ['resolucao'])
 escolha(dPiso['Peça'], 'Rampa sobe para', o.inclinacao_dir, [['+y', '+Y'], ['-y', '−Y'], ['+x', '+X'], ['-x', '−X']], v => { o.inclinacao_dir = v as Opcoes['inclinacao_dir']; previa() })
 const paredesDiv = dPiso['Paredes']
 montaParedes(paredesDiv, o, previa)
+{ // telhado (só bloco quadrado e sem rampa; fora disso é ignorado)
+  const d = dPiso['Telhado']
+  escolha(d, 'Forma', o.telhado_forma, [['nenhum', 'Nenhum'], ['uma', 'Uma água'], ['duas', 'Duas águas'], ['quatro', 'Quatro águas'], ['plano', 'Plano com mureta']], v => { o.telhado_forma = v as Opcoes['telhado_forma']; previa() })
+  escolha(d, 'Modo', o.telhado_modo, [['removivel', 'Removível (STL próprio)'], ['fundido', 'Fundido ao bloco']], v => { o.telhado_modo = v as Opcoes['telhado_modo']; previa() })
+  escolha(d, 'Cumeeira ao longo de (uma água: sobe para)', o.telhado_eixo, [['x', 'X'], ['y', 'Y']], v => { o.telhado_eixo = v as Opcoes['telhado_eixo']; previa() })
+  escolha(d, 'Textura do telhado', o.texturaTelhado, Object.entries(TEX).map(([k, t]) => [k, t.nome]) as [string, string][], v => { o.texturaTelhado = v as TexId; previa() })
+  const n = (rot: string, k: 'telhado_angulo' | 'telhado_beiral' | 'telhado_borda' | 'mureta_altura' | 'mureta_espessura' | 'saia_altura' | 'saia_folga', min: number, max: number, passo: number) =>
+    controle(d, rot, o[k], min, max, v => { o[k] = v }, passo)
+  n('Ângulo (graus)', 'telhado_angulo', 15, 60, 1); n('Beiral (mm)', 'telhado_beiral', 0, 6, .5); n('Borda das águas (mm)', 'telhado_borda', 1, 4, .1)
+  n('Mureta: altura (mm)', 'mureta_altura', 0, 10, .5); n('Mureta: espessura (mm)', 'mureta_espessura', 1, 4, .1)
+  const ck = Object.assign(document.createElement('input'), { type: 'checkbox', checked: o.ameias })
+  ck.onchange = () => { o.ameias = ck.checked; previa() }
+  d.append(campo('Ameias', ck))
+  n('Saia: altura (mm)', 'saia_altura', 0, 6, .5); n('Saia: folga (mm)', 'saia_folga', 0, 1, .05)
+}
 // tema: grava textura, desgaste e tamanho da pedra nos controles; sem tema escolhido, nada muda
 const temaSel = document.createElement('select'), texSel = document.createElement('select'), texParSel = document.createElement('select')
 // ajustes avançados: um bloco por textura, só o da textura escolhida fica visível
@@ -155,6 +174,17 @@ baixar.onclick = async () => { // roda num worker; os parâmetros ficam congelad
     estado.textContent = `${r.tri} triângulos em ${((performance.now() - t) / 1000).toFixed(1)} s`
   } catch (e) { estado.textContent = e === 'cancelado' ? 'Cancelado.' : `Erro: ${e}` }
   finally { baixar.disabled = false; cancela.hidden = true }
+}
+$('baixarTelhado').onclick = async () => {
+  const s = structuredClone(o); s.paredes = paredesValidas(s)
+  estado.textContent = 'Gerando o telhado...'
+  try {
+    const r = await exporta({ tipo: 'exporta', peca: 'telhado', o: s }, e => { estado.textContent = e })
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(new Blob([r.stl], { type: 'model/stl' }))
+    a.download = `Telhado ${s.telhado_forma} ${s.linhas}x${s.colunas}.stl`; a.click()
+    estado.textContent = `Telhado: ${r.tri} triângulos`
+  } catch (e) { estado.textContent = e === 'cancelado' ? 'Cancelado.' : `Erro: ${e}` }
 }
 cancela.onclick = cancelaExporta
 montaSistema()

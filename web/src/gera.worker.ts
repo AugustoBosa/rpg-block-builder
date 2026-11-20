@@ -1,6 +1,7 @@
 // Gera as malhas fora da thread principal (WASM do manifold + relevo da Pedra). Só números entram e saem (buffers transferidos).
 import { cortesParte, stl, type Malha, type Opcoes } from './bloco'
 import { pisoComParedes } from './parede'
+import { telhadoMalha, telhadoSolto, temTelhado } from './telhado'
 import { corpo, degrau, grid, malha } from './sistema'
 
 export type Pedido =
@@ -24,7 +25,7 @@ w.onmessage = async ({ data: q }) => {
     if (q.tipo === 'previa') {
       const { o } = q
       const m = q.passo === 1 ? [malha(corpo(o, o.altura)), malha(grid(o, 1, 1))]
-        : q.peca === 'piso' ? [await pisoComParedes({ ...o, resolucao: q.res }, true), null] : [gera(q.peca, o), null]
+        : q.peca === 'piso' ? [await pisoComParedes({ ...o, resolucao: q.res }, true), temTelhado(o) && o.telhado_modo === 'removivel' ? telhadoMalha(o) : null] : [gera(q.peca, o), null]
       w.postMessage({ id: q.id, ms: performance.now() - t0, m }, m.flatMap(x => x ? [x.pos.buffer, x.idx.buffer] : []))
     } else if (q.tipo === 'cortes') {
       const r = cortesParte(q.o, q.i, q.n)
@@ -35,7 +36,8 @@ w.onmessage = async ({ data: q }) => {
       if (q.peca === 'piso') {
         w.postMessage({ id: q.id, etapa: 'Suavizando, reduzindo e unindo as paredes...' })
         m = await pisoComParedes(q.o, false, q.cortes)
-      } else m = gera(q.peca, q.o)
+      } else if (q.peca === 'telhado') m = telhadoSolto(q.o)
+      else m = gera(q.peca, q.o)
       const buf = stl(m)
       w.postMessage({ id: q.id, stl: buf, tri: m.idx.length / 3 }, [buf])
     }
