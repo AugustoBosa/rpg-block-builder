@@ -26,6 +26,9 @@ jobs:
           cache-dependency-path: web/package-lock.json
       - run: npm ci
         working-directory: web
+      - name: Checks rápidos (temas + 5 hashes de referência, ~1 min)
+        run: npx tsx check_temas.ts && npx tsx check_paredes.ts D2
+        working-directory: web
       - run: npm run build -- --base=./
         working-directory: web
       - uses: actions/upload-pages-artifact@v3

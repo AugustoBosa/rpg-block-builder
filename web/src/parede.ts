@@ -67,11 +67,12 @@ function solido(o: OpcoesP, p: Parede, baixo: number, dl = 0, tex = false) {
   // F3: Pedra (pedra.ts) nas duas faces grandes e no topo: a malha é subdividida e cada vértice dessas faces recua pelo relevo (0..teto, limitado à metade da espessura)
   const r = m.refineToLength(.5); m.delete()
   const ds = o.semente * 13.7, prof = o.profundidade * o.junta_piso, cap = Math.max(Math.min(o.teto, e / 2 - .3), 0), topo = baixo + p.altura
-  const rel = (a: number, b: number, k: number) => Math.min(profTex(o, a, b + k, ds, prof, texParede(o)), cap)
+  const tp = texParede(o), rel = (a: number, b: number, k: number) => Math.min(profTex(o, a, b + k, ds, prof, tp), cap)
+  const face = (u: number, z: number, k: number) => tp === 'tabuas' ? rel(z, u, k) : rel(u, z, k) // Tábuas em pé na parede (gerar.py: uw, vw = pz, gx)
   const w = r.warp(v => {
     const dx = v[0] - s[0], dy = v[1] - s[1], u = dx * d[0] + dy * d[1] - p.inicio, ww = dx * n[0] + dy * n[1], z = v[2], alto = Math.abs(z - topo) < 1e-4
-    if (Math.abs(ww - o1) < 1e-4) { const t = rel(u, z, 0); v[0] += n[0] * t; v[1] += n[1] * t } // face de trás: recua para +n
-    else if (Math.abs(ww - o2) < 1e-4) { const t = rel(u, z, 500); v[0] -= n[0] * t; v[1] -= n[1] * t }
+    if (Math.abs(ww - o1) < 1e-4) { const t = face(u, z, 0); v[0] += n[0] * t; v[1] += n[1] * t } // face de trás: recua para +n
+    else if (Math.abs(ww - o2) < 1e-4) { const t = face(u, z, 500); v[0] -= n[0] * t; v[1] -= n[1] * t }
     if (alto) v[2] -= rel(u, ww, 1000)
   })
   r.delete()

@@ -1,5 +1,5 @@
 // Textura Tábuas: comprimento variado, frestas, empeno, abaulado, veio, nós, pregos e pontas gastas (gerar.py, Gr.tex_tabuas).
-// Na parede as tábuas ficam na horizontal (no Blender giravam para a vertical).
+// Na parede as tábuas ficam em pé, como no Blender (parede.ts troca u e z).
 import { G, grade, grao } from './grade'
 import { mapa, ruido } from './ruido'
 

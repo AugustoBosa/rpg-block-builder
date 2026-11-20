@@ -71,9 +71,14 @@ Leia este arquivo primeiro. Comandos: `USO.md`. Visão: `README.md`. Inventário
 - **Números (`check_texturas.ts`, 0 falha):** média/desvio (mm): Pedra 1,331/0,502; Lisa 0,043/0,084; Lajota 0,727/0,438; Tijolo 0,928/0,501; Terra 1,626/0,435; Areia 0,984/0,310; Rachado 0,651/0,372; Tábuas 0,768/0,514. Todas fecham a malha (1×1 quadrado/hexágono e 2×3), emenda 0,0000 mm, 216204 tri no 1×1. Tempos do `cli.ts` no 1×1: Pedra 2081 ms, Terra 2039, Areia 1665, Rachado 2431, Tábuas 975.
 - **Temas fiéis agora:** castelo (Lajota/Tijolo), ruína (Rachado/Tijolo), taverna (Tábuas), pântano (Terra/Tijolo), deserto (Areia/Tijolo). Cripta (Lajota/Nichos→Pedra), templo, navio, forja, caverna, inundada e vulcão ainda caem para Pedra em parte ou no todo.
 - **Verificado no navegador (orquestrador):** as 4 texturas novas distintas no piso (Terra: pedrinhas saindo do chão; Areia: ondulações; Rachado: lajotas grandes lascadas; Tábuas: tábuas com fresta e pregos); temas aplicam piso/parede esperados; 1024 px e 375 px sem estouro, console limpo. A parede segue lisa na prévia (STL texturizado): conferida por hash e malha fechada.
-- **Diferença conhecida:** Tábuas na parede ficam horizontais; no Blender (`gerar.py`, `uw, vw = pz, gx`) giram para vertical. Não tratei de propósito.
+- ~~Tábuas na parede ficam horizontais~~ **feito na G1**: em pé, como no Blender.
 - **Fluxo:** os managers (M4, M5) fizeram tudo sozinhos, 0 workers; o limite de 5 h interrompeu o M5 no começo e ele foi retomado com `SendMessage`.
 - **Próxima fatia (a decidir):** Água e Lava (usam a Pedra + poças/lava), Caverna, Casco, Metal; Nichos e Glifos (revisar copyright); telhado e canto; Tábuas vertical na parede; rodada B (check no CI).
+
+## Rodada G (2026-11-20, `docs/WORKFLOW_RODADA_G.md`): pendências só de código
+- **G1:** tudo publicado (D, E1, E2 já estavam no `origin/main`; as notas "sem push" abaixo estão velhas). CI roda `check_temas.ts` + `check_paredes.ts D2` (5 hashes, ~40 s) antes do build. Emenda entre peças 2×3 vizinhas medida: 0,0000 mm (Pedra e Tábuas; hexágono não medido, a emenda não é reta). Tábuas em pé na parede. `.gitignore` sem as exceções inúteis do graphify. Tempos locais: `check_texturas.ts` 4 min 42 s, `check_paredes.ts` completo 4 min 41 s.
+- **Decisão:** borda do grid hexagonal fica em zigue-zague (é o que deixa dois grids hex encaixarem).
+- **Próximo:** G2 (Caverna, Casco, Metal) → G3 (Água, Lava) → G4 (facetas) → telhado/canto.
 
 ## Pendências conhecidas (web)
 - **Verificado em 2026-11-08 após `c0288de`:** HUD de Desempenho vermelho (borda e ⚠ ao passar do orçamento), tracejado das aberturas no 3D, `check_paredes.ts` completo (42/42 PASS). **Ainda não verificado:** vista em tela cheia real (só emulada). **Achado (resolvido na rodada A):** a 375 px os cards abertos cobriam o modelo; agora começam recolhidos no celular.

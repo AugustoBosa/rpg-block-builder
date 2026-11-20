@@ -19,9 +19,9 @@ const topoBorda = (m: Malha, x: number, H: number) => {
     if (Math.abs(m.pos[i] - x) < 1e-3 && m.pos[i + 2] > H - 2 && m.pos[i + 2] <= H + .01) { const y = Math.round(m.pos[i + 1] * 1000); z.set(y, Math.max(z.get(y) ?? -1e9, m.pos[i + 2])) }
   return z
 }
-async function emenda(t: TexId) {
-  const base = op({ textura: t, lateral_gasto: 0, quina_gasto: 0 }), a = regiao(base, 1, 1).c.a[0]
-  const A = topoBorda(await pisoFinal(base), a, base.altura), B = topoBorda(await pisoFinal({ ...base, posicao_x: 1 }), -a, base.altura)
+async function emenda(t: TexId, linhas = 1, colunas = 1) { // vizinho à direita: posicao_x desloca `colunas` células
+  const base = op({ textura: t, lateral_gasto: 0, quina_gasto: 0, linhas, colunas }), a = Math.max(...regiao(base, linhas, colunas).seg.map(g => g[0]))
+  const A = topoBorda(await pisoFinal(base), a, base.altura), B = topoBorda(await pisoFinal({ ...base, posicao_x: colunas }), -a, base.altura)
   let n = 0, soma = 0, max = 0
   for (const [y, za] of A) { const zb = B.get(y); if (zb === undefined) continue; const d = Math.abs(za - zb); n++; soma += d; max = Math.max(max, d) }
   return { n, media: soma / n, max, total: A.size, totalB: B.size }
@@ -61,6 +61,10 @@ for (const t of NOVAS) {
   const o = op({ textura: t }), p = { ...paredeNova('a', { tipo: 'aresta', celula: 0, lado: 0 }, +ladoBloco(o, 0)!.L.toFixed(1)), lado: 'dentro' as const }
   const w = await pisoComParedes({ ...o, paredes: [p] }), f = fechada(w.pos, w.idx)
   confere(`(d) ${t}: parede unida ao piso fecha a malha`, f, `fechada: ${f ? 'sim' : 'NÃO'}, ${w.idx.length / 3} triângulos`)
+}
+for (const t of ['pedra', 'tabuas'] as TexId[]) { // emenda entre peças N×M vizinhas (quadrado; no hexágono a emenda não é reta)
+  const em = await emenda(t, 2, 3)
+  confere(`(b) ${t}: emenda 0,0000 mm entre pisos 2×3 vizinhos`, em.n > 100 && em.n === em.total && em.n === em.totalB && em.max < 5e-5, `${em.n} pontos de ${em.total}/${em.totalB}, média ${em.media.toFixed(4)} mm, máx ${em.max.toFixed(4)} mm`)
 }
 // textura separada na parede (Rodada E2a): hash do STL da parede texturizada
 const hashP = (e: Partial<Opcoes>) => {
