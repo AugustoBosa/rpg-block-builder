@@ -51,8 +51,8 @@ Risco de copyright (avisado ao usuário): medidas configuráveis reduzem o risco
 |---|---|---|
 | Piso | textura do piso | ✅ só Pedra |
 | Parede | espessura 4–10, altura 10–60 mm, textura da parede | ⏳ |
-| Canto | igual à parede; só conjunto quadrado | ⏳ |
-| Telhado | ângulo 15–40° | ⏳ |
+| Canto | igual à parede; só conjunto quadrado | ✅ botão "+ Canto" (2 paredes em L, 4 quinas, só quadrado) + pilar automático nas quinas de 90° |
+| Telhado | ângulo 15–40° | ✅ como **rampa**: `inclinacao` 0–40°, 4 direções (no Blender só +Y); paredes ignoradas na rampa. Telhado sobre paredes (duas águas): ⏳ |
 | Porta / Janela (atalho) | parede + 1 abertura | ⏳ |
 | Baú, Prop, Estátua, Espalhar | — | ❌ (props importados) |
 
