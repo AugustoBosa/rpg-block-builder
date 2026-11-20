@@ -36,7 +36,7 @@ Na seção Paredes (`web/src/paredes.ts`), ao lado do "+" atual: seletor de quin
 
 **Detecção** (função nova em `web/src/parede.ts`, ~20 linhas): para cada par de paredes não paralelas (|det(dA, dB)| > 0,1), calcular a interseção das linhas centrais (`quadro(...).pt(u, (o1 + o2) / 2)`). Há pilar se a interseção cai a no máximo `max(eA, eB)` de uma ponta (u = 0 ou u = comprimento) de cada parede. Pilares a menos de 0,5 mm um do outro viram um só.
 
-**Sólido:** prisma quadrado alinhado à parede A, centro na interseção, lado = `max(eA, eB) + 2 × pilar_saliencia`, do mesmo pé das paredes (`baixo`, afundado `AFUNDA`) até `max(altura A, altura B) + pilar_sobe`. Textura da parede (`texParede`) nas 4 faces e no topo, pelo mesmo `warp` de `solido()` (refatorar o trecho de textura de `solido()` numa função usada pelos dois, sem mudar o resultado das paredes). Unido em `pisoComParedes` como mais uma parede.
+**Sólido:** prisma quadrado alinhado à parede A, centro na interseção deslocado `saliência × (vA + vB)` (vA, vB = para onde cada parede segue a partir da quina), para a saliência crescer para dentro do canto e o pilar não passar do contorno do bloco (blocos vizinhos continuam encostando); lado = `max(eA, eB) + 2 × pilar_saliencia`, do mesmo pé das paredes (`baixo`, afundado `AFUNDA`) até `max(altura A, altura B) + pilar_sobe`. Textura da parede (`texParede`) nas 4 faces e no topo, pelo mesmo `warp` de `solido()` (refatorar o trecho de textura de `solido()` numa função usada pelos dois, sem mudar o resultado das paredes). Unido em `pisoComParedes` como mais uma parede.
 
 **Prévia:** igual às paredes (lisa na prévia, texturizada no STL). No esquema 2D (`esquema.ts`), o pilar aparece na planta como quadrado.
 
