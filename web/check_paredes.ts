@@ -3,11 +3,12 @@
 // D9 e o lado de interface do D10 só rodam no navegador: aparecem como TODO no fim.
 import { createHash } from 'node:crypto'
 import { execFileSync } from 'node:child_process'
-import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { fechada, final, padrao, piso, stl, subida, type Malha } from './src/bloco'
 import { pedra } from './src/pedra'
 import { degrau, grid, malha, regiao } from './src/sistema'
 import { canto, ladoBloco, orfa, paredesValidas, pilares } from './src/aberturas'
+import { geoTelhado, telhadoMalha, telhadoSolto } from './src/telhado'
 import { aberturaNova, areaDentro, foraDaArea, paredeNova, parede, perfilAbertura, pisoComParedes, type OpcoesP, type Parede } from './src/parede'
 
 const op = (e: Record<string, unknown> = {}): OpcoesP => ({ ...padrao(), paredes: [], ...e }) as OpcoesP
@@ -258,12 +259,29 @@ t('D14', 'L em eixo (lado centro) com pilar: 1 pilar, fecha, não aumenta o bbox
   for (const k of [0, 1]) if (b.lo[k] < b0.lo[k] - .01 || b.hi[k] > b0.hi[k] + .01) throw new Error('pilar aumenta a área além do L sem pilar')
   return `fechada, dentro do bbox, pilar ${pl[0].comprimento.toFixed(1)} mm`
 })
-const TELHADO_F0 = 0 // ocorrências de "telhado" em web/src no F0 (medido); não pode crescer
-t('D11', '"telhado" em web/src não cresce; textura padrão = Pedra', () => {
-  if (padrao().textura !== 'pedra') throw new Error(`padrão = ${padrao().textura}`)
-  const n = readdirSync('src').filter(f => f.endsWith('.ts')).reduce((s, f) => s + (readFileSync('src/' + f, 'utf8').match(/telhado/gi)?.length ?? 0), 0)
-  if (n > TELHADO_F0) throw new Error(`${n} > ${TELHADO_F0}`); return `${n} ocorrências`
+// ---- D15: telhado ----
+const comCanto = (e: Record<string, unknown>) => { const o = op(e); return { ...o, paredes: canto(o, 0, i => 'c' + i) } }
+for (const forma of ['uma', 'duas', 'quatro', 'plano'] as const) for (const [l, c] of [[1, 1], [2, 3]] as const)
+  t('D15', `telhado ${forma} removível ${l}x${c}: fecha`, () => {
+    const m = telhadoSolto(comCanto({ linhas: l, colunas: c, telhado_forma: forma }))
+    if (!fechada(m.pos, m.idx)) throw new Error('fechada: NÃO'); return `fechada, ${m.idx.length / 3} tri`
+  })
+t('D15', 'duas águas: cumeeira = zb + borda + tg × W/2', () => {
+  const o = comCanto({ telhado_forma: 'duas' }), g = geoTelhado(o), b = bbox(telhadoMalha(o)), alvo = g.zb + g.b + g.tg * (g.y1 - g.y0) / 2
+  if (Math.abs(b.hi[2] - alvo) > .05) throw new Error(`${b.hi[2].toFixed(3)} vs ${alvo.toFixed(3)}`); return `${b.hi[2].toFixed(2)} mm`
 })
+t('D15', 'quatro águas 1x1: ápice no centro', () => {
+  const m = telhadoMalha(comCanto({ telhado_forma: 'quatro' }))
+  let k = 0; for (let i = 2; i < m.pos.length; i += 3) if (m.pos[i] > m.pos[k * 3 + 2]) k = (i - 2) / 3
+  if (Math.hypot(m.pos[k * 3], m.pos[k * 3 + 1]) > .1) throw new Error(`ápice em ${m.pos[k * 3].toFixed(2)}, ${m.pos[k * 3 + 1].toFixed(2)}`); return 'centro'
+})
+t('D15', 'saia por dentro das paredes do canto (folga)', () => {
+  const o = comCanto({ telhado_forma: 'duas' }), m = telhadoSolto(o), lim = 17.5 - 6 - o.saia_folga
+  let mx = -1e9, my = -1e9
+  for (let i = 0; i < m.pos.length; i += 3) if (m.pos[i + 2] < -.01) { mx = Math.max(mx, m.pos[i]); my = Math.max(my, m.pos[i + 1]) }
+  if (mx > lim + .01 || my > lim + .01) throw new Error(`saia até ${mx.toFixed(2)}, ${my.toFixed(2)} (limite ${lim})`); return `saia até ${Math.max(mx, my).toFixed(2)} ≤ ${lim}`
+})
+t('D11', 'textura padrão = Pedra', () => { if (padrao().textura !== 'pedra') throw new Error(`padrão = ${padrao().textura}`); return 'pedra' })
 
 let falhas = 0, nPass = 0
 const filtro = process.argv.slice(2).filter(a => !a.startsWith('--'))
