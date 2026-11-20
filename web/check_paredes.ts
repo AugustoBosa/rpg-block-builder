@@ -7,7 +7,7 @@ import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { fechada, final, padrao, piso, stl, subida, type Malha } from './src/bloco'
 import { pedra } from './src/pedra'
 import { degrau, grid, malha, regiao } from './src/sistema'
-import { canto, ladoBloco, orfa, paredesValidas } from './src/aberturas'
+import { canto, ladoBloco, orfa, paredesValidas, pilares } from './src/aberturas'
 import { aberturaNova, areaDentro, foraDaArea, paredeNova, parede, perfilAbertura, pisoComParedes, type OpcoesP, type Parede } from './src/parede'
 
 const op = (e: Record<string, unknown> = {}): OpcoesP => ({ ...padrao(), paredes: [], ...e }) as OpcoesP
@@ -209,6 +209,38 @@ for (const [l, c] of [[1, 1], [2, 3]] as const) for (const q of [0, 1, 2, 3])
     if (!fechada(m.pos, m.idx)) throw new Error('fechada: NÃO')
     return 'fechada: sim'
   })
+// ---- D14: pilar de canto ----
+t('D14', 'canto 1x1 com pilar: 1 pilar e malha fecha', async () => {
+  const o = op({ pilar: true }), ps = canto(o, 0, i => 'c' + i), pl = pilares(o, ps)
+  if (pl.length !== 1) throw new Error(`${pl.length} pilares`)
+  const m = await pisoComParedes({ ...o, paredes: ps }), b = bbox(m), b0 = bbox(await pisoComParedes({ ...op(), paredes: ps }))
+  if (!fechada(m.pos, m.idx)) throw new Error('fechada: NÃO')
+  for (const k of [0, 1]) if (b.lo[k] < b0.lo[k] - .01 || b.hi[k] > b0.hi[k] + .01) throw new Error('pilar aumenta a área além do canto sem pilar')
+  return `fechada, dentro do contorno, pilar ${pl[0].comprimento.toFixed(1)} mm`
+})
+t('D14', 'contorno 2x2 com pilar: 4 pilares e malha fecha', async () => {
+  const o = op({ pilar: true, linhas: 2, colunas: 2 }), ps = [0, 1, 2, 3].map(i => paredeNova('a' + i, { tipo: 'aresta', celula: 0, lado: i }, +ladoBloco(o, i)!.L.toFixed(1)))
+  if (pilares(o, ps).length !== 4) throw new Error(`${pilares(o, ps).length} pilares`)
+  const m = await pisoComParedes({ ...o, paredes: ps })
+  if (!fechada(m.pos, m.idx)) throw new Error('fechada: NÃO'); return 'fechada: sim'
+})
+t('D14', 'espessuras diferentes: pilar pelo maior, malha fecha', async () => {
+  const o = op({ pilar: true }), [a, b] = canto(o, 1, i => 'c' + i), ps = [{ ...a, espessura: 4 }, { ...b, espessura: 8 }], pl = pilares(o, ps)
+  if (pl.length !== 1 || Math.abs(pl[0].comprimento - (8 + 2 * o.pilar_saliencia)) > 1e-6) throw new Error(`pilares ${pl.map(p => p.comprimento)}`)
+  const m = await pisoComParedes({ ...o, paredes: ps }), bm = bbox(m), bs = bbox(await pisoComParedes({ ...op(), paredes: ps }))
+  if (!fechada(m.pos, m.idx)) throw new Error('fechada: NÃO')
+  for (const k of [0, 1]) if (bm.lo[k] < bs.lo[k] - .01 || bm.hi[k] > bs.hi[k] + .01) throw new Error('pilar aumenta a área além do canto sem pilar')
+  return 'fechada: sim, dentro do canto sem pilar'
+})
+t('D14', 'paralelas e em T não geram pilar; pilar desligado não muda o hash', async () => {
+  const o = op({ pilar: true })
+  if (pilares(o, [noEixo('x', -5, 'a'), noEixo('x', 5, 'b')]).length) throw new Error('paralelas geraram pilar')
+  // T: A no eixo x de x = 0 a 40; B no eixo y em x = 20 (eixo y ⇒ n = [−1, 0], desloc −20), de y = 0 a 20: toca o meio de A
+  if (pilares(o, [noEixo('x', 0, 'a', 40), { ...noEixo('y', -20, 'b', 20), inicio: 0 }]).length) throw new Error('T gerou pilar')
+  const ps = canto(op(), 0, i => 'c' + i)
+  if (hash(await pisoComParedes({ ...op(), paredes: ps })) !== hash(await pisoComParedes({ ...op({ pilar: false, pilar_saliencia: 3 }), paredes: ps }))) throw new Error('pilar desligado mudou o STL')
+  return 'ok'
+})
 const TELHADO_F0 = 0 // ocorrências de "telhado" em web/src no F0 (medido); não pode crescer
 t('D11', '"telhado" em web/src não cresce; textura padrão = Pedra', () => {
   if (padrao().textura !== 'pedra') throw new Error(`padrão = ${padrao().textura}`)

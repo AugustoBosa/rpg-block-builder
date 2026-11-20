@@ -2,7 +2,7 @@
 // lança "F<n>" até a fase que a implementa. Sem paredes, nada muda no piso.
 import Module from 'manifold-3d'
 import { fechada, final, piso, RELEVO, type Malha, type Opcoes } from './bloco'
-import { perfilAbertura, quadro } from './aberturas'
+import { perfilAbertura, pilares, quadro } from './aberturas'
 import { profTex, texParede } from './textura'
 
 // ponytail: instância própria do WASM (sistema.ts não exporta o Manifold); piso e paredes são unidos aqui dentro
@@ -40,7 +40,7 @@ export { aberturaNova, paredeNova } from './aberturas'
 
 /** Sólido da parede com as aberturas cortadas e os batentes. Pé nominal em z = `baixo` (a parede desce até z = 0), topo em baixo + altura.
  *  Planta: retângulo [0, comprimento] × espessura (conforme `lado`); `dl` engorda a planta em todos os lados. */
-function solido(o: OpcoesP, p: Parede, baixo: number, dl = 0, tex = false) {
+function solido(o: OpcoesP, p: Parede, baixo: number, dl = 0, tex = false, pontas = false) {
   const { d, n, o1, o2, pt, s } = quadro(o, p, dl), e = p.espessura
   const poly = [pt(-dl, o1), pt(p.comprimento + dl, o1), pt(p.comprimento + dl, o2), pt(-dl, o2)]
   const A = poly.reduce((q, [x, y], i) => q + x * poly[(i + 1) % 4][1] - poly[(i + 1) % 4][0] * y, 0)
@@ -74,6 +74,10 @@ function solido(o: OpcoesP, p: Parede, baixo: number, dl = 0, tex = false) {
     if (Math.abs(ww - o1) < 1e-4) { const t = face(u, z, 0); v[0] += n[0] * t; v[1] += n[1] * t } // face de trás: recua para +n
     else if (Math.abs(ww - o2) < 1e-4) { const t = face(u, z, 500); v[0] -= n[0] * t; v[1] -= n[1] * t }
     if (alto) v[2] -= rel(u, ww, 1000)
+    if (pontas) { // pilar: textura também nas duas pontas (recua para dentro ao longo de d)
+      if (Math.abs(u + dl) < 1e-4) { const t = rel(ww, z, 1500); v[0] += d[0] * t; v[1] += d[1] * t }
+      else if (Math.abs(u - p.comprimento - dl) < 1e-4) { const t = rel(ww, z, 2000); v[0] -= d[0] * t; v[1] -= d[1] * t }
+    }
   })
   r.delete()
   return w
@@ -121,7 +125,8 @@ export async function pisoComParedes(o: OpcoesP, previa = false, cortes?: Float6
   if (!o.paredes.length || o.inclinacao > 0) return base // rampa: paredes ignoradas
   const z0 = o.altura - RELEVO - AFUNDA - .05 // a base entra na laje (zt − 0,6) e passa 0,05 mm dela: fundo coplanar gerava triângulos de área zero
   // paredes exatas (sem engordar): faces coplanares entre paredes e com o piso se fundem na união (sem degrau de 0,02 mm); `desentorta` limpa triângulos de área ~0
-  const ws = o.paredes.map(p => solido(o, p, RELEVO + AFUNDA + .05, 0, !previa).translate(0, 0, z0))
+  const ps = o.pilar ? [...o.paredes, ...pilares(o, o.paredes)] : o.paredes
+  const ws = ps.map(p => solido(o, p, RELEVO + AFUNDA + .05, 0, !previa, p.id.startsWith('pilar')).translate(0, 0, z0))
   const f = new Manifold(new Mesh({ numProp: 3, vertProperties: base.pos, triVerts: base.idx }))
   const u = Manifold.union([f, ...ws]), r = paraMalha(u)
   for (const x of [u, f, ...ws]) x.delete()

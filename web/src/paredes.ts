@@ -52,6 +52,12 @@ export function montaParedes(div: HTMLElement, o: Opcoes, previa: () => void) {
     })
     c.append(botao('+ Abertura', () => { const ab = aberturaNova('porta'); ab.pos = p.comprimento / 2; p.aberturas.push(ab); refaz() }), botao('− Parede', () => { o.paredes.splice(i, 1); refaz() }))
   })
+  const ck = marca()
+  ck.checked = o.pilar
+  ck.onchange = () => { o.pilar = ck.checked; previa() }
+  div.append(campo('Pilares nas quinas', ck))
+  controle(div, 'Pilar: saliência (mm)', o.pilar_saliencia, 0, 4, v => { o.pilar_saliencia = v }, .1)
+  controle(div, 'Pilar: acima da parede (mm)', o.pilar_sobe, 0, 6, v => { o.pilar_sobe = v }, .1)
   if (!hex) {
     escolha(div, 'Quina do canto', String(quina), [['0', '+X +Y'], ['1', '−X +Y'], ['2', '−X −Y'], ['3', '+X −Y']], v => { quina = +v })
     div.append(botao('+ Canto', () => { o.paredes.push(...canto(o, quina, () => 'p' + ++nParede)); refaz() }))

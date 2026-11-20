@@ -2,7 +2,7 @@
 // (contorno grosso, tracejado para o que está oculto, eixos traço-ponto, hachura nas seções, cotas com traços de 45°).
 // Os números vêm só de medidas() e das funções de sistema.ts; aqui é projeção e desenho.
 import type { Opcoes } from './bloco'
-import { foraDaArea, paredesValidas, perfilAbertura, quadro } from './aberturas'
+import { foraDaArea, paredesValidas, perfilAbertura, pilares, quadro } from './aberturas'
 import { alturaGrid, celula, centros, contorno, medidas, regiao, type Celula, type Medidas } from './sistema'
 
 type P2 = [number, number]
@@ -250,9 +250,11 @@ export function esquemaPiso(o: Opcoes): string {
   const cel = r.cs.map(([cx, cy]) => contorno(r.c, 0).map(([x, y]) => S(cx + x, cy + y)))
   const base = ps.map(p => { const q = quadro(o, p), L = p.comprimento; return { p, q, f: [q.pt(0, q.o1), q.pt(L, q.o1), q.pt(L, q.o2), q.pt(0, q.o2)].map(([x, y]) => S(x, y)) } })
   const vaos = base.flatMap(({ p, q }) => p.aberturas.map(a => [q.pt(a.pos - a.largura / 2, q.o1), q.pt(a.pos + a.largura / 2, q.o1), q.pt(a.pos + a.largura / 2, q.o2), q.pt(a.pos - a.largura / 2, q.o2)].map(([x, y]) => S(x, y))))
-  const todos = [...cel.flat(), ...base.flatMap(b => b.f), ...vaos.flat()]
+  const pil = (o.pilar ? pilares(o, ps) : []).map(p => { const q = quadro(o, p), L = p.comprimento; return [q.pt(0, q.o1), q.pt(L, q.o1), q.pt(L, q.o2), q.pt(0, q.o2)].map(([x, y]) => S(x, y)) })
+  const todos = [...cel.flat(), ...base.flatMap(b => b.f), ...pil.flat(), ...vaos.flat()]
   const planta = vista('Planta · piso com paredes', todos, P => cel.map(c => poli(P, c, `fill="none" stroke="${COR.traco}"`)).join('') +
-    base.map(b => poli(P, b.f, `fill="${COR.bloco}" fill-opacity=".35" stroke="${COR.bloco}"`)).join('') + vaos.map(v => poli(P, v, TR)).join(''), EIXO.z)
+    base.map(b => poli(P, b.f, `fill="${COR.bloco}" fill-opacity=".35" stroke="${COR.bloco}"`)).join('') +
+    pil.map(f => poli(P, f, `fill="${COR.bloco}" fill-opacity=".6" stroke="${COR.bloco}"`)).join('') + vaos.map(v => poli(P, v, TR)).join(''), EIXO.z)
   const elev = base.map(({ p }, i) => {
     const E = (u: number, v: number): P2 => [u, -v], per = p.aberturas.map(a => perfilAbertura(a).map(([u, v]) => E(u, v)))
     const pts = [E(0, 0), E(p.comprimento, p.altura), ...per.flat()], id = `cp${i}`

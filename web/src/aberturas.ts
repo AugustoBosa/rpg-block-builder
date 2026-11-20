@@ -113,3 +113,33 @@ export const orfa = (o: Opcoes, p: Parede) => p.ancora.tipo === 'aresta' && !lad
 /** Atalho de canto (só quadrado): 2 paredes nos lados inteiros `quina` e `quina + 1`, espessura para dentro. */
 export const canto = (o: Opcoes, quina: number, id: (i: number) => string): Parede[] =>
   [quina, (quina + 1) % 4].map((lado, i) => paredeNova(id(i), { tipo: 'aresta', celula: 0, lado }, +ladoBloco(o, lado)!.L.toFixed(1)))
+
+const EIXOS: [number, 'x' | 'y' | 'h60' | 'h120'][] = [[0, 'x'], [90, 'y'], [60, 'h60'], [120, 'h120']]
+/** Pilares de canto: onde as linhas centrais de 2 paredes não paralelas se cruzam a até max(espessuras) de uma ponta de cada.
+ *  Cada pilar é uma Parede quadrada (âncora eixo alinhada à 1ª parede) com id 'pilar…'; pilares a < 0,5 mm viram um. */
+export function pilares(o: Opcoes, ps: Parede[]): Parede[] {
+  const out: Parede[] = [], cs: [number, number][] = []
+  const cx = (a: [number, number], b: [number, number]) => a[0] * b[1] - a[1] * b[0]
+  for (let i = 0; i < ps.length; i++) for (let j = i + 1; j < ps.length; j++) {
+    const A = quadro(o, ps[i]), B = quadro(o, ps[j]), det = cx(A.d, B.d)
+    if (Math.abs(det) < .1) continue
+    const a0 = A.pt(0, (A.o1 + A.o2) / 2), b0 = B.pt(0, (B.o1 + B.o2) / 2), w: [number, number] = [b0[0] - a0[0], b0[1] - a0[1]]
+    const ta = cx(w, B.d) / det, tb = cx(w, A.d) / det, e = Math.max(ps[i].espessura, ps[j].espessura)
+    const ponta = (t: number, c: number) => Math.abs(t) <= e || Math.abs(t - c) <= e
+    if (!ponta(ta, ps[i].comprimento) || !ponta(tb, ps[j].comprimento)) continue
+    const x: [number, number] = [a0[0] + A.d[0] * ta, a0[1] + A.d[1] * ta]
+    if (cs.some(q => Math.hypot(q[0] - x[0], q[1] - x[1]) < .5)) continue
+    cs.push(x)
+    // a saliência cresce para dentro do canto (para onde as paredes seguem): o pilar não passa do contorno do bloco
+    const va = ta < ps[i].comprimento / 2 ? A.d : [-A.d[0], -A.d[1]], vb = tb < ps[j].comprimento / 2 ? B.d : [-B.d[0], -B.d[1]]
+    const l = e + 2 * o.pilar_saliencia, ka = (l - ps[i].espessura) / 2, kb = (l - ps[j].espessura) / 2
+    // rente à face externa de cada parede: anda ka para onde B segue e kb para onde A segue
+    const c: [number, number] = [x[0] + kb * va[0] + ka * vb[0], x[1] + kb * va[1] + ka * vb[1]]
+    const ang = ((Math.atan2(A.d[1], A.d[0]) * 180 / Math.PI) % 180 + 180) % 180
+    const [t0, eixo] = EIXOS.reduce((m, x) => Math.abs(x[0] - ang) < Math.abs(m[0] - ang) ? x : m)
+    const r = t0 * Math.PI / 180, d = [Math.cos(r), Math.sin(r)], n = [-d[1], d[0]]
+    out.push({ id: 'pilar' + out.length, ancora: { tipo: 'eixo', eixo, desloc: c[0] * n[0] + c[1] * n[1] }, inicio: c[0] * d[0] + c[1] * d[1] - l / 2,
+      comprimento: l, espessura: l, lado: 'centro', altura: Math.max(ps[i].altura, ps[j].altura) + o.pilar_sobe, aberturas: [] })
+  }
+  return out
+}
