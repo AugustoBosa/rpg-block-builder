@@ -82,7 +82,8 @@ Leia este arquivo primeiro. Comandos: `USO.md`. Visão: `README.md`. Inventário
 - **G3 (`b12f4db`): Água e Lava.** Água 2,096/0,302; Lava 1,679/0,424. Teto da Água = `o.teto + 0,5` (`tetoDe` em `textura.ts`; decisão "teto maior só na Água"). Na parede, Água e Lava viram Pedra (`texParede`). Check da emenda olha a laje inteira (3,2 mm) porque a Água fica abaixo do topo.
 - **Verificado (orquestrador):** `check_texturas` 0 falha com as 13 (6 min 52 s; médias antigas idênticas), `check_paredes` 42/42, `check_temas` PASS, navegador 1024 e 375 px (sem estouro, texturas distintas).
 - **Pendência:** Lava leva 2,6–2,9 s no 1×1 (Pedra 2,2–2,3 s na mesma hora; meta era 2,5 s). Cripta e templo seguem parciais (Nichos e Glifos dependem do jurídico).
-- **Próximo:** G4 (facetas) → telhado/canto.
+- **G4 (`7c998d9`): facetas.** Meta ≤ 0,5 % não se aplica: as arestas vivas vêm do contorno de 90° do bloco, não do relevo (topo: 0,04 %). `SUAVIZA` 2 e 0 pioram o p90; nada mudou na malha (hashes iguais). Ferramenta: `npx tsx facetas.ts [textura]`. Achado: corpo e laje são cascas sobrepostas no STL (2 laços ocultos em z0 e zt), como sempre foram.
+- **Próximo:** telhado/canto (precisa de design antes) → gerador de grid completo. Pendências pequenas: tempo da Lava.
 
 ## Pendências conhecidas (web)
 - **Verificado em 2026-11-08 após `c0288de`:** HUD de Desempenho vermelho (borda e ⚠ ao passar do orçamento), tracejado das aberturas no 3D, `check_paredes.ts` completo (42/42 PASS). **Ainda não verificado:** vista em tela cheia real (só emulada). **Achado (resolvido na rodada A):** a 375 px os cards abertos cobriam o modelo; agora começam recolhidos no celular.
@@ -96,7 +97,7 @@ Leia este arquivo primeiro. Comandos: `USO.md`. Visão: `README.md`. Inventário
 - Emenda entre dois blocos N × M vizinhos não foi medida. Dentro de um bloco, as células se emendam por construção.
 - No hexágono, a borda externa do grid N × M fica recortada, célula a célula.
 - `validar.py` só conhece a célula de 35 mm e o pé das originais: ele reprova o encaixe próprio. Para conferir se a malha fecha, use o `cli.ts`.
-- Facetas p90 14,4° e arestas ≥ 60° em 1,7 % (originais: 0,1–0,3 %).
+- ~~Facetas: arestas ≥ 60° em 1,7 %~~ **fechado na G4**: `web/facetas.ts` (porte do `facetas.py`) mostra 2,23 % na Pedra, mas o topo texturizado tem só 0,04 %. O resto é o contorno de 90° do bloco (ombro do pé, aro do corpo, borda da laje, quinas), que é geometria do produto. Chanfrar mudaria o encaixe: não fazer antes de imprimir.
 - Cotas 3D: a 375 px ainda pode haver 1 cruzamento entre cota principal e menor em pose extrema, e a principal pode cruzar o slider (item 3/4).
 - O gizmo tem 128 px fixos (o ViewHelper do three 0.187 não aceita tamanho).
 
