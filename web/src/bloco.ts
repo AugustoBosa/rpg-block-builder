@@ -29,6 +29,7 @@ export const PISO = { // nome: [padrão, mín, máx, rótulo, passo?] (sem passo
   linhas: [1, 1, 6, 'Linhas (células)', 1], colunas: [1, 1, 6, 'Colunas (células)', 1], altura: [24.5, 12, 60, 'Altura total (mm)'],
   semente: [1, 0, 9999, 'Semente', 1], desgaste: [.5, 0, 1, 'Desgaste'], tamanho_pedra: [10, 5, 25, 'Tamanho da pedra (mm)'],
   profundidade: [.5, .4, .7, 'Profundidade'], posicao_x: [0, -8, 8, 'Posição X no mapa (células)', .5], posicao_y: [0, -8, 8, 'Posição Y no mapa (células)', .5],
+  inclinacao: [0, 0, 40, 'Inclinação da rampa (graus)', 1],
   quina_largura: [1.8, 0, 5, 'Quina: largura (mm)'], quina_gasto: [1, 0, 3, 'Quina: gasto'], lateral_largura: [2, 0, 5, 'Lateral: largura (mm)'],
   lateral_gasto: [1, 0, 3, 'Lateral: gasto'], ruido_borda: [.3, .05, 2, 'Ruído da borda'], teto: [2.5, .5, 2.5, 'Teto do relevo (mm)'],
   junta_piso: [2.4, .5, 5, 'Ganho da junta (× profundidade)'], resolucao: [.125, .1, 1, 'Malha (mm)'],
@@ -38,15 +39,15 @@ export const GUIAS = { // grid e degrau (aba própria)
 } as const
 // seções das abas Blocos e Grids (chave → título; as tuplas acima não mudam)
 export const SECAO_PISO = {
-  linhas: 'Peça', colunas: 'Peça', altura: 'Peça', posicao_x: 'Peça', posicao_y: 'Peça',
+  linhas: 'Peça', colunas: 'Peça', altura: 'Peça', posicao_x: 'Peça', posicao_y: 'Peça', inclinacao: 'Peça',
   semente: 'Textura', desgaste: 'Textura', tamanho_pedra: 'Textura', profundidade: 'Textura', teto: 'Textura', junta_piso: 'Textura',
   quina_largura: 'Borda', quina_gasto: 'Borda', lateral_largura: 'Borda', lateral_gasto: 'Borda', ruido_borda: 'Borda',
 } as const
 export const SECAO_GUIAS = { grid_linhas: 'Dimensões', grid_colunas: 'Dimensões', altura_degrau: 'Dimensões' } as const
 type Num<T> = { -readonly [k in keyof T]: number }
-export type Opcoes = Sistema & Num<typeof PISO> & Num<typeof GUIAS> & { textura: TexId; texturaParede: TexId | ''; pedra: KnobsPedra; lisa: KnobsLisa; lajota: KnobsLajota; tijolo: KnobsTijolo; terra: KnobsTerra; areia: KnobsAreia; rachado: KnobsRachado; tabuas: KnobsTabuas; caverna: KnobsCaverna; casco: KnobsCasco; metal: KnobsMetal; agua: KnobsAgua; lava: KnobsLava; paredes: Parede[] }
+export type Opcoes = Sistema & Num<typeof PISO> & Num<typeof GUIAS> & { textura: TexId; texturaParede: TexId | ''; pedra: KnobsPedra; lisa: KnobsLisa; lajota: KnobsLajota; tijolo: KnobsTijolo; terra: KnobsTerra; areia: KnobsAreia; rachado: KnobsRachado; tabuas: KnobsTabuas; caverna: KnobsCaverna; casco: KnobsCasco; metal: KnobsMetal; agua: KnobsAgua; lava: KnobsLava; paredes: Parede[]; inclinacao_dir: '+y' | '-y' | '+x' | '-x'; pilar: boolean; pilar_saliencia: number; pilar_sobe: number }
 const ini = (t: object) => Object.fromEntries(Object.entries(t).map(([k, v]) => [k, v[0]]))
-export const padrao = (): Opcoes => ({ ...ini(SISTEMA), ...ini(PISO), ...ini(GUIAS), formato: 'quadrado', textura: 'pedra', texturaParede: '', ...Object.fromEntries(Object.entries(TEX).map(([id, t]) => [id, ini(t.knobs)])), paredes: [] } as any)
+export const padrao = (): Opcoes => ({ ...ini(SISTEMA), ...ini(PISO), ...ini(GUIAS), formato: 'quadrado', textura: 'pedra', texturaParede: '', inclinacao_dir: '+y', pilar: false, pilar_saliencia: 1.5, pilar_sobe: 2, ...Object.fromEntries(Object.entries(TEX).map(([id, t]) => [id, ini(t.knobs)])), paredes: [] } as any)
 
 /** Rede do topo da laje: xy por ponto, triângulos e o contorno de cada célula (anti-horário).
  *  Todas as células caem na mesma rede global, então os pontos dos lados comuns são os mesmos. */
@@ -119,6 +120,15 @@ export function cortesParte(o: Opcoes, i: number, n: number) {
   return { de, nl, c }
 }
 
+/** Rampa: eixo (0 = x, 1 = y), sinal, tangente e o começo da subida (mínimo da coordenada com sinal sobre o contorno). */
+function rampa(o: Opcoes, r: Regiao) {
+  const tg = Math.tan(o.inclinacao * Math.PI / 180), ei = o.inclinacao_dir[1] === 'x' ? 0 : 1, sn = o.inclinacao_dir[0] === '-' ? -1 : 1
+  const s = r.seg.flatMap(g => [sn * g[ei], sn * g[ei + 2]]), s0 = Math.min(...s)
+  return { tg, sobe: (x: number, y: number) => tg * (sn * (ei ? y : x) - s0), ext: Math.max(...s) - s0 }
+}
+/** Quanto o topo sobe de uma ponta à outra da rampa (mm); 0 sem rampa. */
+export const subida = (o: Opcoes) => { const k = rampa(o, regiao(o, o.linhas, o.colunas)); return k.tg * k.ext }
+
 /** Malha crua (sem suavizar). zt = topo do corpo. `cortes` (opcional): relevo do topo já calculado por cortesParte. */
 export function piso(o: Opcoes, cortes?: Float64Array): Malha & { zt: number; r: Regiao } {
   const r = regiao(o, o.linhas, o.colunas), zt = o.altura - RELEVO
@@ -131,7 +141,7 @@ export function piso(o: Opcoes, cortes?: Float64Array): Malha & { zt: number; r:
   const z0 = zt - .6, z1 = zt + RELEVO, nz = Math.round((z1 - z0) / res + 1)
   const { XY, tri, loops } = rede(o, r, res), nl = XY.length / 2
   const base = P.length / 3, id = new Int32Array(nl * nz).fill(-1)
-  const f = relevo(o, r, XY), des = o.desgaste
+  const f = relevo(o, r, XY), des = o.desgaste, rp = rampa(o, r)
   const corte = new Float32Array(nl).fill(-1) // corte do topo por ponto da rede, calculado uma vez
   const v = (L: number, k: number) => {
     const n = L + nl * k
@@ -147,7 +157,9 @@ export function piso(o: Opcoes, cortes?: Float64Array): Malha & { zt: number; r:
     let ct = corte[L]
     if (ct < 0) ct = corte[L] = cortes ? cortes[L] : f.corte(L, rn) // 1ª vez em precisão dupla, as seguintes em Float32 (como sempre foi)
     // a coluna da lateral encolhe até o relevo daquele ponto: a textura desce pela lateral, sem parede fina em volta (o fundo z0 fica)
-    P.push(x + dx * lado, y + dy * lado, z0 + (z - z0) * (1 - ct / (z1 - z0)))
+    let zf = z0 + (z - z0) * (1 - ct / (z1 - z0))
+    if (rp.tg) zf += rp.sobe(x, y) * k / (nz - 1) // rampa: o fundo (k = 0) fica, o topo sobe tudo; a laje vira cunha
+    P.push(x + dx * lado, y + dy * lado, zf)
     return (id[n] = base + (P.length / 3 - 1 - base))
   }
   for (let t = 0; t < tri.length; t++) T.push(v(tri[t], nz - 1)) // topo

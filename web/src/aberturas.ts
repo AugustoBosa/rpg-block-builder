@@ -106,6 +106,6 @@ export function foraDaArea(p: Parede, a: Abertura): Linha[] {
 }
 
 /** Paredes cuja âncora existe no bloco atual (uma aresta some se linhas, colunas ou formato mudam): as outras são ignoradas. */
-export const paredesValidas = (o: Opcoes) => o.paredes.filter(p => !orfa(o, p))
+export const paredesValidas = (o: Opcoes) => o.inclinacao > 0 ? [] : o.paredes.filter(p => !orfa(o, p))
 /** Parede em aresta cujo lado não existe mais no bloco atual (ignorada na prévia, no STL e no esquema). */
 export const orfa = (o: Opcoes, p: Parede) => p.ancora.tipo === 'aresta' && !ladoBloco(o, p.ancora.lado)

@@ -1,7 +1,7 @@
 // Cotas da vista 3D: linhas finas âmbar na cena + rótulos HTML (CSS2D). Todos os números vêm de sistema.ts (medidas, celula, contorno, centros, fundo).
 import * as THREE from 'three'
 import { CSS2DObject, CSS2DRenderer } from 'three/examples/jsm/renderers/CSS2DRenderer.js'
-import type { Opcoes } from './bloco'
+import { subida, type Opcoes } from './bloco'
 import { celula, centros, contorno, fundo, medidas, type Celula } from './sistema'
 
 /** Estilo das cotas (card Cotas): tamanho e fonte do texto, cor, e fator de afastamento das linhas (1 = padrão). Mudou: refazer as cotas (`cotas()`). */
@@ -205,7 +205,7 @@ function grade(o: Opcoes, peca: string, fixa: Desenho, k: Caixa) {
 export function cotas(passo: 1 | 2 | 3, o: Opcoes, peca: string, mostrar = 'ambos'): THREE.Group {
   limpaCotas()
   LINHA.color.set(estilo.cor)
-  const h = passo === 3 ? o.altura : medidas(o).alturaGrid, c: V = [0, 0, h / 2] // centro aproximado da peça: as cotas saem para fora dele
+  const h = passo === 3 ? o.altura + subida(o) : medidas(o).alturaGrid, c: V = [0, 0, h / 2] // centro aproximado da peça: as cotas saem para fora dele
   const cel = celula(o), k = passo === 1 ? caixa(cel, 1, 1) : passo === 2 ? caixa(cel, o.grid_linhas, o.grid_colunas) : caixa(cel, o.linhas, o.colunas)
   const poli = passo === 1 ? (i: number) => contorno(cel, i) : retangulo(k)
   const fixa = new Desenho(c, poli), bloco = new Desenho(c, poli)
@@ -216,7 +216,7 @@ export function cotas(passo: 1 | 2 | 3, o: Opcoes, peca: string, mostrar = 'ambo
     bloco.ativo = mostrar !== 'grid'
     sistema(o, cel, fixa, bloco)
   } else if (passo === 2) grade(o, peca, fixa, k)
-  else externas(fixa, k, o.altura, 'altura')
+  else externas(fixa, k, o.altura + subida(o), 'altura')
   const raiz = new THREE.Group()
   raiz.add(fixa.fecha(), bloco.fecha())
   raiz.userData.elevavel = bloco.g

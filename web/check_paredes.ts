@@ -4,7 +4,7 @@
 import { createHash } from 'node:crypto'
 import { execFileSync } from 'node:child_process'
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { fechada, final, padrao, piso, stl, type Malha } from './src/bloco'
+import { fechada, final, padrao, piso, stl, subida, type Malha } from './src/bloco'
 import { pedra } from './src/pedra'
 import { degrau, grid, malha, regiao } from './src/sistema'
 import { ladoBloco, orfa, paredesValidas } from './src/aberturas'
@@ -177,6 +177,27 @@ t('D10', 'prévia (piso cru 0,5 mm) com 4 paredes ≤ 3 s', async () => {
   const o = op({ linhas: 2, colunas: 3, resolucao: .5 }), ps = [noEixo('x', 0, 'a'), noEixo('y', 0, 'b'), noEixo('x', 8, 'c'), noEixo('y', 8, 'd')]
   const t0 = performance.now(); await pisoComParedes({ ...o, paredes: ps }, true); const s = (performance.now() - t0) / 1000
   if (s > 3) throw new Error(`${s.toFixed(1)} s`); return `${s.toFixed(2)} s`
+})
+// ---- D12: rampa (piso inclinado) ----
+const DIRS = ['+y', '-y', '+x', '-x'] as const
+for (const [nome, e] of [['1x1 quadrado', {}], ['2x3 quadrado', { linhas: 2, colunas: 3 }], ['1x1 hexágono', { formato: 'hexagono' }]] as [string, Record<string, unknown>][])
+  for (const ang of [15, 40]) for (const dir of DIRS)
+    t('D12', `rampa ${ang}° ${dir}, ${nome}: fecha e sobe o esperado`, async () => {
+      const o = op({ ...e, inclinacao: ang, inclinacao_dir: dir }), m = await pisoComParedes(o), b = bbox(m), alto = o.altura + subida(o)
+      if (!fechada(m.pos, m.idx)) throw new Error('fechada: NÃO')
+      if (b.hi[2] > alto + .05 || b.hi[2] < alto - 4) throw new Error(`topo ${b.hi[2].toFixed(2)}, esperado ≤ ${alto.toFixed(2)} e > ${(alto - 4).toFixed(2)}`)
+      return `fechada, topo ${b.hi[2].toFixed(2)} (≤ ${alto.toFixed(2)})`
+    })
+t('D12', 'rampa ignora as paredes (mesmo hash que sem paredes)', async () => {
+  const o = op({ inclinacao: 20 }), com = { ...o, paredes: [naAresta(o, 0, 'a')] }
+  if (hash(await pisoComParedes(com)) !== hash(await pisoComParedes(o))) throw new Error('paredes entraram na rampa')
+  return 'iguais'
+})
+t('D12', 'rampa: piso 1×1 ≤ tempo sem rampa + 10 %', async () => {
+  const med = async (e: Record<string, unknown>) => { const t0 = performance.now(); await pisoComParedes(op(e)); return performance.now() - t0 }
+  await med({}) // aquece
+  const a = await med({}), b = await med({ inclinacao: 30 })
+  if (b > a * 1.1 + 50) throw new Error(`${b.toFixed(0)} ms vs ${a.toFixed(0)} ms`); return `${b.toFixed(0)} ms vs ${a.toFixed(0)} ms`
 })
 const TELHADO_F0 = 0 // ocorrências de "telhado" em web/src no F0 (medido); não pode crescer
 t('D11', '"telhado" em web/src não cresce; textura padrão = Pedra', () => {

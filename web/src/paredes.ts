@@ -8,6 +8,9 @@ let nParede = 0
 export function montaParedes(div: HTMLElement, o: Opcoes, previa: () => void) {
   const hex = o.formato === 'hexagono'
   div.replaceChildren()
+  const av = document.createElement('div')
+  av.id = 'avisoRampa'; av.className = 'nota'; av.style.color = '#e9a35a'
+  div.append(av)
   const refaz = () => { montaParedes(div, o, previa); previa() }
   o.paredes.forEach((p, i) => {
     const d = document.createElement('details'), sm = document.createElement('summary'), c = document.createElement('div')

@@ -118,7 +118,7 @@ export { areaDentro, foraDaArea, perfilAbertura } from './aberturas' // F2: geom
  *  Sem paredes devolve exatamente o piso de antes (regressão D2). */
 export async function pisoComParedes(o: OpcoesP, previa = false, cortes?: Float64Array): Promise<Malha> {
   const c = piso(o, cortes), base: Malha = previa ? { pos: c.pos, idx: c.idx } : await final(c)
-  if (!o.paredes.length) return base
+  if (!o.paredes.length || o.inclinacao > 0) return base // rampa: paredes ignoradas
   const z0 = o.altura - RELEVO - AFUNDA - .05 // a base entra na laje (zt − 0,6) e passa 0,05 mm dela: fundo coplanar gerava triângulos de área zero
   // paredes exatas (sem engordar): faces coplanares entre paredes e com o piso se fundem na união (sem degrau de 0,02 mm); `desentorta` limpa triângulos de área ~0
   const ws = o.paredes.map(p => solido(o, p, RELEVO + AFUNDA + .05, 0, !previa).translate(0, 0, z0))

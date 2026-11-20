@@ -8,7 +8,7 @@ import { aoMudarVer, config, enquadra, mostra, mostraTracejado, type Ver } from 
 import { gerando, hudPerf, infoPerf, montaCards, perf, RES, resRapida } from './cards'
 import { montaParedes } from './paredes'
 import { aplicaTema, TEMAS } from './temas'
-import { $, aoMudar, campo, controle, grupo, opcoes, secoes } from './ui'
+import { $, aoMudar, campo, controle, escolha, grupo, opcoes, secoes } from './ui'
 
 // nada é salvo: cada abertura começa do padrão
 const o: Opcoes = padrao()
@@ -36,6 +36,8 @@ function previa(res = resRapida()) {
         mostra(1, null)
       }
       mostraTracejado(passo === 3 ? snap.paredes.flatMap(w => tracejado3D(snap, w)) : [])
+      const ar = document.getElementById('avisoRampa')
+      if (ar) ar.textContent = snap.inclinacao > 0 && o.paredes.length ? '⚠ Paredes desligadas na rampa (inclinação > 0).' : ''
       if (passo === 3) {
         const nk = r.ms * res ** 2
         perf.k = perf.k ? (perf.k + nk) / 2 : nk
@@ -96,6 +98,7 @@ encaixe.onchange = () => { Object.assign(o, ENCAIXES[encaixe.value as keyof type
 // aba Blocos (peça de piso e Pedra avançada) e aba Grids (grid e degrau). As duas leem as medidas do Sistema.
 const dPiso = secoes($('gerais'), ['Peça', 'Paredes', 'Textura', 'Borda'], ['Peça'])
 const poePiso = grupo(PISO, o, SECAO_PISO, dPiso, ['resolucao'])
+escolha(dPiso['Peça'], 'Rampa sobe para', o.inclinacao_dir, [['+y', '+Y'], ['-y', '−Y'], ['+x', '+X'], ['-x', '−X']], v => { o.inclinacao_dir = v as Opcoes['inclinacao_dir']; previa() })
 const paredesDiv = dPiso['Paredes']
 montaParedes(paredesDiv, o, previa)
 // tema: grava textura, desgaste e tamanho da pedra nos controles; sem tema escolhido, nada muda
