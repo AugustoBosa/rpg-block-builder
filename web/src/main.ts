@@ -9,7 +9,7 @@ import { gerando, hudPerf, infoPerf, montaCards, perf, RES, resRapida } from './
 import { montaParedes } from './paredes'
 import { temTelhado } from './telhado'
 import { aplicaTema, TEMAS } from './temas'
-import { $, aoMudar, campo, controle, escolha, grupo, opcoes, secoes } from './ui'
+import { $, aoMudar, botao, campo, controle, escolha, grupo, opcoes, secoes } from './ui'
 
 // nada é salvo: cada abertura começa do padrão
 const o: Opcoes = padrao()
@@ -35,6 +35,7 @@ function previa(res = resRapida()) {
       } else {
         mostra(0, r.m[0])
         mostra(1, r.m[1])
+        $('aviso').textContent = passo === 2 ? [...avisos(snap), ...(r.av ?? [])].join(' ') : ''
       }
       mostraTracejado(passo === 3 ? snap.paredes.flatMap(w => tracejado3D(snap, w)) : [])
       const ar = document.getElementById('avisoRampa')
@@ -42,6 +43,7 @@ function previa(res = resRapida()) {
       if (ar) ar.textContent = snap.inclinacao > 0 && o.paredes.length ? '⚠ Paredes desligadas na rampa (inclinação > 0).'
         : snap.telhado_forma !== 'nenhum' && !temTelhado(snap) ? '⚠ Telhado só no bloco quadrado e sem rampa (ignorado).'
         : semApoio ? (snap.telhado_modo === 'fundido' ? '⚠ Telhado fundido precisa de paredes (ignorado).' : '⚠ Telhado sem paredes para apoiar.') : ''
+      $('baixarClip').hidden = !(passo === 2 && snap.trava === 'clip')
       $('baixarTelhado').hidden = !(passo === 3 && temTelhado(snap) && snap.telhado_modo === 'removivel')
       if (passo === 3) {
         const nk = r.ms * res ** 2
@@ -144,7 +146,17 @@ texSel.onchange = () => { o.textura = texSel.value as TexId; mostraTextura(); pr
 opcoes(texParSel, [['', 'Igual ao piso'], ...Object.entries(TEX).map(([k, t]) => [k, t.nome] as [string, string])])
 texParSel.onchange = () => { o.texturaParede = texParSel.value as Opcoes['texturaParede']; mostraTextura(); previa() }
 $('gerais').prepend(campo('Tema', temaSel), campo('Textura', texSel), campo('Textura da parede', texParSel))
-grupo(GUIAS, o, SECAO_GUIAS, secoes($('op-guias'), ['Dimensões', 'Travas', 'Ímãs do grid']))
+const dG = secoes($('op-guias'), ['Dimensões', 'Travas', 'Ímãs do grid', 'Economia'])
+grupo(GUIAS, o, SECAO_GUIAS, dG)
+const caixa = (pai: HTMLElement, rot: string, k: 'ima_borda' | 'ima_cruz' | 'ima_meio' | 'alivio') => {
+  const c = Object.assign(document.createElement('input'), { type: 'checkbox', checked: o[k] })
+  c.onchange = () => { o[k] = c.checked; previa() }
+  pai.append(campo(rot, c))
+}
+escolha(dG['Travas'], 'Trava', o.trava, [['nenhuma', 'Nenhuma'], ['clip', 'Clip separado'], ['macho', 'Macho e fêmea']], v => { o.trava = v as Opcoes['trava']; previa() })
+dG['Travas'].append(botao('Baixar clip', () => $('baixarClip').click(), 'Exporta o clip separado'))
+caixa(dG['Ímãs do grid'], 'Borda', 'ima_borda'); caixa(dG['Ímãs do grid'], 'Cruzamento das nervuras', 'ima_cruz'); caixa(dG['Ímãs do grid'], 'Meio da nervura', 'ima_meio')
+caixa(dG['Economia'], 'Alívio sob o fundo (precisa de fundo fechado)', 'alivio')
 const sel3 = $('peca3') as HTMLSelectElement
 const peca = () => config.passo === 3 ? 'piso' : sel3.value
 sel3.onchange = () => { enquadrar = true; previa() }
@@ -159,12 +171,12 @@ function vaiPara(n: number) {
 }
 for (const i of [1, 2, 3]) $('ir' + i).onclick = () => vaiPara(i)
 
-const estado = $('estado'), baixar = $('baixar') as HTMLButtonElement, cancela = $('cancela'), baixarTelhado = $('baixarTelhado') as HTMLButtonElement
+const estado = $('estado'), baixar = $('baixar') as HTMLButtonElement, cancela = $('cancela'), baixarTelhado = $('baixarTelhado') as HTMLButtonElement, baixarClip = $('baixarClip') as HTMLButtonElement
 baixar.onclick = async () => { // roda num worker; os parâmetros ficam congelados no clique
   const t = performance.now(), p = peca(), s = structuredClone(o), f = FORMATOS[s.formato]
   s.paredes = paredesValidas(s)
   const nome = p === 'piso' ? `Piso ${TEX[s.textura].nome} ${f} ${s.linhas}x${s.colunas} s${s.semente}` : `${p === 'grid' ? 'Grid' : 'Degrau'} ${f} ${s.grid_linhas}x${s.grid_colunas}`
-  baixar.disabled = true; baixarTelhado.disabled = true; cancela.hidden = false
+  baixar.disabled = baixarTelhado.disabled = baixarClip.disabled = true; cancela.hidden = false
   estado.textContent = 'Gerando...'
   try {
     const r = await exporta({ tipo: 'exporta', peca: p, o: s }, e => { estado.textContent = e })
@@ -174,11 +186,11 @@ baixar.onclick = async () => { // roda num worker; os parâmetros ficam congelad
     a.click()
     estado.textContent = `${r.tri} triângulos em ${((performance.now() - t) / 1000).toFixed(1)} s`
   } catch (e) { estado.textContent = e === 'cancelado' ? 'Cancelado.' : `Erro: ${e}` }
-  finally { baixar.disabled = false; baixarTelhado.disabled = false; cancela.hidden = true }
+  finally { baixar.disabled = baixarTelhado.disabled = baixarClip.disabled = false; cancela.hidden = true }
 }
 baixarTelhado.onclick = async () => {
   const s = structuredClone(o); s.paredes = paredesValidas(s)
-  baixar.disabled = true; baixarTelhado.disabled = true; cancela.hidden = false
+  baixar.disabled = baixarTelhado.disabled = baixarClip.disabled = true; cancela.hidden = false
   estado.textContent = 'Gerando o telhado...'
   try {
     const r = await exporta({ tipo: 'exporta', peca: 'telhado', o: s }, e => { estado.textContent = e })
@@ -187,7 +199,20 @@ baixarTelhado.onclick = async () => {
     a.download = `Telhado ${s.telhado_forma} ${TEX[s.texturaTelhado].nome} ${s.linhas}x${s.colunas} s${s.semente}.stl`; a.click()
     estado.textContent = `Telhado: ${r.tri} triângulos`
   } catch (e) { estado.textContent = e === 'cancelado' ? 'Cancelado.' : `Erro: ${e}` }
-  finally { baixar.disabled = false; baixarTelhado.disabled = false; cancela.hidden = true }
+  finally { baixar.disabled = baixarTelhado.disabled = baixarClip.disabled = false; cancela.hidden = true }
+}
+baixarClip.onclick = async () => {
+  const s = structuredClone(o)
+  baixar.disabled = baixarTelhado.disabled = baixarClip.disabled = true; cancela.hidden = false
+  estado.textContent = 'Gerando o clip...'
+  try {
+    const r = await exporta({ tipo: 'exporta', peca: 'clip', o: s }, e => { estado.textContent = e })
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(new Blob([r.stl], { type: 'model/stl' }))
+    a.download = `Clip ${s.trava_comprimento}mm.stl`; a.click()
+    estado.textContent = `Clip: ${r.tri} triângulos`
+  } catch (e) { estado.textContent = e === 'cancelado' ? 'Cancelado.' : `Erro: ${e}` }
+  finally { baixar.disabled = baixarTelhado.disabled = baixarClip.disabled = false; cancela.hidden = true }
 }
 cancela.onclick = cancelaExporta
 montaSistema()

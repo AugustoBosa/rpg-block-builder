@@ -49,7 +49,7 @@ const filaPrevia = new Fila(), filaExporta = new Fila()
 const pool: Fila[] = []
 const nPool = Math.max(1, Math.min(6, (navigator.hardwareConcurrency || 2) - 1))
 let ciclo = 0
-export const previa = (q: Extract<Sem<Pedido>, { tipo: 'previa' }>) => filaPrevia.pede<{ ms: number, m: (Malha | null)[] }>(q)
+export const previa = (q: Extract<Sem<Pedido>, { tipo: 'previa' }>) => filaPrevia.pede<{ ms: number, m: (Malha | null)[], av?: string[] }>(q)
 export async function exporta(q: Extract<Sem<Pedido>, { tipo: 'exporta' }>, etapa: (s: string) => void) {
   const eu = ciclo
   if (q.peca === 'piso' && nPool > 1) {
