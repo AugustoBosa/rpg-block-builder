@@ -7,7 +7,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { fechada, final, padrao, piso, stl, subida, type Malha } from './src/bloco'
 import { pedra } from './src/pedra'
 import { avisosGrid, degrau, grid, malha, medidas, regiao } from './src/sistema'
-import { clipSolido, poe, verticesBorda } from './src/travas'
+import { clipSolido, poe, rabo, verticesBorda } from './src/travas'
 import { canto, ladoBloco, orfa, paredesValidas, pilares } from './src/aberturas'
 import { geoTelhado, telhadoMalha, telhadoSolto } from './src/telhado'
 import { aberturaNova, areaDentro, foraDaArea, paredeNova, parede, perfilAbertura, pisoComParedes, type OpcoesP, type Parede } from './src/parede'
@@ -363,9 +363,28 @@ t('D16', 'clip no hexágono com recuo padrão: aviso', () => {
 })
 t('D16', 'clip cabe no recorte do grid', () => {
   const o = xg({ trava: 'clip' }), g = grid(o, 2, 3, o), v = verticesBorda(regiao(o, 2, 3).seg).find(v => v.ang > 179)!
-  const c = poe(clipSolido(o), v.p, v.b), dentro = c.intersect(g).volume()
+  const c = poe(clipSolido(o), v.p, v.b), ix = c.intersect(g), dentro = ix.volume(); c.delete(); ix.delete()
   if (dentro > 1e-3) throw new Error(`clip invade o grid: ${dentro.toFixed(4)} mm³`); return 'sem interferência'
 })
+for (const f of ['quadrado', 'hexagono'] as const)
+  t('D16', `macho de um grid entra na fêmea do vizinho, ${f} 2x3`, () => {
+    const o = xg({ formato: f, trava: 'macho' }), vs = verticesBorda(regiao(o, 2, 3).seg).filter(v => v.ang >= 119)
+    const macho = (v: { ang: number; n: number[] }) => f === 'hexagono' ? v.ang < 200 : v.n[0] > .5 || v.n[1] > .5
+    const A0 = grid(o, 2, 3), Af = grid(o, 2, 3, o), L = o.trava_comprimento, h = o.trava_altura
+    for (const v of vs.filter(macho)) for (const w of vs.filter(w => !macho(w))) {
+      if (Math.hypot(v.b[0] + w.b[0], v.b[1] + w.b[1]) > 1e-3) continue // bissetrizes opostas: o macho aponta para dentro da fêmea
+      const d: [number, number, number] = [v.p[0] - w.p[0], v.p[1] - w.p[1], 0], B0 = A0.translate(d)
+      const x0 = A0.intersect(B0), sobre = x0.volume(); x0.delete()
+      if (sobre > 1e-3) { B0.delete(); continue } // placas se sobrepõem: outro par
+      const m = poe(rabo(L, o.trava_largura, o.trava_haste, 0, h), v.p, [-v.b[0], -v.b[1]]), Bf = Af.translate(d)
+      const i1 = m.intersect(Bf), i0 = m.intersect(B0), vf = i1.volume(), v0 = i0.volume()
+      for (const x of [m, Bf, B0, i1, i0]) x.delete()
+      if (vf >= 1e-3) throw new Error(`macho invade o grid vizinho: ${vf.toFixed(4)} mm³`)
+      if (v0 <= 1) throw new Error(`macho não cai em material: ${v0.toFixed(3)} mm³`)
+      return `d = (${d[0].toFixed(1)}, ${d[1].toFixed(1)}); dentro da fêmea ${vf.toFixed(4)} mm³, no grid cheio ${v0.toFixed(2)} mm³`
+    }
+    throw new Error('nenhum par macho/fêmea sem sobreposição')
+  })
 t('D16', 'sem trava: grid igual (hash)', () => { const o = op(); if (hash(malha(grid(o, 3, 3, o))) !== hash(malha(grid(o, 3, 3)))) throw new Error('mudou'); return 'igual' })
 t('D11', 'textura padrão = Pedra',() => { if (padrao().textura !== 'pedra') throw new Error(`padrão = ${padrao().textura}`); return 'pedra' })
 

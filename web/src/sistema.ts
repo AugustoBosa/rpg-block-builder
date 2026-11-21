@@ -172,7 +172,7 @@ export function grid(s: Sistema, linhas: number, colunas: number, x?: ExtrasGrid
       // recorte para dentro: testa o engordado de 0,8 mm contra os furos
       const teste = g(poe(forma(F + .8, h), v.p, v.b))
       if (g(teste.intersect(furos)).volume() > 1e-3) { pul++; continue }
-      m = g(m.subtract(g(poe(forma(F, h + .3), v.p, v.b).translate(0, 0, -.3))))
+      m = g(m.subtract(g(g(poe(forma(F, h + .3), v.p, v.b)).translate(0, 0, -.3))))
     }
     if (pul) avisosGrid.push(`Trava não cabe em ${pul} vértice(s): aumente o recuo ou diminua a trava${c.hex ? ' (no hexágono, use macho/fêmea ou aumente o recuo)' : ''}.`)
   }
