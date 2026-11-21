@@ -2,6 +2,7 @@
 // Encaixe próprio (não é o das originais): pé com chanfro embaixo, parede reta ou cônica, ombro até a nervura do grid.
 import type { Vec3 } from 'manifold-3d/manifold'
 import { Manifold } from './wasm'
+import { osso, poe, rabo, verticesBorda, type ExtrasGrid } from './travas'
 
 type Solido = InstanceType<typeof Manifold>
 export interface Malha { pos: Float32Array; idx: Uint32Array }
@@ -152,11 +153,30 @@ function furo(s: Sistema, c: Celula, zTopo: number) {
   return m
 }
 
-/** Grid linhas × colunas: placa cheia menos um furo por célula. */
-export function grid(s: Sistema, linhas: number, colunas: number) {
+export const avisosGrid: string[] = []
+/** Grid linhas × colunas: placa cheia menos um furo por célula; `x` liga as travas (clip ou macho/fêmea) nos vértices da borda. */
+export function grid(s: Sistema, linhas: number, colunas: number, x?: ExtrasGrid) {
   const c = celula(s), G = alturaGrid(s), cs = centros(c, linhas, colunas)
-  const placa = g(Manifold.union(cs.map(([x, y]) => g(pilha(c, [[0, 0], [G, 0]]).translate(x, y, 0)))))
-  return g(placa.subtract(g(Manifold.union(cs.map(([x, y]) => g(furo(s, c, G).translate(x, y, 0)))))))
+  const placa = g(Manifold.union(cs.map(([px, py]) => g(pilha(c, [[0, 0], [G, 0]]).translate(px, py, 0)))))
+  const furos = g(Manifold.union(cs.map(([px, py]) => g(furo(s, c, G).translate(px, py, 0)))))
+  avisosGrid.length = 0
+  let m = g(placa.subtract(furos))
+  if (x && x.trava !== 'nenhuma') {
+    const vs = verticesBorda(regiao(s, linhas, colunas).seg).filter(v => v.ang >= 119)
+    const L = x.trava_comprimento, W = x.trava_largura, H = x.trava_haste, F = x.trava_folga, h = x.trava_altura
+    let pul = 0
+    for (const v of vs) {
+      const macho = x.trava === 'macho' && (c.hex ? v.ang > 200 : v.n[0] > .5 || v.n[1] > .5) // hexágono: 240° é macho; quadrado: lados +X e +Y
+      if (macho) { m = g(m.add(g(poe(rabo(L, W, H, 0, h), v.p, [-v.b[0], -v.b[1]])))); continue } // para fora; começa 0,3 mm dentro do grid
+      const forma = (f: number, alt: number) => x.trava === 'clip' ? osso(L, W, H, f, alt) : rabo(L, W, H, f, alt)
+      // recorte para dentro: testa o engordado de 0,8 mm contra os furos
+      const teste = g(poe(forma(F + .8, h), v.p, v.b))
+      if (g(teste.intersect(furos)).volume() > 1e-3) { pul++; continue }
+      m = g(m.subtract(g(poe(forma(F, h + .3), v.p, v.b).translate(0, 0, -.3))))
+    }
+    if (pul) avisosGrid.push(`Trava não cabe em ${pul} vértice(s): aumente o recuo ou diminua a trava.`)
+  }
+  return m
 }
 
 /** Corpo de várias células: um pé por célula, corpo cheio emendado até `topo`. */

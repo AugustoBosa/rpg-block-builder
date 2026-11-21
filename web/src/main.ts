@@ -144,7 +144,7 @@ texSel.onchange = () => { o.textura = texSel.value as TexId; mostraTextura(); pr
 opcoes(texParSel, [['', 'Igual ao piso'], ...Object.entries(TEX).map(([k, t]) => [k, t.nome] as [string, string])])
 texParSel.onchange = () => { o.texturaParede = texParSel.value as Opcoes['texturaParede']; mostraTextura(); previa() }
 $('gerais').prepend(campo('Tema', temaSel), campo('Textura', texSel), campo('Textura da parede', texParSel))
-grupo(GUIAS, o, SECAO_GUIAS, secoes($('op-guias'), ['Dimensões']))
+grupo(GUIAS, o, SECAO_GUIAS, secoes($('op-guias'), ['Dimensões', 'Travas', 'Ímãs do grid']))
 const sel3 = $('peca3') as HTMLSelectElement
 const peca = () => config.passo === 3 ? 'piso' : sel3.value
 sel3.onchange = () => { enquadrar = true; previa() }
