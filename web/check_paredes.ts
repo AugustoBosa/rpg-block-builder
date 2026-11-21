@@ -6,7 +6,7 @@ import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { fechada, final, padrao, piso, stl, subida, type Malha } from './src/bloco'
 import { pedra } from './src/pedra'
-import { degrau, grid, malha, regiao } from './src/sistema'
+import { degrau, grid, malha, medidas, regiao } from './src/sistema'
 import { canto, ladoBloco, orfa, paredesValidas, pilares } from './src/aberturas'
 import { geoTelhado, telhadoMalha, telhadoSolto } from './src/telhado'
 import { aberturaNova, areaDentro, foraDaArea, paredeNova, parede, perfilAbertura, pisoComParedes, type OpcoesP, type Parede } from './src/parede'
@@ -331,6 +331,19 @@ t('D15', 'telhado ignorado na rampa, no hexágono e fundido sem paredes', async 
     ['sem paredes', op(f), op()],
   ] as [string, OpcoesP, OpcoesP][]) if (hash(await pisoComParedes(a)) !== hash(await pisoComParedes(b))) throw new Error(nome)
   return 'iguais'
+})
+// ---- D16: grid completo ----
+const larguraFuroTopo = (m: Malha, zTopo: number, meiaCelula: number) => { // menor |x| dos vértices do topo com |x| < meia célula − 0,25: o furo é o único contorno ali (a borda externa fica em meia célula)
+  let r = 1e9
+  for (let i = 0; i < m.pos.length; i += 3) if (Math.abs(m.pos[i + 2] - zTopo) < 1e-3 && Math.abs(m.pos[i]) < meiaCelula - .25) r = Math.min(r, Math.abs(m.pos[i]))
+  return r
+}
+t('D16', 'chanfro do furo 1 mm: grid fecha e o furo abre 1 mm de cada lado no topo', () => {
+  const o0 = op(), o1 = op({ chanfro_furo: 1 }), G = medidas(o0).alturaGrid, M = o0.largura / 2
+  const a = malha(grid(o0, 1, 1)), b = malha(grid(o1, 1, 1))
+  if (!fechada(b.pos, b.idx)) throw new Error('fechada: NÃO')
+  const d = larguraFuroTopo(b, G, M) - larguraFuroTopo(a, G, M) // o furo abre: meia largura cresce
+  if (Math.abs(d - 1) > .02) throw new Error(`abriu ${d.toFixed(3)} mm`); return `abriu ${d.toFixed(3)} mm`
 })
 t('D11', 'textura padrão = Pedra',() => { if (padrao().textura !== 'pedra') throw new Error(`padrão = ${padrao().textura}`); return 'pedra' })
 

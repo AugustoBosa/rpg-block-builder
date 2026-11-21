@@ -1,11 +1,8 @@
 // Passo 1 — o sistema: formato da célula e encaixe. O pé do bloco e o furo do grid saem do mesmo perfil.
 // Encaixe próprio (não é o das originais): pé com chanfro embaixo, parede reta ou cônica, ombro até a nervura do grid.
-import Module from 'manifold-3d'
 import type { Vec3 } from 'manifold-3d/manifold'
+import { Manifold } from './wasm'
 
-const wasm = await Module()
-wasm.setup()
-const { Manifold } = wasm
 type Solido = InstanceType<typeof Manifold>
 export interface Malha { pos: Float32Array; idx: Uint32Array }
 
@@ -16,14 +13,14 @@ export const SISTEMA = { // nome: [padrão, mín, máx, rótulo]
   conicidade: [0, 0, 3, 'Pé: conicidade (mm)'], ombro: [2.5, 0, 10, 'Ombro: altura (mm)'], nervura: [3, .8, 8, 'Nervura do grid (mm)'],
   folga: [.15, -.3, .6, 'Folga lateral (mm)'], folga_fundo: [.3, 0, 2, 'Folga embaixo do pé (mm)'],
   ima_d: [0, 0, 12, 'Ímã: diâmetro (mm, 0 = sem)'], ima_h: [2, .5, 5, 'Ímã: altura (mm)'], folga_ima: [.15, 0, .5, 'Ímã: folga (mm)'],
-  fundo: [0, 0, 5, 'Grid: fundo (mm, 0 = vazado)'],
+  fundo: [0, 0, 5, 'Grid: fundo (mm, 0 = vazado)'], chanfro_furo: [0, 0, 2, 'Grid: chanfro na entrada do furo (mm)'],
 } as const
 export const SECAO = { // chave → seção da aba Sistema (fica ao lado da tabela; as tuplas não mudam)
   largura: 'Célula', comprimento: 'Célula',
   altura_pe: 'Pé do bloco', recuo: 'Pé do bloco', chanfro: 'Pé do bloco', conicidade: 'Pé do bloco', folga: 'Pé do bloco',
   ombro: 'Ombro e nervura', nervura: 'Ombro e nervura', folga_fundo: 'Ombro e nervura',
   ima_d: 'Ímã', ima_h: 'Ímã', folga_ima: 'Ímã',
-  fundo: 'Grid',
+  fundo: 'Grid', chanfro_furo: 'Grid',
 } as const
 export const ENCAIXES = { // presets: só ajustam os números, todos continuam editáveis
   reto: ['Pé reto + chanfro', { conicidade: 0, ima_d: 0 }],
@@ -103,10 +100,11 @@ export function medidas(s: Sistema): Medidas {
   const cel = celula(s), r = s.recuo + s.folga, zs = assento(s), h = hPe(s), nm = nervura(s), f = fundo(s), G = alturaGrid(s)
   const zb = f > 0 ? f : -1, zf = f + s.folga_fundo // zb: base do furo; zf: topo da folga embaixo do pé
   const db = s.recuo + s.conicidade + s.conicidade * (zf + s.chanfro - zb) / Math.max(h - s.chanfro, .1) // parede do pé prolongada até zb
+  const cf = Math.max(0, Math.min(s.chanfro_furo, nm - .4)) // chanfro na entrada: sobra crista de 0,8 mm na nervura
   return {
     cel, assento: zs, hPe: h, alturaGrid: G, nervuraMeia: nm, fundoReal: f,
     perfilPe: [[0, r + s.conicidade + s.chanfro], [s.chanfro, r + s.conicidade], [h, r], [zs, nm + s.folga], [zs, 0]],
-    perfilFuro: [[zb, db], [zf + h, s.recuo], [G, nm], [G + 1, nm]],
+    perfilFuro: cf > 0 ? [[zb, db], [zf + h, s.recuo], [G - cf, nm], [G, nm - cf], [G + 1, nm - cf]] : [[zb, db], [zf + h, s.recuo], [G, nm], [G + 1, nm]],
   }
 }
 
