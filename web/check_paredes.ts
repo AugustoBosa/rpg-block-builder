@@ -388,7 +388,7 @@ for (const f of ['quadrado', 'hexagono'] as const)
 const cil = (d: number, h: number) => 24 * (d / 2) ** 2 * Math.sin(Math.PI / 24) * h // cilindro de 48 lados (não o círculo exato)
 for (const f of ['quadrado', 'hexagono'] as const) for (const [q, nome] of [['ima_borda', 'borda'], ['ima_cruz', 'cruzamento'], ['ima_meio', 'meio']] as const)
   t('D16', `ímã ${nome}, ${f} 2x3: fecha e remove o volume dos furos`, () => {
-    const o = xg({ formato: f, [q]: true, ...(q === 'ima_borda' ? { ima_grid_d: 4 } : {}) }), a = grid(o, 2, 3), b = grid(o, 2, 3, o)
+    const o = xg({ formato: f, [q]: true }), a = grid(o, 2, 3), b = grid(o, 2, 3, o)
     const va = a.volume(), vb = b.volume(), mb = malha(b)
     if (!fechada(mb.pos, mb.idx)) throw new Error('fechada: NÃO')
     const n = (va - vb) / cil(o.ima_grid_d + 2 * o.folga_ima, o.ima_grid_h + .2)
@@ -401,6 +401,9 @@ t('D16', 'alívio com fundo 3: fecha, piso ≥ 1 mm; sem fundo: igual', () => {
   const m = malha(grid(o, 2, 3, o))
   if (!fechada(m.pos, m.idx)) throw new Error('fechada: NÃO')
   if (v0 - v1 < 100) throw new Error(`alívio removeu só ${(v0 - v1).toFixed(1)} mm³`)
+  const o1 = xg({ fundo: 3, alivio: true, grid_linhas: 1, grid_colunas: 1 }), p = malha(grid(o1, 1, 1, o1)), lim = o1.largura / 2 - o1.recuo - 1.2 + .1 // vértices do teto ficam na borda da cavidade
+  let zc = 1e9; for (let i = 0; i < p.pos.length; i += 3) if (Math.abs(p.pos[i]) < lim && Math.abs(p.pos[i + 1]) < lim && p.pos[i + 2] > .05) zc = Math.min(zc, p.pos[i + 2])
+  if (zc < o1.fundo - 1 - .01 || zc > o1.fundo - 1 + .01) throw new Error(`teto da cavidade em z = ${zc.toFixed(3)} (esperado ${o1.fundo - 1})`)
   const o0 = xg({ alivio: true }); if (hash(malha(grid(o0, 2, 3, o0))) !== hash(malha(grid(o0, 2, 3)))) throw new Error('sem fundo mudou')
   return 'ok'
 })

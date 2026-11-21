@@ -38,7 +38,7 @@ export const GUIAS = { // grid e degrau (aba própria)
   grid_linhas: [3, 1, 12, 'Linhas', 1], grid_colunas: [3, 1, 12, 'Colunas', 1], altura_degrau: [24, 10, 80, 'Degrau: altura (mm)'],
   trava_altura: [3, 1.5, 6, 'Trava: altura (mm)'], trava_comprimento: [8, 4, 16, 'Trava: comprimento (mm)'], trava_largura: [4, 2, 8, 'Trava: cabeça (mm)'],
   trava_haste: [2, 1, 5, 'Trava: haste/pescoço (mm)'], trava_folga: [.15, 0, .5, 'Trava: folga (mm)'],
-  ima_grid_d: [5, 2, 10, 'Ímã do grid: diâmetro (mm)'], ima_grid_h: [2, 1, 5, 'Ímã do grid: altura (mm)'],
+  ima_grid_d: [4, 2, 10, 'Ímã do grid: diâmetro (mm)'], ima_grid_h: [2, 1, 5, 'Ímã do grid: altura (mm)'],
 } as const
 // seções das abas Blocos e Grids (chave → título; as tuplas acima não mudam)
 export const SECAO_PISO = {
