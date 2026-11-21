@@ -2,7 +2,7 @@
 // Encaixe próprio (não é o das originais): pé com chanfro embaixo, parede reta ou cônica, ombro até a nervura do grid.
 import type { Vec3 } from 'manifold-3d/manifold'
 import { Manifold } from './wasm'
-import { osso, poe, rabo, verticesBorda, type ExtrasGrid } from './travas'
+import { imaH, imaV, osso, poe, pontosInternos, rabo, verticesBorda, type ExtrasGrid } from './travas'
 
 type Solido = InstanceType<typeof Manifold>
 export interface Malha { pos: Float32Array; idx: Uint32Array }
@@ -175,6 +175,32 @@ export function grid(s: Sistema, linhas: number, colunas: number, x?: ExtrasGrid
       m = g(m.subtract(g(g(poe(forma(F, h + .3), v.p, v.b)).translate(0, 0, -.3))))
     }
     if (pul) avisosGrid.push(`Trava não cabe em ${pul} vértice(s): aumente o recuo ou diminua a trava${c.hex ? ' (no hexágono, use macho/fêmea ou aumente o recuo)' : ''}.`)
+  }
+  if (x && (x.ima_borda || x.ima_cruz || x.ima_meio)) {
+    const dI = x.ima_grid_d + 2 * x.folga_ima, hI = x.ima_grid_h + .2
+    let pul = 0
+    const fura = (forma: (d: number, h: number) => Solido, cabe = true) => { // teste do engordado de 0,8 mm contra os furos
+      if (!cabe || g(g(forma(dI + 1.6, hI + .8)).intersect(furos)).volume() > 1e-3) { pul++; return }
+      m = g(m.subtract(g(forma(dI, hI))))
+    }
+    if (x.ima_borda) {
+      const zOmbro = fundo(s) + s.folga_fundo + medidas(s).hPe
+      for (const q of regiao(s, linhas, colunas).seg) fura((d, h) => imaH([(q[0] + q[2]) / 2, (q[1] + q[3]) / 2], [q[4], q[5]], d, h, zOmbro / 2), dI + 1.6 <= zOmbro)
+    }
+    if (x.ima_cruz || x.ima_meio) {
+      const pi = pontosInternos(cs.map(([cx, cy]) => contorno(c, 0).map(([px, py]) => [cx + px, cy + py] as [number, number])), c.hex)
+      if (x.ima_cruz) for (const p of pi.cruz) fura((d, h) => imaV(p, d, h))
+      if (x.ima_meio) for (const p of pi.meio) fura((d, h) => imaV(p, d, h))
+    }
+    if (pul) avisosGrid.push(`Ímã do grid não cabe em ${pul} ponto(s): aumente o recuo ou diminua o ímã.`)
+  }
+  if (x?.alivio && fundo(s) > 1.4) { // cavidade por baixo de cada célula; sobra 1 mm de piso e desvia do ímã do pé
+    const f = fundo(s)
+    for (const [px, py] of cs) {
+      let cav = pilha(c, [[-1, s.recuo + 1.2], [f - 1, s.recuo + 1.2]])
+      if (s.ima_d > 0) { const r = s.ima_d / 2 + s.folga_ima + 1.2; cav = g(cav.subtract(g(Manifold.cylinder(f + 2, r, r, 48).translate(0, 0, -1)))) }
+      m = g(m.subtract(g(cav.translate(px, py, 0))))
+    }
   }
   return m
 }

@@ -385,6 +385,25 @@ for (const f of ['quadrado', 'hexagono'] as const)
     }
     throw new Error('nenhum par macho/fêmea sem sobreposição')
   })
+const cil = (d: number, h: number) => 24 * (d / 2) ** 2 * Math.sin(Math.PI / 24) * h // cilindro de 48 lados (não o círculo exato)
+for (const f of ['quadrado', 'hexagono'] as const) for (const [q, nome] of [['ima_borda', 'borda'], ['ima_cruz', 'cruzamento'], ['ima_meio', 'meio']] as const)
+  t('D16', `ímã ${nome}, ${f} 2x3: fecha e remove o volume dos furos`, () => {
+    const o = xg({ formato: f, [q]: true, ...(q === 'ima_borda' ? { ima_grid_d: 4 } : {}) }), a = grid(o, 2, 3), b = grid(o, 2, 3, o)
+    const va = a.volume(), vb = b.volume(), mb = malha(b)
+    if (!fechada(mb.pos, mb.idx)) throw new Error('fechada: NÃO')
+    const n = (va - vb) / cil(o.ima_grid_d + 2 * o.folga_ima, o.ima_grid_h + .2)
+    if (avisosGrid.length && n < .5) throw new Error(avisosGrid.join(' '))
+    if (Math.abs(n - Math.round(n)) > .05 || n < .5) throw new Error(`removido = ${n.toFixed(2)} ímãs`); return `${Math.round(n)} ímãs${avisosGrid.length ? ' (aviso: ' + avisosGrid[0] + ')' : ''}`
+  })
+t('D16', 'ímã grande não cabe: pulado com aviso', () => { const o = xg({ ima_meio: true, ima_grid_d: 10 }); grid(o, 2, 3, o); if (!avisosGrid.length) throw new Error('sem aviso'); return avisosGrid[0] })
+t('D16', 'alívio com fundo 3: fecha, piso ≥ 1 mm; sem fundo: igual', () => {
+  const o = xg({ fundo: 3, alivio: true }), v0 = grid(o, 2, 3).volume(), v1 = grid(o, 2, 3, o).volume() // sem x = sem alívio
+  const m = malha(grid(o, 2, 3, o))
+  if (!fechada(m.pos, m.idx)) throw new Error('fechada: NÃO')
+  if (v0 - v1 < 100) throw new Error(`alívio removeu só ${(v0 - v1).toFixed(1)} mm³`)
+  const o0 = xg({ alivio: true }); if (hash(malha(grid(o0, 2, 3, o0))) !== hash(malha(grid(o0, 2, 3)))) throw new Error('sem fundo mudou')
+  return 'ok'
+})
 t('D16', 'sem trava: grid igual (hash)', () => { const o = op(); if (hash(malha(grid(o, 3, 3, o))) !== hash(malha(grid(o, 3, 3)))) throw new Error('mudou'); return 'igual' })
 t('D11', 'textura padrão = Pedra',() => { if (padrao().textura !== 'pedra') throw new Error(`padrão = ${padrao().textura}`); return 'pedra' })
 

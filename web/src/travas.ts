@@ -41,5 +41,26 @@ export function rabo(L: number, cab: number, haste: number, folga: number, h: nu
 }
 /** Gira +x para a direção b e põe em p. */
 export const poe = (s: Solido, p: P, b: P) => { const t = s.rotate([0, 0, Math.atan2(b[1], b[0]) * 180 / Math.PI]).translate([p[0], p[1], 0]); s.delete(); return t }
+/** Vértices (cruz: 4 células no quadrado, 3 no hexágono) e meios de lado (meio: 2 células) internos, a partir dos contornos de cada célula. */
+export function pontosInternos(celulas: P[][], hex: boolean) {
+  const vc = new Map<string, { p: P; n: number }>(), lados = new Map<string, { p: P; n: number }>()
+  for (const poli of celulas) poli.forEach((p, i) => {
+    const q = poli[(i + 1) % poli.length], m: P = [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2]
+    const a = vc.get(k(p)) ?? { p, n: 0 }; a.n++; vc.set(k(p), a)
+    const b = lados.get(k(m)) ?? { p: m, n: 0 }; b.n++; lados.set(k(m), b)
+  })
+  const nc = hex ? 3 : 4
+  return { cruz: [...vc.values()].filter(v => v.n >= nc).map(v => v.p), meio: [...lados.values()].filter(v => v.n === 2).map(v => v.p) }
+}
+/** Cilindro vertical do ímã por baixo (de z = −0,5 a h) em p. */
+export const imaV = (p: P, d: number, h: number) => {
+  const c = Manifold.cylinder(h + .5, d / 2, d / 2, 48), t = c.translate([p[0], p[1], -.5]); c.delete(); return t
+}
+/** Cilindro horizontal entrando pela borda: em p (meio do lado), eixo −n, centro em z, profundidade h (+0,5 para fora). */
+export const imaH = (p: P, n: P, d: number, h: number, z: number) => {
+  const c = Manifold.cylinder(h + .5, d / 2, d / 2, 48), r = c.rotate([0, 90, 0]); c.delete() // eixo +x, de x = 0 a h + 0,5
+  const t = r.translate([-.5, 0, z]); r.delete()
+  return poe(t, p, [-n[0], -n[1]])
+}
 /** Peça clip (STL próprio): osso sem folga, mais baixo que o recorte. */
 export const clipSolido = (x: ExtrasGrid) => osso(x.trava_comprimento, x.trava_largura, x.trava_haste, 0, x.trava_altura - .3)
