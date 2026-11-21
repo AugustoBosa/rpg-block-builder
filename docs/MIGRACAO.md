@@ -165,7 +165,9 @@ Pendências técnicas conhecidas:
 3. Arestas com 60° ou mais ainda acima das originais (1,7 % contra 0,1–0,3 %).
 4. Hospedagem: a decidir (site estático; qualquer serviço de páginas estáticas serve).
 
-## 5. Gerador de grid (decidido em 2026-11-06, implementação futura)
+## 5. Gerador de grid (decidido em 2026-11-06; ✅ implementado em 2026-11-21, spec `docs/superpowers/specs/2026-11-20-grid-completo-design.md`)
+
+Feito: chanfro na entrada do furo (aba Sistema); travas clip (STL próprio) ou macho/fêmea nos vértices da borda, quadrado e hexágono; ímãs do grid (4 × 2 mm por padrão) na borda, no cruzamento e no meio da nervura; alívio sob o fundo fechado. Recorte que não cabe é pulado com aviso. Fora: ângulo do chanfro ≠ 45°, quantidade/espaçamento livre de ímãs.
 
 Infraestrutura semelhante ao grid original (placa com um furo por célula), com geometria própria. O furo tem o mesmo formato do bloco: quadrado ou hexágono. Gerador próprio na web, com o máximo de parâmetros.
 
