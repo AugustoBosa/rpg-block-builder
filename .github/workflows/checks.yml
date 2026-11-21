@@ -1,0 +1,27 @@
+# Checks completos (paredes, rampa, canto, pilar, telhado, grid, emenda e texturas). Demoram; não seguram o deploy do Pages, que roda só o subconjunto rápido.
+name: Checks
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npx tsx check_temas.ts
+      - run: npx tsx check_paredes.ts
+      - run: npx tsx check_emenda.ts
+      - run: npx tsx check_texturas.ts

@@ -41,7 +41,7 @@ Risco de copyright (avisado ao usuário): medidas configuráveis reduzem o risco
 | Pé longo / curto | Encaixe no grid | 16,6 / 9,8 mm até encher a célula; altura 24,5 / 17,5 | ❌ substituído pelo encaixe próprio |
 | Folga | Pé mais estreito ou largo | −0,2 a 0 testados | ✅ slider |
 | Bloco de teste de folga | Marcas da folga em relevo | 3 blocos | ⏳ |
-| Liso | Bloco sem textura | — | ⏳ (trivial) |
+| Liso | Bloco sem textura | — | ✅ textura Lisa |
 | Encaixe próprio | Pé e grid nossos, ajustáveis | não existe | ✅ `sistema.ts`: pé reto + chanfro, cônico ou com ímã; altura, recuo, chanfro, conicidade, ombro, nervura, folgas, ímã, fundo |
 | Grid e degrau | Placa com furos; degrau para empilhar | não existe no gerador | ✅ N × M, no formato do sistema (versão simples; o resto do §5 depois) |
 | Hexágono | — | não existe | ✅ lados planos em cima e embaixo; emenda 0,0000 mm |
@@ -49,8 +49,8 @@ Risco de copyright (avisado ao usuário): medidas configuráveis reduzem o risco
 ### 2.2 Peças
 | Peça | Ajustes próprios | Web |
 |---|---|---|
-| Piso | textura do piso | ✅ só Pedra |
-| Parede | espessura 4–10, altura 10–60 mm, textura da parede | ⏳ |
+| Piso | textura do piso | ✅ 13 texturas |
+| Parede | espessura 4–10, altura 10–60 mm, textura da parede | ✅ (ver §6) |
 | Canto | igual à parede; só conjunto quadrado | ✅ botão "+ Canto" (2 paredes em L, 4 quinas, só quadrado) + pilar automático nas quinas de 90° |
 | Telhado | ângulo 15–40° | ✅ como **rampa**: `inclinacao` 0–40°, 4 direções (no Blender só +Y); paredes ignoradas na rampa. Telhado sobre paredes ✅ (uma, duas, quatro águas, plano com mureta e ameias; removível com saia ou fundido; só quadrado) |
 | Porta / Janela (atalho) | parede + 1 abertura | ⏳ |
@@ -90,17 +90,17 @@ Funções comuns do Blender que as texturas usam (portar junto): `grade` (fiadas
 | Semente, desgaste, tamanho da pedra, profundidade | 0–9999, 0–1, 5–25, 0,4–0,7 | ✅ |
 | Posição X/Y no mapa (emenda) | −8 a 8 células | ✅ |
 | Borda da laje: quina, lateral, ruído | 5 ajustes | ✅ |
-| Face e topo da parede | 3 ajustes | ⏳ |
+| Face e topo da parede | 3 ajustes | ✅ (parede usa a textura escolhida) |
 | Orientação (giro 0/90/180/270) | — | ⏳ |
 
 ### 2.5 Portas e janelas (parede e canto)
-Até 2 aberturas. Tipo (porta/janela), lado (A/B no canto), posição, largura 3–30, altura 4–50, peitoril 0–40 mm, verga (reta, arco, abatido, ogiva), moldura (liga, largura, saliência, relevo), limites (pilar e verga mínimos, abatimento). **Web: ⏳** — precisa de booleana (`manifold-3d`). Limite conhecido do Blender: batente sem moldura sai liso.
+Até 2 aberturas. Tipo (porta/janela), lado (A/B no canto), posição, largura 3–30, altura 4–50, peitoril 0–40 mm, verga (reta, arco, abatido, ogiva), moldura (liga, largura, saliência, relevo), limites (pilar e verga mínimos, abatimento). **Web: ✅** (`manifold-3d`; ver §6). Limite conhecido do Blender: batente sem moldura sai liso.
 
 ### 2.6 Conjuntos
-Colunas × linhas até 7×7, um pé por célula, parede só na borda de trás, divisão contínua, junta ou bisel. **Web: ⏳**.
+Colunas × linhas até 7×7, um pé por célula, parede só na borda de trás, divisão contínua, junta ou bisel. **Web: ✅** como linhas × colunas de 1 a 6 (Rodada D).
 
 ### 2.7 Temas (13 atalhos)
-dungeon, castelo, ruína, taverna, pântano, deserto, inundada, vulcão, caverna, cripta, templo, navio, forja. Cada um escolhe a textura do piso e da parede, o desgaste e o tamanho da pedra (`TEMAS` no `gerar.py`). **Web: ⏳** (são só predefinições). Pântano, caverna e cripta usavam o Espalhar: na web ficam sem esses detalhes.
+dungeon, castelo, ruína, taverna, pântano, deserto, inundada, vulcão, caverna, cripta, templo, navio, forja. Cada um escolhe a textura do piso e da parede, o desgaste e o tamanho da pedra (`TEMAS` no `gerar.py`). **Web: ✅** (`web/src/temas.ts`, Rodada D; cripta e templo ficam parciais até Nichos e Glifos). Pântano, caverna e cripta usavam o Espalhar: na web ficam sem esses detalhes.
 
 ### 2.8 Malha e exportação
 | Etapa | Blender | Web |
@@ -111,7 +111,7 @@ dungeon, castelo, ruína, taverna, pântano, deserto, inundada, vulcão, caverna
 | Borda travada | 1,2 mm não reduz; 0,2 mm não suaviza | ✅ igual |
 | Malha fecha? | retenta outra razão; por fim, malha crua | ✅ igual (`fechada` em `bloco.ts`) |
 | JSON lateral | ficha da peça | ✅ só na linha de comando |
-| Corte de portas | booleana Manifold | ⏳ `manifold-3d` |
+| Corte de portas | booleana Manifold | ✅ `manifold-3d` |
 
 ### 2.9 Interface (estado em 2026-11-07)
 | Item | O que é | Web |

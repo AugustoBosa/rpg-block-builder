@@ -1,4 +1,4 @@
-# RETOMAR — estado do projeto (2026-11-09, branch main; publicado até `7640edf`; **locais sem push:** `1d8df94` Rodada E2a e `d3ab621` Rodada E2b)
+# RETOMAR — estado do projeto (2026-11-21, branch main; publicado até `878a541`; a Rodada Fechamento está só no disco, sem commit)
 
 Projeto: **RPG Block Builder**. "Dungeon Blocks" nos documentos é sempre o produto original de referência, nunca o nosso.
 
@@ -39,9 +39,9 @@ Leia este arquivo primeiro. Comandos: `USO.md`. Visão: `README.md`. Inventário
 ## Próximo
 1. **Revisão do usuário** no site. Depois, imprimir 1 grid 1 × 1 e 1 bloco para testar o encaixe e a folga.
 2. **Paredes com aberturas: implementadas em 2026-11-08 (F0–F5 do `docs/WORKFLOW_PAREDES.md`, ainda sem commit).** Só Pedra, sem telhado e sem canto. Código: `web/src/parede.ts` (sólido, união com o piso, textura), `web/src/aberturas.ts` (perfis reta/arco/abatido/ogiva, `foraDaArea`, tracejado, batente), seção "Paredes" na aba Blocos (`main.ts`), tracejado na vista 3D (`vista.ts`) e planta + elevações no esquema (`esquema.ts`). Check: `cd web && npx tsx check_paredes.ts` (37/37 PASS, cerca de 3 min; `ref_hashes.json` é o baseline dos 5 STL). Na prévia a parede sai lisa; o STL sempre texturizado. **Âncora em aresta = só os lados do contorno do bloco** (4 no quadrado, 6 no hexágono; `ladoBloco()` em `aberturas.ts`; lado = índice da direção da normal); parede em aresta nasce com `lado: 'dentro'`, em eixo com `'centro'`. Publicado: `87abb0d` (paredes) e `4bff4d3` (lados do contorno). **Paredes exatas (`c0288de`):** em `pisoComParedes` as paredes se cruzam por união exata, sem engordar `.02*(i+1)` (esse degrau criava arestas visíveis nos cantos); `check_paredes.ts` 42/42 após isso. Pendências fechadas em 2026-11-08 (publicadas em `37a8d65`): parede órfã (`orfa()` em `aberturas.ts`) ganha aviso laranja no título e `ladoBloco` devolve `null` para lado além do formato (antes estourava); tracejado agora é polilinha contínua (`foraDaArea` funde segmentos; `vista.ts` usa `THREE.Line`); `aplicaCorte` força `needsUpdate` quando muda o nº de planos (causa provável do "firstElem.toArray", não reproduzida); `check_paredes.ts` 42/42, com contorno completo 2×2 e 3×2 e teste de órfã (D10 estava quebrado desde a mudança de lados). Telhado, canto, outras texturas e props ficam para depois.
-3. As outras **7** texturas (8 prontas: Pedra, Lisa, Lajota, Tijolo, Terra, Areia, Rachado, Tábuas; ver "Rodadas D e E1" e "Rodada E2"). Faltam Água, Lava (dependem da Pedra), Nichos, Glifos (revisar copyright), Caverna, Casco, Metal. Cerca de 1,5 semana.
+3. Texturas: **13 de 15 prontas** (ver Rodadas D, E1, E2, G). Faltam só **Nichos e Glifos** (dependem da revisão jurídica de copyright).
 4. ~~Web Worker~~ **feito e publicado (2026-11-08, `63e2f50`)**. ~~Conjuntos e temas~~ **feitos (Rodada D, `6b19854`, sem push)**: "conjuntos" já era linhas × colunas.
-5. Depois: o gerador de grid completo (`docs/MIGRACAO.md` §5: travas, borda, alívio, ímãs na nervura) e os props importados.
+5. ~~Gerador de grid completo~~ **feito** (ver "Gerador de grid completo"). Depois: props importados (`docs/PROPS.md`; falta decidir a licença).
 
 ## Em aberto (chamar direcionado: "faça o item N")
 | # | Item | Área | Tamanho |
@@ -91,6 +91,13 @@ Leia este arquivo primeiro. Comandos: `USO.md`. Visão: `README.md`. Inventário
 - **Pendências pequenas do grid:** ângulo do chanfro fixo em 45°; quantidade/espaçamento de ímãs não é livre; o chanfro deixa a rampa do ombro mais íngreme (cotas "nervura/2" não mostram).
 - **Próximo:** imprimir grid + bloco 1×1 (físico) e as pendências pequenas (tempo da Lava, oitões lisos, telhado oco).
 
+## Rodada Fechamento (2026-11-21, sem commit)
+- **CI em dois fluxos:** `pages.yml` segue rápido (`check_temas` + `check_paredes D2`) e segura o deploy. Novo `.github/workflows/checks.yml` (push no main, PR e manual, limite de 40 min) roda `tsc`, `check_temas`, `check_paredes` completo (D1–D16), `check_emenda` e `check_texturas`. Não segura o deploy. No CI (`CI=1`) os dois checks de tempo do `check_paredes` (D10 prévia ≤ 3 s e D12 tempo da rampa) só informam o tempo, porque o runner é mais lento e variável.
+- **Medido neste PC:** D13–D16 juntos = 66/66 PASS em 6 min 50 s (com outro check rodando ao mesmo tempo). O `checks.yml` ainda **não rodou no GitHub**: ver o tempo real no primeiro push.
+- **Emenda:** ver "Pendências conhecidas (web)".
+- **Scripts Python:** não foram movidos. `README.md` e `USO.md` já avisam que só rodam na cópia local; mover quebraria `AQUI`/`spec_encaixe.json` e as docs sem ganho.
+- **Tela cheia real:** continua sem teste (precisa de um Chrome de verdade).
+
 ## Pendências conhecidas (web)
 - **Verificado em 2026-11-08 após `c0288de`:** HUD de Desempenho vermelho (borda e ⚠ ao passar do orçamento), tracejado das aberturas no 3D, `check_paredes.ts` completo (42/42 PASS). **Ainda não verificado:** vista em tela cheia real (só emulada). **Achado (resolvido na rodada A):** a 375 px os cards abertos cobriam o modelo; agora começam recolhidos no celular.
 - **Erro `firstElem.toArray` no 1º carregamento do servidor de desenvolvimento:** vem do aviso "Re-optimizing dependencies" do Vite (duas cópias do three na 1ª abertura). Não ocorre ao recarregar e não afeta o site publicado.
@@ -100,8 +107,8 @@ Leia este arquivo primeiro. Comandos: `USO.md`. Visão: `README.md`. Inventário
 - **Erros amigáveis (item C2, commit `fa57b83`):** `index.html` mostra uma faixa vermelha se a página falhar ao iniciar (WebGL, WASM); `cliente.ts` rejeita com mensagem clara se o Worker não subir.
 - **Bloco grande:** 2 × 3 gera ~0,9 a 1,1 milhão de triângulos. Na exportação, o relevo do topo é calculado em paralelo (pool de até 6 workers, `cortesParte` em `bloco.ts`; 17 s → 6,4 s com 12 núcleos, mesmo hash); a tela não trava e há Cancelar. Sobra em série: a malha e `final()` (suavizar + reduzir). A prévia usa 1 worker só.
 - **Não feito de propósito:** renderização sob demanda (o laço do three tem amortecimento, animação e gizmo) e relevo em GPU/WASM-SIMD (o float da GPU difere da CPU e a prévia deixaria de ser igual ao STL).
-- Emenda entre dois blocos N × M vizinhos não foi medida. Dentro de um bloco, as células se emendam por construção.
-- No hexágono, a borda externa do grid N × M fica recortada, célula a célula.
+- Emenda entre blocos vizinhos **medida** (Rodada Fechamento, `web/check_emenda.ts`): hexágono 1×1 nas 3 direções e quadrado 2×3 em +Y dão 0,0000 mm (Pedra); Tábuas dá 0,0000 em todos os pontos menos 1 vértice de canto do hexágono (0,05–0,10 mm: degrau de ripa + erro de float). O +X do 2×3 já estava no `check_texturas.ts`. **Não medido:** hexágono N×M maior que 1×1 (a borda é em zigue-zague).
+- No hexágono, a borda externa do grid N × M fica em zigue-zague, de propósito (decisão da G1: é o que deixa dois grids hex encaixarem).
 - `validar.py` só conhece a célula de 35 mm e o pé das originais: ele reprova o encaixe próprio. Para conferir se a malha fecha, use o `cli.ts`.
 - ~~Facetas: arestas ≥ 60° em 1,7 %~~ **fechado na G4**: `web/facetas.ts` (porte do `facetas.py`) mostra 2,23 % na Pedra, mas o topo texturizado tem só 0,04 %. O resto é o contorno de 90° do bloco (ombro do pé, aro do corpo, borda da laje, quinas), que é geometria do produto. Chanfrar mudaria o encaixe: não fazer antes de imprimir.
 - Cotas 3D: a 375 px ainda pode haver 1 cruzamento entre cota principal e menor em pose extrema, e a principal pode cruzar o slider (item 3/4).
