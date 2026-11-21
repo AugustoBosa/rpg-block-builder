@@ -361,11 +361,28 @@ t('D16', 'clip no hexágono com recuo padrão: aviso', () => {
   const o = xg({ formato: 'hexagono', trava: 'clip' }); malha(grid(o, 2, 3, o))
   if (!avisosGrid.length) throw new Error('sem aviso'); return avisosGrid[0]
 })
-t('D16', 'clip cabe no recorte do grid', () => {
-  const o = xg({ trava: 'clip' }), g = grid(o, 2, 3, o), v = verticesBorda(regiao(o, 2, 3).seg).find(v => v.ang > 179)!
-  const c = poe(clipSolido(o), v.p, v.b), ix = c.intersect(g), dentro = ix.volume(); c.delete(); ix.delete()
-  if (dentro > 1e-3) throw new Error(`clip invade o grid: ${dentro.toFixed(4)} mm³`); return 'sem interferência'
+for (const f of ['quadrado', 'hexagono'] as const)
+  t('D16', `clip cabe no recorte do grid, ${f}`, () => {
+    const o = xg({ formato: f, trava: 'clip', ...(f === 'hexagono' ? { recuo: 6 } : {}) }), g = grid(o, 2, 3, o), v = verticesBorda(regiao(o, 2, 3).seg).find(v => v.ang > 179)!
+    const c = poe(clipSolido(o), v.p, v.b), ix = c.intersect(g), dentro = ix.volume(); c.delete(); ix.delete()
+    if (dentro > 1e-3) throw new Error(`clip invade o grid: ${dentro.toFixed(4)} mm³`); return 'sem interferência'
+  })
+t('D16', 'hexágono 2x3: 18 vértices elegíveis para trava', () => {
+  const n = verticesBorda(regiao(xg({ formato: 'hexagono' }), 2, 3).seg).filter(v => v.ang >= 119).length
+  if (n !== 18) throw new Error(`${n} vértices elegíveis (esperado 18)`); return `${n}`
 })
+for (const f of ['quadrado', 'hexagono'] as const)
+  t('D16', `combinação trava macho + 3 ímãs + alívio, ${f} 2x3: fecha`, () => {
+    const o = xg({ formato: f, trava: 'macho', ima_borda: true, ima_cruz: true, ima_meio: true, alivio: true, fundo: 3, ...(f === 'hexagono' ? { ima_d: 6 } : {}) }), m = malha(grid(o, 2, 3, o))
+    if (!fechada(m.pos, m.idx)) throw new Error('fechada: NÃO'); return `fechada; avisos: ${avisosGrid.length}`
+  })
+t('D16', 'chanfro do furo maior que o ombro: fecha e o perfil não decresce', () => {
+  const o = op({ chanfro_furo: 2, ombro: .5 }), m = malha(grid(o, 1, 1)), P = medidas(o).perfilFuro
+  if (!fechada(m.pos, m.idx)) throw new Error('fechada: NÃO')
+  for (let i = 1; i < P.length; i++) if (P[i][0] < P[i - 1][0] - 1e-9) throw new Error(`z decresce: ${JSON.stringify(P)}`)
+  return 'ok'
+})
+t('D16', 'alívio sem fundo fechado: aviso', () => { const o = xg({ alivio: true }); grid(o, 2, 3, o); if (!avisosGrid.some(a => a.includes('Alívio'))) throw new Error('sem aviso'); return avisosGrid[0] })
 for (const f of ['quadrado', 'hexagono'] as const)
   t('D16', `macho de um grid entra na fêmea do vizinho, ${f} 2x3`, () => {
     const o = xg({ formato: f, trava: 'macho' }), vs = verticesBorda(regiao(o, 2, 3).seg).filter(v => v.ang >= 119)

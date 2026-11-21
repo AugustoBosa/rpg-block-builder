@@ -39,7 +39,7 @@ w.onmessage = async ({ data: q }) => {
         w.postMessage({ id: q.id, etapa: 'Suavizando, reduzindo e unindo as paredes...' })
         m = await pisoComParedes(q.o, false, q.cortes)
       } else if (q.peca === 'telhado') m = telhadoSolto(q.o)
-      else if (q.peca === 'clip') m = malha(clipSolido(q.o))
+      else if (q.peca === 'clip') { const c = clipSolido(q.o); m = malha(c); c.delete() }
       else m = gera(q.peca, q.o)
       const buf = stl(m)
       w.postMessage({ id: q.id, stl: buf, tri: m.idx.length / 3 }, [buf])

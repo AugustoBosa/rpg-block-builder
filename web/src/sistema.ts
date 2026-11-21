@@ -101,7 +101,7 @@ export function medidas(s: Sistema): Medidas {
   const cel = celula(s), r = s.recuo + s.folga, zs = assento(s), h = hPe(s), nm = nervura(s), f = fundo(s), G = alturaGrid(s)
   const zb = f > 0 ? f : -1, zf = f + s.folga_fundo // zb: base do furo; zf: topo da folga embaixo do pé
   const db = s.recuo + s.conicidade + s.conicidade * (zf + s.chanfro - zb) / Math.max(h - s.chanfro, .1) // parede do pé prolongada até zb
-  const cf = Math.max(0, Math.min(s.chanfro_furo, nm - .4)) // chanfro na entrada: sobra crista de 0,8 mm na nervura
+  const cf = Math.max(0, Math.min(s.chanfro_furo, nm - .4, s.ombro)) // chanfro na entrada: sobra crista de 0,8 mm na nervura e nunca passa do ombro (z não decresce)
   return {
     cel, assento: zs, hPe: h, alturaGrid: G, nervuraMeia: nm, fundoReal: f,
     perfilPe: [[0, r + s.conicidade + s.chanfro], [s.chanfro, r + s.conicidade], [h, r], [zs, nm + s.folga], [zs, 0]],
@@ -134,7 +134,7 @@ function pilha(c: Celula, perfil: number[][]) {
 }
 const ima = (s: Sistema, z: number) => { // cilindro do ímã com o fundo em z; passa 0,5 mm para os dois lados do corte
   const h = s.ima_h + .2
-  return g(Manifold.cylinder(h + 1, s.ima_d / 2 + s.folga_ima, s.ima_d / 2 + s.folga_ima, 48).translate(0, 0, z - .5))
+  return g(g(Manifold.cylinder(h + 1, s.ima_d / 2 + s.folga_ima, s.ima_d / 2 + s.folga_ima, 48)).translate(0, 0, z - .5))
 }
 
 /** Bloco de 1 célula até `topo`: pé (com folga e ímã) + corpo cheio. */
@@ -160,7 +160,7 @@ export function grid(s: Sistema, linhas: number, colunas: number, x?: ExtrasGrid
   const placa = g(Manifold.union(cs.map(([px, py]) => g(pilha(c, [[0, 0], [G, 0]]).translate(px, py, 0)))))
   const furos = g(Manifold.union(cs.map(([px, py]) => g(furo(s, c, G).translate(px, py, 0)))))
   avisosGrid.length = 0
-  let m = g(placa.subtract(furos))
+  let m = g(placa.subtract(furos)); const cortes: Solido[] = [] // recortes de trava aplicados: os ímãs também desviam deles
   if (x && x.trava !== 'nenhuma') {
     const vs = verticesBorda(regiao(s, linhas, colunas).seg).filter(v => v.ang >= 119)
     const L = x.trava_comprimento, W = x.trava_largura, H = x.trava_haste, F = x.trava_folga, h = x.trava_altura
@@ -172,15 +172,17 @@ export function grid(s: Sistema, linhas: number, colunas: number, x?: ExtrasGrid
       // recorte para dentro: testa o engordado de 0,8 mm contra os furos
       const teste = g(poe(forma(F + .8, h), v.p, v.b))
       if (g(teste.intersect(furos)).volume() > 1e-3) { pul++; continue }
-      m = g(m.subtract(g(g(poe(forma(F, h + .3), v.p, v.b)).translate(0, 0, -.3))))
+      const rec = g(g(poe(forma(F, h + .3), v.p, v.b)).translate(0, 0, -.3)); cortes.push(rec)
+      m = g(m.subtract(rec))
     }
-    if (pul) avisosGrid.push(`Trava não cabe em ${pul} vértice(s): aumente o recuo ou diminua a trava${c.hex ? ' (no hexágono, use macho/fêmea ou aumente o recuo)' : ''}.`)
+    if (pul) avisosGrid.push(`Trava não cabe em ${pul} vértice(s): aumente o recuo ou diminua a trava${c.hex && x.trava === 'clip' ? ' (no hexágono, use macho/fêmea, aumente o recuo ou feche o fundo (≥ altura da trava))' : ''}.`)
   }
   if (x && (x.ima_borda || x.ima_cruz || x.ima_meio)) {
     const dI = x.ima_grid_d + 2 * x.folga_ima, hI = x.ima_grid_h + .2
     let pul = 0
-    const fura = (forma: (d: number, h: number) => Solido, cabe = true) => { // teste do engordado de 0,8 mm contra os furos
-      if (!cabe || g(g(forma(dI + 1.6, hI + .8)).intersect(furos)).volume() > 1e-3) { pul++; return }
+    const livre = cortes.length ? g(Manifold.union([furos, ...cortes])) : furos
+    const fura = (forma: (d: number, h: number) => Solido, cabe = true) => { // teste do engordado de 0,8 mm contra os furos e os recortes de trava
+      if (!cabe || g(g(forma(dI + 1.6, hI + .8)).intersect(livre)).volume() > 1e-3) { pul++; return }
       m = g(m.subtract(g(forma(dI, hI))))
     }
     if (x.ima_borda) {
@@ -194,11 +196,12 @@ export function grid(s: Sistema, linhas: number, colunas: number, x?: ExtrasGrid
     }
     if (pul) avisosGrid.push(`Ímã do grid não cabe em ${pul} ponto(s): aumente o recuo ou diminua o ímã.`)
   }
+  if (x?.alivio && fundo(s) <= 1.4) avisosGrid.push('Alívio precisa de fundo fechado (> 1,4 mm): sem efeito.')
   if (x?.alivio && fundo(s) > 1.4) { // cavidade por baixo de cada célula; sobra 1 mm de piso e desvia do ímã do pé
     const f = fundo(s)
     for (const [px, py] of cs) {
       let cav = pilha(c, [[-1, s.recuo + 1.2], [f - 1, s.recuo + 1.2]])
-      if (s.ima_d > 0) { const r = s.ima_d / 2 + s.folga_ima + 1.2; cav = g(cav.subtract(g(Manifold.cylinder(f + 2, r, r, 48).translate(0, 0, -1)))) }
+      if (s.ima_d > 0) { const r = s.ima_d / 2 + s.folga_ima + 1.2; cav = g(cav.subtract(g(g(Manifold.cylinder(f + 2, r, r, 48)).translate(0, 0, -1)))) }
       m = g(m.subtract(g(cav.translate(px, py, 0))))
     }
   }

@@ -32,10 +32,12 @@ function previa(res = resRapida()) {
         mostra(0, r.m[0], fundo(snap) + snap.folga_fundo)
         mostra(1, r.m[1])
         $('aviso').textContent = avisos(snap).join(' ')
+        $('avisoGrid').textContent = ''
       } else {
         mostra(0, r.m[0])
         mostra(1, r.m[1])
-        $('aviso').textContent = passo === 2 ? [...avisos(snap), ...(r.av ?? [])].join(' ') : ''
+        $('aviso').textContent = ''
+        $('avisoGrid').textContent = passo === 2 ? [...avisos(snap), ...(r.av ?? [])].join(' ') : ''
       }
       mostraTracejado(passo === 3 ? snap.paredes.flatMap(w => tracejado3D(snap, w)) : [])
       const ar = document.getElementById('avisoRampa')
@@ -153,8 +155,9 @@ const caixa = (pai: HTMLElement, rot: string, k: 'ima_borda' | 'ima_cruz' | 'ima
   c.onchange = () => { o[k] = c.checked; previa() }
   pai.append(campo(rot, c))
 }
-escolha(dG['Travas'], 'Trava', o.trava, [['nenhuma', 'Nenhuma'], ['clip', 'Clip separado'], ['macho', 'Macho e fêmea']], v => { o.trava = v as Opcoes['trava']; previa() })
-dG['Travas'].append(botao('Baixar clip', () => $('baixarClip').click(), 'Exporta o clip separado'))
+const bClip = botao('Baixar clip', () => $('baixarClip').click(), 'Exporta o clip separado'); bClip.hidden = o.trava !== 'clip'
+escolha(dG['Travas'], 'Trava', o.trava, [['nenhuma', 'Nenhuma'], ['clip', 'Clip separado'], ['macho', 'Macho e fêmea']], v => { o.trava = v as Opcoes['trava']; bClip.hidden = v !== 'clip'; previa() })
+dG['Travas'].append(bClip)
 caixa(dG['Ímãs do grid'], 'Borda', 'ima_borda'); caixa(dG['Ímãs do grid'], 'Cruzamento das nervuras', 'ima_cruz'); caixa(dG['Ímãs do grid'], 'Meio da nervura', 'ima_meio')
 caixa(dG['Economia'], 'Alívio sob o fundo (precisa de fundo fechado)', 'alivio')
 const sel3 = $('peca3') as HTMLSelectElement

@@ -67,7 +67,7 @@
     summary { cursor: pointer; margin: 10px 0 4px; font-weight: 600 }
     h3 { margin: 14px 0 4px; font-size: 13px; color: #aab }
     .nota { font-size: 12px; color: #9a9 }
-    #aviso { font-size: 12px; color: #e9a35a }
+    #aviso, #avisoGrid { font-size: 12px; color: #e9a35a }
     /* celular: prévia em cima (fixa), controles embaixo com rolagem própria; alvos de toque maiores */
     @media (max-width: 700px) {
       body { flex-direction: column; height: 100dvh }
@@ -92,6 +92,7 @@
       <div id="aviso"></div>
     </section>
     <section id="passo2" hidden>
+      <div id="avisoGrid"></div>
       <details open name="passo2"><summary>Peça</summary><div><label>Peça <select id="peca3"><option value="grid">Grid</option><option value="degrau">Degrau (adaptador de nível)</option></select></label></div></details>
       <div id="op-guias"></div>
     </section>

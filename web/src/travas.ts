@@ -29,7 +29,7 @@ const extr = (c: InstanceType<typeof CrossSection>, h: number) => { const m = Ma
 /** "Osso" em planta ao longo de +x, centrado na origem: haste + duas cabeças. */
 export function osso(L: number, cab: number, haste: number, folga: number, h: number): Solido {
   const r = cab / 2 + folga, x = L / 2 - cab / 2
-  const c1 = CrossSection.circle(r, 32).translate([-x, 0]), c2 = CrossSection.circle(r, 32).translate([x, 0])
+  const k = CrossSection.circle(r, 32), c1 = k.translate([-x, 0]), c2 = k.translate([x, 0]); k.delete()
   const hs = CrossSection.square([2 * x, haste + 2 * folga], true)
   const u = CrossSection.union([c1, c2, hs]); for (const q of [c1, c2, hs]) q.delete()
   return extr(u, h)
@@ -40,7 +40,7 @@ export function rabo(L: number, cab: number, haste: number, folga: number, h: nu
   return extr(new CrossSection([[[-.3, -a], [e, -b], [e, b], [-.3, a]]]), h) // começa 0,3 mm antes do vértice: sem face coplanar com a borda
 }
 /** Gira +x para a direção b e põe em p. */
-export const poe = (s: Solido, p: P, b: P) => { const t = s.rotate([0, 0, Math.atan2(b[1], b[0]) * 180 / Math.PI]).translate([p[0], p[1], 0]); s.delete(); return t }
+export const poe = (s: Solido, p: P, b: P) => { const r = s.rotate([0, 0, Math.atan2(b[1], b[0]) * 180 / Math.PI]), t = r.translate([p[0], p[1], 0]); r.delete(); s.delete(); return t }
 /** Vértices (cruz: 4 células no quadrado, 3 no hexágono) e meios de lado (meio: 2 células) internos, a partir dos contornos de cada célula. */
 export function pontosInternos(celulas: P[][], hex: boolean) {
   const vc = new Map<string, { p: P; n: number }>(), lados = new Map<string, { p: P; n: number }>()
