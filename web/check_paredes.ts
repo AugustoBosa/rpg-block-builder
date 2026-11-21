@@ -349,14 +349,18 @@ t('D16', 'chanfro do furo 1 mm: grid fecha e o furo abre 1 mm de cada lado no to
 const xg = (e: Record<string, unknown>) => op({ grid_linhas: 2, grid_colunas: 3, ...e })
 for (const f of ['quadrado', 'hexagono'] as const) for (const tv of ['clip', 'macho'] as const)
   t('D16', `trava ${tv}, ${f} 2x3: grid fecha e todas as travas entram`, () => {
-    // hexágono: nos vértices de 120° o osso/rabo engordado 0,8 mm só cabe com recuo ≥ ~5,8 mm (com 4 mm: 12 pulados + aviso)
-    const o = xg({ formato: f, trava: tv, ...(f === 'hexagono' ? { recuo: 6 } : {}) }), m = malha(grid(o, 2, 3, o))
+    // hexágono clip: no canto de 120° o clip precisa de recuo ≥ ~4,7 mm; o macho/fêmea cabe com o recuo padrão (macho sai do canto de 120°)
+    const o = xg({ formato: f, trava: tv, ...(f === 'hexagono' && tv === 'clip' ? { recuo: 6 } : {}) }), m = malha(grid(o, 2, 3, o))
     if (!fechada(m.pos, m.idx)) throw new Error('fechada: NÃO')
     const vs = verticesBorda(regiao(o, 2, 3).seg), n = vs.filter(v => v.ang >= 119).length
     if (f === 'quadrado' && n !== 6) throw new Error(`${n} vértices elegíveis (esperado 6)`)
     if (avisosGrid.length) throw new Error(avisosGrid.join(' '))
     return `${n} travas; ângulos ${[...new Set(vs.map(v => Math.round(v.ang)))].join('/')}`
   })
+t('D16', 'clip no hexágono com recuo padrão: aviso', () => {
+  const o = xg({ formato: 'hexagono', trava: 'clip' }); malha(grid(o, 2, 3, o))
+  if (!avisosGrid.length) throw new Error('sem aviso'); return avisosGrid[0]
+})
 t('D16', 'clip cabe no recorte do grid', () => {
   const o = xg({ trava: 'clip' }), g = grid(o, 2, 3, o), v = verticesBorda(regiao(o, 2, 3).seg).find(v => v.ang > 179)!
   const c = poe(clipSolido(o), v.p, v.b), dentro = c.intersect(g).volume()

@@ -166,7 +166,7 @@ export function grid(s: Sistema, linhas: number, colunas: number, x?: ExtrasGrid
     const L = x.trava_comprimento, W = x.trava_largura, H = x.trava_haste, F = x.trava_folga, h = x.trava_altura
     let pul = 0
     for (const v of vs) {
-      const macho = x.trava === 'macho' && (c.hex ? v.ang > 200 : v.n[0] > .5 || v.n[1] > .5) // hexágono: 240° é macho; quadrado: lados +X e +Y
+      const macho = x.trava === 'macho' && (c.hex ? v.ang < 200 : v.n[0] > .5 || v.n[1] > .5) // hexágono: 120° é macho (só acrescenta material, não precisa de espaço no canto); 240° é fêmea (corta a parede interna, onde há espaço); quadrado: lados +X e +Y
       if (macho) { m = g(m.add(g(poe(rabo(L, W, H, 0, h), v.p, [-v.b[0], -v.b[1]])))); continue } // para fora; começa 0,3 mm dentro do grid
       const forma = (f: number, alt: number) => x.trava === 'clip' ? osso(L, W, H, f, alt) : rabo(L, W, H, f, alt)
       // recorte para dentro: testa o engordado de 0,8 mm contra os furos
@@ -174,7 +174,7 @@ export function grid(s: Sistema, linhas: number, colunas: number, x?: ExtrasGrid
       if (g(teste.intersect(furos)).volume() > 1e-3) { pul++; continue }
       m = g(m.subtract(g(poe(forma(F, h + .3), v.p, v.b).translate(0, 0, -.3))))
     }
-    if (pul) avisosGrid.push(`Trava não cabe em ${pul} vértice(s): aumente o recuo ou diminua a trava.`)
+    if (pul) avisosGrid.push(`Trava não cabe em ${pul} vértice(s): aumente o recuo ou diminua a trava${c.hex ? ' (no hexágono, use macho/fêmea ou aumente o recuo)' : ''}.`)
   }
   return m
 }
