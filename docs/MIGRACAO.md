@@ -68,8 +68,8 @@ Risco de copyright (avisado ao usuário): medidas configuráveis reduzem o risco
 | 6 | Areia | Ondulações e dunas | 6 | ambos | ✅ |
 | 7 | Água | Pedra com poças, ondas, pedras saindo | 5 + Pedra | só piso | ✅ (teto +0,5 mm) |
 | 8 | Lava | Pedra com rio de lava, fluxo e crosta | 6 + Pedra | só piso | ✅ |
-| 9 | Nichos | Nichos em arco; parte com caveira ou pote | 9 | ambos | 🔁 revisar visual (copyright) |
-| 10 | Glifos | Painel rebaixado com símbolos | 8 | ambos | 🔁 revisar visual (copyright) |
+| 9 | Nichos | Nichos em arco; parte com caveira ou pote | 9 | ambos | ⏳ desenho próprio, diferente do Dungeon Blocks (decisão de 2026-11-22) |
+| 10 | Glifos | Painel rebaixado com símbolos | 8 | ambos | ⏳ desenho próprio, diferente do Dungeon Blocks (decisão de 2026-11-22) |
 | 11 | Caverna | Rocha em lajes, fendas, rugas | 11 | ambos | ✅ |
 | 12 | Casco | Tábuas de navio sobrepostas, cavilhas | 13 | ambos | ✅ |
 | 13 | Metal | Chapas, costura, rebites, amassados, corrosão | 12 | ambos | ✅ |

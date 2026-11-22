@@ -39,7 +39,7 @@ Leia este arquivo primeiro. Comandos: `USO.md`. Visão: `README.md`. Inventário
 ## Próximo
 1. **Revisão do usuário** no site. Depois, imprimir 1 grid 1 × 1 e 1 bloco para testar o encaixe e a folga.
 2. **Paredes com aberturas: implementadas em 2026-11-08 (F0–F5 do `docs/WORKFLOW_PAREDES.md`, ainda sem commit).** Só Pedra, sem telhado e sem canto. Código: `web/src/parede.ts` (sólido, união com o piso, textura), `web/src/aberturas.ts` (perfis reta/arco/abatido/ogiva, `foraDaArea`, tracejado, batente), seção "Paredes" na aba Blocos (`main.ts`), tracejado na vista 3D (`vista.ts`) e planta + elevações no esquema (`esquema.ts`). Check: `cd web && npx tsx check_paredes.ts` (37/37 PASS, cerca de 3 min; `ref_hashes.json` é o baseline dos 5 STL). Na prévia a parede sai lisa; o STL sempre texturizado. **Âncora em aresta = só os lados do contorno do bloco** (4 no quadrado, 6 no hexágono; `ladoBloco()` em `aberturas.ts`; lado = índice da direção da normal); parede em aresta nasce com `lado: 'dentro'`, em eixo com `'centro'`. Publicado: `87abb0d` (paredes) e `4bff4d3` (lados do contorno). **Paredes exatas (`c0288de`):** em `pisoComParedes` as paredes se cruzam por união exata, sem engordar `.02*(i+1)` (esse degrau criava arestas visíveis nos cantos); `check_paredes.ts` 42/42 após isso. Pendências fechadas em 2026-11-08 (publicadas em `37a8d65`): parede órfã (`orfa()` em `aberturas.ts`) ganha aviso laranja no título e `ladoBloco` devolve `null` para lado além do formato (antes estourava); tracejado agora é polilinha contínua (`foraDaArea` funde segmentos; `vista.ts` usa `THREE.Line`); `aplicaCorte` força `needsUpdate` quando muda o nº de planos (causa provável do "firstElem.toArray", não reproduzida); `check_paredes.ts` 42/42, com contorno completo 2×2 e 3×2 e teste de órfã (D10 estava quebrado desde a mudança de lados). Telhado, canto, outras texturas e props ficam para depois.
-3. Texturas: **13 de 15 prontas** (ver Rodadas D, E1, E2, G). Faltam só **Nichos e Glifos** (dependem da revisão jurídica de copyright).
+3. Texturas: **13 de 15 prontas** (ver Rodadas D, E1, E2, G). Faltam só **Nichos e Glifos**, que serão **desenhos próprios, diferentes dos do Dungeon Blocks** (decisão de 2026-11-22; não dependem mais do jurídico; ver "Backlog").
 4. ~~Web Worker~~ **feito e publicado (2026-11-08, `63e2f50`)**. ~~Conjuntos e temas~~ **feitos (Rodada D, `6b19854`, sem push)**: "conjuntos" já era linhas × colunas.
 5. ~~Gerador de grid completo~~ **feito** (ver "Gerador de grid completo"). Depois: props importados (`docs/PROPS.md`; falta decidir a licença).
 
@@ -98,6 +98,21 @@ Leia este arquivo primeiro. Comandos: `USO.md`. Visão: `README.md`. Inventário
 - **Scripts Python:** não foram movidos. `README.md` e `USO.md` já avisam que só rodam na cópia local; mover quebraria `AQUI`/`spec_encaixe.json` e as docs sem ganho.
 - **Tela cheia real:** continua sem teste (precisa de um Chrome de verdade).
 
+## Backlog para a próxima sessão (anotado em 2026-11-22; o usuário volta com sessão nova e modelo maior)
+Fechamento publicado em `4be5ee0`; CI verde (Pages 1 min 13 s; Checks 17 min 5 s). Ordem sugerida, nada começado:
+| # | Item | O que trava | Tempo |
+|---|------|-------------|-------|
+| 1 | **Imprimir grid 1×1 + bloco 1×1** (físico, usuário) | Tudo: o encaixe nunca foi testado na mão | 1 dia |
+| 2 | **Nichos e Glifos próprios** (desenho novo, diferente do original) | Cripta e templo completos; fecha as 15 texturas | ~2 dias |
+| 3 | **Props importados** (`docs/PROPS.md`); licença CC0 ou CC0 + CC BY a decidir | Baú, estátua, decoração | 1–2 semanas |
+| 4 | **Acabamento do telhado:** oitões, beirada e mureta lisos; maciço (oco se pesar); juntas abertas sob o beiral no fundido | Visual e peso do STL | 4–6 h (oco: +1 dia) |
+| 5 | **Lava lenta** (2,6–2,9 s no 1×1; meta 2,5 s) e **exportação pesada** em faces lisas (água a 60° em 2×3) | Conforto e tamanho do STL | 5–7 h |
+| 6 | **Cotas a 375 px** (1 cruzamento em pose extrema) e **tela cheia real** (Chrome de verdade) | Só celular e validação | 3 h + 15 min |
+| 7 | **Emenda do hexágono N×M** maior que 1×1 (borda em zigue-zague) | Não medida | 1–2 h |
+| 8 | **Salvar e carregar projeto** (o usuário adiou; não propor antes) | Cada abertura começa do zero | 2–3 dias |
+| 9 | **Final:** nome no INPI, USPTO e lojas de STL; termos de uso; advogado | Publicar e vender | 2–3 h + 1–3 semanas |
+Menores, sem urgência: ângulo do chanfro do grid fixo em 45° e ímãs sem quantidade livre; costura do pilar com a parede (só se vê ao imprimir); `desentorta` desloca vértices 0,01 mm; `validar.py` reprova o encaixe próprio (atualizar ou aposentar); decidir a skill `technical-drawing`; bloco 2×3 com ~1 milhão de triângulos.
+
 ## Pendências conhecidas (web)
 - **Verificado em 2026-11-08 após `c0288de`:** HUD de Desempenho vermelho (borda e ⚠ ao passar do orçamento), tracejado das aberturas no 3D, `check_paredes.ts` completo (42/42 PASS). **Ainda não verificado:** vista em tela cheia real (só emulada). **Achado (resolvido na rodada A):** a 375 px os cards abertos cobriam o modelo; agora começam recolhidos no celular.
 - **Erro `firstElem.toArray` no 1º carregamento do servidor de desenvolvimento:** vem do aviso "Re-optimizing dependencies" do Vite (duas cópias do three na 1ª abertura). Não ocorre ao recarregar e não afeta o site publicado.
@@ -140,7 +155,7 @@ Leia este arquivo primeiro. Comandos: `USO.md`. Visão: `README.md`. Inventário
 - Baú, prop, estátua e Espalhar não vão para a web. Props prontos importados numa etapa futura (`docs/PROPS.md`): sobre qualquer piso, sempre fundidos ao bloco. Falta decidir as licenças (CC0 ou CC0 + CC BY).
 - Impressão **com suportes**: overhang só informa.
 - Textura Lisa pode ter relevo < 0,4 mm.
-- Copyright: medidas configuráveis e encaixe próprio reduzem o risco, mas não o eliminam. Faltam conferir o nome no INPI, no USPTO e nas lojas de STL, revisar Glifos e Nichos, escrever os termos de uso e consultar um advogado.
+- Copyright: medidas configuráveis e encaixe próprio reduzem o risco, mas não o eliminam. Faltam conferir o nome no INPI, no USPTO e nas lojas de STL, escrever os termos de uso e consultar um advogado. **Tudo isso fica para o final** (decisão de 2026-11-22). Nichos e Glifos serão criados do zero, com desenho próprio e diferente do original (não copiar nem aproximar o visual do Dungeon Blocks).
 - Backup de `amostra_hd/`: não fazer (decisão do usuário). Não sugerir de novo.
 
 ## Armadilhas técnicas (web)
