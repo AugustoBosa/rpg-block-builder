@@ -23,11 +23,14 @@ function perlin(x: number, y: number, z: number, s: number) {
   x -= X; y -= Y; z -= Z
   const u = fade(x), v = fade(y), w = fade(z)
   // mesmo valor de hash(X+i, Y+j, Z+k, s), com as camadas de h32 compartilhadas entre os 8 cantos (15 em vez de 32)
-  const hs = h32(s | 0), hk = [h32((Z | 0) + hs), h32(((Z + 1) | 0) + hs)]
-  const hj = [h32((Y | 0) + hk[0]), h32(((Y + 1) | 0) + hk[0]), h32((Y | 0) + hk[1]), h32(((Y + 1) | 0) + hk[1])]
-  const g = (i: number, j: number, k: number) => grad(h32(((X + i) | 0) + hj[k * 2 + j]), x - i, y - j, z - k)
-  return lerp(lerp(lerp(g(0, 0, 0), g(1, 0, 0), u), lerp(g(0, 1, 0), g(1, 1, 0), u), v),
-    lerp(lerp(g(0, 0, 1), g(1, 0, 1), u), lerp(g(0, 1, 1), g(1, 1, 1), u), v), w)
+  const hs = h32(s | 0), hk0 = h32((Z | 0) + hs), hk1 = h32(((Z + 1) | 0) + hs)
+  const h00 = h32((Y | 0) + hk0), h10 = h32(((Y + 1) | 0) + hk0), h01 = h32((Y | 0) + hk1), h11 = h32(((Y + 1) | 0) + hk1)
+  const X0 = X | 0, X1 = (X + 1) | 0, x1 = x - 1, y1 = y - 1, z1 = z - 1
+  const a000 = grad(h32(X0 + h00), x, y, z), a100 = grad(h32(X1 + h00), x1, y, z)
+  const a010 = grad(h32(X0 + h10), x, y1, z), a110 = grad(h32(X1 + h10), x1, y1, z)
+  const a001 = grad(h32(X0 + h01), x, y, z1), a101 = grad(h32(X1 + h01), x1, y, z1)
+  const a011 = grad(h32(X0 + h11), x, y1, z1), a111 = grad(h32(X1 + h11), x1, y1, z1)
+  return lerp(lerp(lerp(a000, a100, u), lerp(a010, a110, u), v), lerp(lerp(a001, a101, u), lerp(a011, a111, u), v), w)
 }
 
 /** fBm normalizado, 0..1 com centro em 0,5. `detalhe` = oitavas extras; `s` muda o canal. */
@@ -59,7 +62,7 @@ export function voronoi(x: number, y: number, z: number, escala: number, out: Vo
     if (i === mi && j === mj && k === mk) continue
     const a = cx + i, b = cy + j, c = cz + k
     const rx = i + rnd(a, b, c, 1) - fx, ry = j + rnd(a, b, c, 2) - fy, rz = k + rnd(a, b, c, 3) - fz
-    const dx = rx - mx, dy = ry - my, dz = rz - mz, L = Math.hypot(dx, dy, dz)
+    const dx = rx - mx, dy = ry - my, dz = rz - mz, L = Math.sqrt(dx * dx + dy * dy + dz * dz)
     const e = ((mx + rx) * dx + (my + ry) * dy + (mz + rz) * dz) / (2 * L)
     if (e < borda) borda = e
   }

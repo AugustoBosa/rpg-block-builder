@@ -18,6 +18,8 @@ export const SECAO_PEDRA = { // chave → seção "Avançado" da aba Blocos
 
 const v1: Vor = { r0: 0, r1: 0, r2: 0, px: 0, py: 0, borda: 0 }
 const v2: Vor = { ...v1 }
+/** Último ruído de grão (sem o × k.grao) calculado por `pedra`: a Lava reaproveita no mesmo ponto. */
+export const P = { grao: 0 }
 
 /** (x, y) globais em mm, z = fatia da semente; prof = profundidade da junta (mm); desg 0..1. */
 export function pedra(x: number, y: number, z: number, tam: number, prof: number, desg: number, k: KnobsPedra) {
@@ -40,6 +42,6 @@ export function pedra(x: number, y: number, z: number, tam: number, prof: number
   const racha = (f.r0 > 1 - k.rachadas - desg * .08 ? 1 : 0) * mapa(d2, 0, .9, 1, 0) * mapa(dist, 1.5, 3, 0, 1) * k.racha_fundo
   const lim = .66 - desg * .14
   const lasca = mapa(dist, 0, k.lasca_largura, 1, 0) * mapa(ruido(x, y, z, .45, 3, .5, 5), lim, lim + .06, 0, 1) * k.lasca_fundo
-  const grao = ruido(x, y, z, 1.1, 3, .6, 7) * k.grao
-  return junta + f.r0 * k.altura_var + incl + racha + lasca + grao
+  P.grao = ruido(x, y, z, 1.1, 3, .6, 7)
+  return junta + f.r0 * k.altura_var + incl + racha + lasca + P.grao * k.grao
 }

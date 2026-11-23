@@ -1,7 +1,7 @@
 // Textura Lava: Pedra fora do rio; dentro, linhas de fluxo em curva e placas de crosta soltas, mais altas e de borda arredondada (gerar.py, Gr.tex_lava).
-import { desloca, grao } from './grade'
+import { desloca } from './grade'
 import { mapa, ruido, voronoi, type Vor } from './ruido'
-import { pedra } from './pedra'
+import { P, pedra } from './pedra'
 import type { Opcoes } from './bloco'
 
 export const LAVA = { // nome: [padrão, mín, máx, rótulo]
@@ -23,5 +23,5 @@ export function lava(x: number, y: number, z: number, tam: number, prof: number,
   const crosta = k.crosta_nivel + f.r1 * .25 + mapa(f.borda * c, 0, 1.4, 1, 0) * 9 + (f.r0 < 1 - k.crosta + desg * .25 ? 9 : 0)
   // fluxo >= nivel: onde a crosta já é mais baixa que o nível, o ruído do fluxo nem entra (mesmo resultado, menos custo)
   const rio = crosta <= k.nivel ? crosta : Math.min(k.nivel + (.5 + Math.sin(ruido(X, Y, Z, .07, 2) * 45) * .5) * k.fluxo, crosta)
-  return base * (1 - m) + (rio + grao(x, y, z, .05)) * m
+  return base * (1 - m) + (rio + (m < 1 ? P.grao : ruido(x, y, z, 1.1, 3, .6, 7)) * .05) * m
 }
