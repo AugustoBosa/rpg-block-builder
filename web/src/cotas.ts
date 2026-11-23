@@ -47,7 +47,16 @@ const cruza = (p: Ret, q: Ret) => p[0] < q[2] + 3 && q[0] < p[2] + 3 && p[1] < q
 interface Extra { inset?: number; alt?: [V, V]; sec?: boolean } // sec: secundária, nunca forçada e sai por último
 interface Item extends Extra { a: V; b: V; dist: number; txt: string; r: CSS2DObject }
 /** Contexto de um redesenho: direção da visão, teste de oclusão e projeção (mundo → px), e os rótulos já postos. */
-interface Ctx { dir: V; oculto: (p: V) => boolean; proj: (p: V) => [number, number]; ret: Ret[]; lw: number; lh: number }
+interface Ctx { dir: V; oculto: (p: V) => boolean; proj: (p: V) => [number, number]; ret: Ret[]; proib: Ret[]; seg: Ret[]; lw: number; lh: number } // proib: zonas que a cota forçada evita (slider); seg: linhas de cota já desenhadas na tela
+/** O segmento s (px) atravessa o retângulo r? (Liang–Barsky) */
+const corta = (s: Ret, r: Ret) => {
+  let t0 = 0, t1 = 1
+  const dx = s[2] - s[0], dy = s[3] - s[1]
+  for (const [p, d] of [[-dx, s[0] - r[0]], [dx, r[2] - s[0]], [-dy, s[1] - r[1]], [dy, r[3] - s[1]]]) {
+    if (p === 0) { if (d < 0) return false } else { const t = d / p; if (p < 0) t0 = Math.max(t0, t); else t1 = Math.min(t1, t) }
+  }
+  return t0 <= t1
+}
 
 /** Guarda as cotas de um grupo e as redesenha (`orienta`) para a câmera atual:
  *  - cota sem boa leitura (medida na direção da visão) ou atrás da peça some;
@@ -74,18 +83,23 @@ class Desenho {
   }
   /** Altura (z0 a z1) numa quina do contorno encolhido de `inset` mm. */
   altura(inset: number, z0: number, z1: number, texto: string) { this.cota([0, 0, z0], [0, 0, z1], DV, texto, { inset }) }
-  orienta(cx: Ctx) {
-    const pos: number[] = [], seg = (p: V, q: V) => pos.push(...p, ...q)
+  private pos: number[] = []
+  private carga = [0, 0]
+  /** Duas fases (chamar `orienta(cx, 0)` em todos os desenhos, depois `orienta(cx, 1)`): 0 = cotas forçadas, 1 = as demais. */
+  orienta(cx: Ctx, fase: 0 | 1) {
+    if (fase === 0) { this.pos = []; this.carga = [0, 0] }
+    const pos = this.pos, seg = (p: V, q: V) => { pos.push(...p, ...q); cx.seg.push([...cx.proj(mundo(p)), ...cx.proj(mundo(q))] as Ret) }
     const off = this.g.position, mundo = (p: V): V => [p[0] + off.x, p[1] + off.y, p[2] + off.z] // o grupo do bloco sobe com a elevação
     const centroMundo = mundo(this.centro)
-    for (const it of this.itens) it.r.visible = false
+    if (fase === 0) for (const it of this.itens) it.r.visible = false
     type Geo = { a: V; b: V; v: V; dist: number; dA: V; dB: V; lab: V; ret: Ret }
     const geo = (it: Item, a: V, b: V, v: V, dist: number): Geo => {
       const dA = soma(a, v, dist), dB = soma(b, v, dist), lab = soma(meio(dA, dB), v, 3)
       const [x, y] = cx.proj(mundo(lab)), e = estilo.tam / 11, w = it.txt.length * 6.4 * e + 8 // largura e altura do rótulo crescem com o tamanho da fonte
       return { a, b, v, dist, dA, dB, lab, ret: [x - w / 2, y - 8 * e, x + w / 2, y + 8 * e] }
     }
-    const livre = (g: Geo) => g.ret[0] > 0 && g.ret[2] < cx.lw && g.ret[1] > 0 && g.ret[3] < cx.lh && !cx.ret.some(q => cruza(q, g.ret)) // dentro da vista e sem bater em outro rótulo
+    const livre = (g: Geo, lin = false) => g.ret[0] > 0 && g.ret[2] < cx.lw && g.ret[1] > 0 && g.ret[3] < cx.lh && !cx.ret.some(q => cruza(q, g.ret)) && !(lin && cx.seg.some(s => corta(s, g.ret))) // dentro da vista, sem bater em outro rótulo (nem, se `lin`, em linha de cota)
+    const evita = <T extends { g: Geo }>(p: T[]) => { const s = p.filter(c => !cx.proib.some(q => cruza(q, c.g.ret))); return s.length ? s : p } // forçada: foge do slider se der
     const fora = (g: Geo) => Math.max(0, -g.ret[0]) + Math.max(0, g.ret[2] - cx.lw) + Math.max(0, -g.ret[1]) + Math.max(0, g.ret[3] - cx.lh) // px para fora da vista
     const cruzs = (g: Geo) => cx.ret.filter(q => cruza(q, g.ret)).length // rótulos que batem
     const menor = (g: Geo, h: Geo) => fora(g) < fora(h) || (fora(g) === fora(h) && cruzs(g) < cruzs(h)) // g é melhor que h para a cota forçada
@@ -107,6 +121,7 @@ class Desenho {
       this.itens.filter(i => i.inset === undefined).sort((p, q) => (+!!p.sec - +!!q.sec) || comp(q) - comp(p)).forEach(it => {
         const forca = !it.sec && k < 2 // as duas principais são forçadas
         if (!it.sec) k++
+        if (forca !== (fase === 0)) return // fase 0: só as forçadas; fase 1: o resto
         const todas: { g: Geo; nota: number; oc: boolean }[] = []
         for (const [a, b] of [[it.a, it.b], ...(it.alt ? [it.alt] : [])]) {
           const u = unidade(soma(b, a, -1)), c = cruz(cx.dir, u)
@@ -119,17 +134,18 @@ class Desenho {
         }
         const vis = todas.filter(c => !c.oc)
         let melhor: Geo | null = null, nota = -Infinity
-        for (const c of vis) { const s = c.nota - (livre(c.g) ? 0 : 1e6); if (s > nota) { nota = s; melhor = c.g } }
-        if (melhor && livre(melhor)) desenha(it, melhor)
+        for (const c of vis) { const s = c.nota - (livre(c.g, !forca) ? 0 : 1e6); if (s > nota) { nota = s; melhor = c.g } }
+        if (melhor && livre(melhor, !forca)) desenha(it, melhor)
         else if (forca && todas.length) { // a maior sai mesmo sobreposta: a menos fora da vista, depois a que bate menos (visíveis antes; empate: a mais longe)
-          const pool = vis.length ? vis : todas
+          const pool = evita(vis.length ? vis : todas)
           desenha(it, pool.reduce((x, y) => (menor(y.g, x.g) || (!menor(x.g, y.g) && y.nota > x.nota) ? y : x)).g)
         }
       })
       // alturas: maiores primeiro (pegam vaga antes), uma quina do contorno visível (esquerda ou direita), colunas para fora até o rótulo caber. Sem vaga, não desenha (a maior sempre sai)
-      const carga = [0, 0]
+      const carga = this.carga
       const alturas = this.itens.filter(i => i.inset !== undefined).sort((p, q) => Math.abs(q.b[2] - q.a[2]) - Math.abs(p.b[2] - p.a[2]))
       alturas.forEach((it, k) => {
+        if ((k === 0) !== (fase === 0)) return // fase 0: só a maior (forçada)
         if (Math.hypot(...cruz(cx.dir, [0, 0, 1])) < .25) return // vista de cima ou de baixo
         const zm = (it.a[2] + it.b[2]) / 2
         const q = this.poligono(it.inset!).map(([x, y]) => ({ x, y, sx: cx.proj(mundo([x, y, zm]))[0] }))
@@ -143,14 +159,14 @@ class Desenho {
         for (let col = 0; col < 6 && !escolhida; col++) {
           for (const lado of ordem) {
             const g = tenta(lado, col)
-            if (livre(g) && !cx.oculto(mundo(meio(g.dA, g.dB)))) { escolhida = { g, lado }; break }
+            if (livre(g, k > 0) && !cx.oculto(mundo(meio(g.dA, g.dB)))) { escolhida = { g, lado }; break }
           }
         }
         if (!escolhida && k === 0) { // a maior sai mesmo sobreposta: a de menor custo entre lados e colunas (visíveis antes; empate: menor coluna)
           const todas: { g: Geo; lado: number; oc: boolean }[] = []
           for (let col = 0; col < 6; col++) for (const lado of ordem) { const g = tenta(lado, col); todas.push({ g, lado, oc: cx.oculto(mundo(meio(g.dA, g.dB))) }) }
           for (const dentro of [-6, -12]) for (const lado of ordem) { const g = tenta(lado, 0, dentro); todas.push({ g, lado, oc: cx.oculto(mundo(meio(g.dA, g.dB))) }) } // por dentro da peça, depois de fora (menor `fora` ganha)
-          const vis = todas.filter(c => !c.oc), pool = vis.length ? vis : todas
+          const vis = todas.filter(c => !c.oc), pool = evita(vis.length ? vis : todas)
           escolhida = pool.reduce((x, y) => (menor(y.g, x.g) ? y : x))
         }
         if (!escolhida) return // sem vaga: não desenha
@@ -185,6 +201,7 @@ function sistema(o: Opcoes, c: Celula, fixa: Desenho, bloco: Desenho) {
   const a = ponta(c, -1), b = ponta(c, 1), L = mm(b[1] - a[1])
   fixa.cota(a, b, k.x1 + OFF - a[0], c.hex ? 'entre lados ' + L : L, c.hex ? {} : { alt: [[k.x0, a[1], 0], [k.x0, b[1], 0]] })
   fixa.altura(0, 0, M.alturaGrid, 'grid ' + mm(M.alturaGrid))
+  if (M.chanfroH > 0) fixa.altura(M.nervuraMeia, M.alturaGrid - M.chanfroV, M.alturaGrid, `chanfro do furo ${mm(M.chanfroH)} × ${mm(M.chanfroV)}`)
 
   bloco.altura(o.recuo, zb, zb + M.hPe, `pé ${mm(M.hPe)}` + (o.conicidade > 0 ? ` · cônico ${mm(o.conicidade)}` : ''))
   bloco.altura(M.nervuraMeia, zb + M.hPe, M.alturaGrid, 'ombro ' + mm(M.assento - M.hPe))
@@ -282,8 +299,8 @@ export function renderRotulos(cena: THREE.Scene, cam: THREE.Camera, oclusores: (
         return raio.intersectObjects(ocl, false).some(h => !((h.object as THREE.Mesh).material as THREE.Material).clippingPlanes?.some(q => q.distanceToPoint(h.point) < 0))
       }
       const proj = (p: V): [number, number] => { tmp.set(...p).project(cam); return [(tmp.x + 1) / 2 * lw, (1 - tmp.y) / 2 * lh] }
-      const cx: Ctx = { dir: [d.x, d.y, d.z], oculto, proj, ret: zonaElev(), lw, lh }
-      for (const x of desenhos) x.orienta(cx)
+      const proib = zonaElev(), cx: Ctx = { dir: [d.x, d.y, d.z], oculto, proj, ret: [...proib], proib, seg: [], lw, lh }
+      for (const fase of [0, 1] as const) for (const x of desenhos) x.orienta(cx, fase)
     }
   }
   rotulos?.render(cena, cam)

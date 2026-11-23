@@ -189,6 +189,7 @@ function corte(o: Opcoes, m: Modelo, k: 0 | 1, mini = false): string {
     if (o.conicidade > 0 && !(c.hex && k === 0)) cot.push(hz(zb + o.chanfro, uc + W(M.perfilPe[1][1]), uc + W(M.perfilPe[2][1]), 16, `conicidade ${f0(o.conicidade)}`))
   }
   if (furo && !(c.hex && k === 0)) cot.push(hz(T, uMax + W(M.nervuraMeia), xr, -16, `nervura/2 ${f0(M.nervuraMeia)}`))
+  if (furo && M.chanfroH > 0) cot.push(vz(uMax + W(M.nervuraMeia), T - M.chanfroV, T, -14, `chanfro do furo ${f0(M.chanfroH)} × ${f0(M.chanfroV)}`))
   const zTopo = Math.max(T, ...(pe ?? []).map(p => p[0])), eixos = cut.map(p => [[p[k], -zTopo - 3], [p[k], 3]] as P2[])
   const ps = [...formas.flatMap(f => f[0]), ...(mini ? [] : cot.flatMap(q => [q.a, q.b])), ...eixos.flat()]
   return vista(k === 0 ? 'Frontal · plano y = 0' : 'Lateral · plano x = 0', ps, P =>

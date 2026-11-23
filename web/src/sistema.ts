@@ -2,7 +2,7 @@
 // Encaixe próprio (não é o das originais): pé com chanfro embaixo, parede reta ou cônica, ombro até a nervura do grid.
 import type { Vec3 } from 'manifold-3d/manifold'
 import { Manifold } from './wasm'
-import { imaH, imaV, osso, poe, pontosInternos, rabo, verticesBorda, type ExtrasGrid } from './travas'
+import { divide, imaH, imaV, osso, poe, pontosInternos, rabo, verticesBorda, type ExtrasGrid } from './travas'
 
 type Solido = InstanceType<typeof Manifold>
 export interface Malha { pos: Float32Array; idx: Uint32Array }
@@ -15,13 +15,14 @@ export const SISTEMA = { // nome: [padrão, mín, máx, rótulo]
   folga: [.15, -.3, .6, 'Folga lateral (mm)'], folga_fundo: [.3, 0, 2, 'Folga embaixo do pé (mm)'],
   ima_d: [0, 0, 12, 'Ímã: diâmetro (mm, 0 = sem)'], ima_h: [2, .5, 5, 'Ímã: altura (mm)'], folga_ima: [.15, 0, .5, 'Ímã: folga (mm)'],
   fundo: [0, 0, 5, 'Grid: fundo (mm, 0 = vazado)'], chanfro_furo: [0, 0, 2, 'Grid: chanfro na entrada do furo (mm)'],
+  chanfro_furo_ang: [45, 30, 75, 'Chanfro do furo: ângulo (°)'],
 } as const
 export const SECAO = { // chave → seção da aba Sistema (fica ao lado da tabela; as tuplas não mudam)
   largura: 'Célula', comprimento: 'Célula',
   altura_pe: 'Pé do bloco', recuo: 'Pé do bloco', chanfro: 'Pé do bloco', conicidade: 'Pé do bloco', folga: 'Pé do bloco',
   ombro: 'Ombro e nervura', nervura: 'Ombro e nervura', folga_fundo: 'Ombro e nervura',
   ima_d: 'Ímã', ima_h: 'Ímã', folga_ima: 'Ímã',
-  fundo: 'Grid', chanfro_furo: 'Grid',
+  fundo: 'Grid', chanfro_furo: 'Grid', chanfro_furo_ang: 'Grid',
 } as const
 export const ENCAIXES = { // presets: só ajustam os números, todos continuam editáveis
   reto: ['Pé reto + chanfro', { conicidade: 0, ima_d: 0 }],
@@ -96,16 +97,18 @@ export const alturaGrid = (s: Sistema) => fundo(s) + s.folga_fundo + assento(s)
 
 /** Medidas do encaixe, sem geometria. `perfilPe`: [z, recuo] do fundo do pé até o ombro (o corpo acrescenta o topo);
  *  `perfilFuro`: [z, recuo] com z a partir da base do furo (base = topo do grid − alturaGrid). */
-export interface Medidas { cel: Celula; perfilPe: number[][]; perfilFuro: number[][]; alturaGrid: number; assento: number; hPe: number; nervuraMeia: number; fundoReal: number }
+export interface Medidas { cel: Celula; perfilPe: number[][]; perfilFuro: number[][]; alturaGrid: number; assento: number; hPe: number; nervuraMeia: number; fundoReal: number; chanfroH: number; chanfroV: number }
 export function medidas(s: Sistema): Medidas {
   const cel = celula(s), r = s.recuo + s.folga, zs = assento(s), h = hPe(s), nm = nervura(s), f = fundo(s), G = alturaGrid(s)
   const zb = f > 0 ? f : -1, zf = f + s.folga_fundo // zb: base do furo; zf: topo da folga embaixo do pé
   const db = s.recuo + s.conicidade + s.conicidade * (zf + s.chanfro - zb) / Math.max(h - s.chanfro, .1) // parede do pé prolongada até zb
-  const cf = Math.max(0, Math.min(s.chanfro_furo, nm - .4, s.ombro)) // chanfro na entrada: sobra crista de 0,8 mm na nervura e nunca passa do ombro (z não decresce)
+  const t = Math.round(Math.tan(s.chanfro_furo_ang * Math.PI / 180) * 1e9) / 1e9 // 45° dá exatamente 1
+  // chanfro na entrada: largura cf (sobra crista de 0,8 mm na nervura), altura cv = cf·tan(ângulo); cv nunca passa do ombro (z não decresce)
+  const cf = Math.max(0, Math.min(s.chanfro_furo, nm - .4, s.ombro / t)), cv = cf * t
   return {
-    cel, assento: zs, hPe: h, alturaGrid: G, nervuraMeia: nm, fundoReal: f,
+    cel, assento: zs, hPe: h, alturaGrid: G, nervuraMeia: nm, fundoReal: f, chanfroH: cf, chanfroV: cv,
     perfilPe: [[0, r + s.conicidade + s.chanfro], [s.chanfro, r + s.conicidade], [h, r], [zs, nm + s.folga], [zs, 0]],
-    perfilFuro: cf > 0 ? [[zb, db], [zf + h, s.recuo], [G - cf, nm], [G, nm - cf], [G + 1, nm - cf]] : [[zb, db], [zf + h, s.recuo], [G, nm], [G + 1, nm]],
+    perfilFuro: cf > 0 ? [[zb, db], [zf + h, s.recuo], [G - cv, nm], [G, nm - cf], [G + 1, nm - cf]] : [[zb, db], [zf + h, s.recuo], [G, nm], [G + 1, nm]],
   }
 }
 
@@ -179,7 +182,7 @@ export function grid(s: Sistema, linhas: number, colunas: number, x?: ExtrasGrid
   }
   if (x && (x.ima_borda || x.ima_cruz || x.ima_meio)) {
     const dI = x.ima_grid_d + 2 * x.folga_ima, hI = x.ima_grid_h + .2
-    let pul = 0
+    let pul = 0; const n = Math.max(1, Math.round(x.ima_por_lado || 1))
     const livre = cortes.length ? g(Manifold.union([furos, ...cortes])) : furos
     const fura = (forma: (d: number, h: number) => Solido, cabe = true) => { // teste do engordado de 0,8 mm contra os furos e os recortes de trava
       if (!cabe || g(g(forma(dI + 1.6, hI + .8)).intersect(livre)).volume() > 1e-3) { pul++; return }
@@ -187,12 +190,12 @@ export function grid(s: Sistema, linhas: number, colunas: number, x?: ExtrasGrid
     }
     if (x.ima_borda) {
       const zOmbro = fundo(s) + s.folga_fundo + medidas(s).hPe
-      for (const q of regiao(s, linhas, colunas).seg) fura((d, h) => imaH([(q[0] + q[2]) / 2, (q[1] + q[3]) / 2], [q[4], q[5]], d, h, zOmbro / 2), dI + 1.6 <= zOmbro)
+      for (const q of regiao(s, linhas, colunas).seg) for (const p of divide([q[0], q[1]], [q[2], q[3]], n)) fura((d, h) => imaH(p, [q[4], q[5]], d, h, zOmbro / 2), dI + 1.6 <= zOmbro)
     }
     if (x.ima_cruz || x.ima_meio) {
       const pi = pontosInternos(cs.map(([cx, cy]) => contorno(c, 0).map(([px, py]) => [cx + px, cy + py] as [number, number])), c.hex)
       if (x.ima_cruz) for (const p of pi.cruz) fura((d, h) => imaV(p, d, h))
-      if (x.ima_meio) for (const p of pi.meio) fura((d, h) => imaV(p, d, h))
+      if (x.ima_meio) for (const [a, b] of pi.meio) for (const p of divide(a, b, n)) fura((d, h) => imaV(p, d, h))
     }
     if (pul) avisosGrid.push(`Ímã do grid não cabe em ${pul} ponto(s): aumente o recuo ou diminua o ímã.`)
   }

@@ -6,7 +6,7 @@ type P = [number, number]
 
 export interface ExtrasGrid {
   trava: 'nenhuma' | 'clip' | 'macho'; trava_altura: number; trava_comprimento: number; trava_largura: number; trava_haste: number; trava_folga: number
-  ima_borda: boolean; ima_cruz: boolean; ima_meio: boolean; ima_grid_d: number; ima_grid_h: number; folga_ima: number; alivio: boolean
+  ima_borda: boolean; ima_cruz: boolean; ima_meio: boolean; ima_grid_d: number; ima_grid_h: number; ima_por_lado: number; folga_ima: number; alivio: boolean
 }
 
 const k = ([x, y]: P) => `${x.toFixed(4)},${y.toFixed(4)}`
@@ -43,15 +43,18 @@ export function rabo(L: number, cab: number, haste: number, folga: number, h: nu
 export const poe = (s: Solido, p: P, b: P) => { const r = s.rotate([0, 0, Math.atan2(b[1], b[0]) * 180 / Math.PI]), t = r.translate([p[0], p[1], 0]); r.delete(); s.delete(); return t }
 /** Vértices (cruz: 4 células no quadrado, 3 no hexágono) e meios de lado (meio: 2 células) internos, a partir dos contornos de cada célula. */
 export function pontosInternos(celulas: P[][], hex: boolean) {
-  const vc = new Map<string, { p: P; n: number }>(), lados = new Map<string, { p: P; n: number }>()
+  const vc = new Map<string, { p: P; n: number }>(), lados = new Map<string, { e: [P, P]; n: number }>()
   for (const poli of celulas) poli.forEach((p, i) => {
     const q = poli[(i + 1) % poli.length], m: P = [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2]
     const a = vc.get(k(p)) ?? { p, n: 0 }; a.n++; vc.set(k(p), a)
-    const b = lados.get(k(m)) ?? { p: m, n: 0 }; b.n++; lados.set(k(m), b)
+    const b = lados.get(k(m)) ?? { e: [p, q], n: 0 }; b.n++; lados.set(k(m), b)
   })
   const nc = hex ? 3 : 4
-  return { cruz: [...vc.values()].filter(v => v.n >= nc).map(v => v.p), meio: [...lados.values()].filter(v => v.n === 2).map(v => v.p) }
+  return { cruz: [...vc.values()].filter(v => v.n >= nc).map(v => v.p), meio: [...lados.values()].filter(v => v.n === 2).map(v => v.e) } // meio: extremos do lado compartilhado
 }
+/** `n` pontos igualmente espaçados entre a e b (t = (i+1)/(n+1)); n = 1 é o meio exato. */
+export const divide = (a: P, b: P, n: number): P[] =>
+  Array.from({ length: n }, (_, i) => { const t = (i + 1) / (n + 1); return [a[0] * (1 - t) + b[0] * t, a[1] * (1 - t) + b[1] * t] as P })
 /** Cilindro vertical do ímã por baixo (de z = −0,5 a h) em p. */
 export const imaV = (p: P, d: number, h: number) => {
   const c = Manifold.cylinder(h + .5, d / 2, d / 2, 48), t = c.translate([p[0], p[1], -.5]); c.delete(); return t

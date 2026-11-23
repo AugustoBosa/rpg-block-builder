@@ -382,6 +382,13 @@ t('D16', 'chanfro do furo maior que o ombro: fecha e o perfil não decresce', ()
   for (let i = 1; i < P.length; i++) if (P[i][0] < P[i - 1][0] - 1e-9) throw new Error(`z decresce: ${JSON.stringify(P)}`)
   return 'ok'
 })
+t('D16', 'chanfro do furo a 60°: fecha, altura = largura·tan(60°), z não decresce', () => {
+  const o = op({ chanfro_furo: 1, chanfro_furo_ang: 60 }), m = malha(grid(o, 1, 1)), M = medidas(o)
+  if (!fechada(m.pos, m.idx)) throw new Error('fechada: NÃO')
+  if (Math.abs(M.chanfroV - M.chanfroH * Math.tan(Math.PI / 3)) > 1e-6) throw new Error(`${M.chanfroH} × ${M.chanfroV}`)
+  for (let i = 1; i < M.perfilFuro.length; i++) if (M.perfilFuro[i][0] < M.perfilFuro[i - 1][0] - 1e-9) throw new Error('z decresce')
+  return `${M.chanfroH.toFixed(2)} × ${M.chanfroV.toFixed(2)}`
+})
 t('D16', 'alívio sem fundo fechado: aviso', () => { const o = xg({ alivio: true }); grid(o, 2, 3, o); if (!avisosGrid.some(a => a.includes('Alívio'))) throw new Error('sem aviso'); return avisosGrid[0] })
 for (const f of ['quadrado', 'hexagono'] as const)
   t('D16', `macho de um grid entra na fêmea do vizinho, ${f} 2x3`, () => {
@@ -411,6 +418,13 @@ for (const f of ['quadrado', 'hexagono'] as const) for (const [q, nome] of [['im
     const n = (va - vb) / cil(o.ima_grid_d + 2 * o.folga_ima, o.ima_grid_h + .2)
     if (avisosGrid.length && n < .5) throw new Error(avisosGrid.join(' '))
     if (Math.abs(n - Math.round(n)) > .05 || n < .5) throw new Error(`removido = ${n.toFixed(2)} ímãs`); return `${Math.round(n)} ímãs${avisosGrid.length ? ' (aviso: ' + avisosGrid[0] + ')' : ''}`
+  })
+for (const f of ['quadrado', 'hexagono'] as const)
+  t('D16', `3 ímãs por lado (borda + meio), ${f} 2x3: fecha; o que não cabe vira aviso`, () => {
+    const o = xg({ formato: f, ima_borda: true, ima_meio: true, ima_por_lado: 3 }), a = grid(o, 2, 3), b = grid(o, 2, 3, o), va = a.volume(), vb = b.volume(), mb = malha(b)
+    if (!fechada(mb.pos, mb.idx)) throw new Error('fechada: NÃO')
+    const n = (va - vb) / cil(o.ima_grid_d + 2 * o.folga_ima, o.ima_grid_h + .2)
+    if (n < 3) throw new Error(`só ${n.toFixed(1)} ímãs`); return `${n.toFixed(1)} ímãs${avisosGrid.length ? ' (aviso: ' + avisosGrid[0] + ')' : ''}`
   })
 t('D16', 'ímã grande não cabe: pulado com aviso', () => { const o = xg({ ima_meio: true, ima_grid_d: 10 }); grid(o, 2, 3, o); if (!avisosGrid.length) throw new Error('sem aviso'); return avisosGrid[0] })
 t('D16', 'alívio com fundo 3: fecha, piso ≥ 1 mm; sem fundo: igual', () => {

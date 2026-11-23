@@ -38,7 +38,7 @@ export const GUIAS = { // grid e degrau (aba própria)
   grid_linhas: [3, 1, 12, 'Linhas', 1], grid_colunas: [3, 1, 12, 'Colunas', 1], altura_degrau: [24, 10, 80, 'Degrau: altura (mm)'],
   trava_altura: [3, 1.5, 6, 'Trava: altura (mm)'], trava_comprimento: [8, 4, 16, 'Trava: comprimento (mm)'], trava_largura: [4, 2, 8, 'Trava: cabeça (mm)'],
   trava_haste: [2, 1, 5, 'Trava: haste/pescoço (mm)'], trava_folga: [.15, 0, .5, 'Trava: folga (mm)'],
-  ima_grid_d: [4, 2, 10, 'Ímã do grid: diâmetro (mm)'], ima_grid_h: [2, 1, 5, 'Ímã do grid: altura (mm)'],
+  ima_grid_d: [4, 2, 10, 'Ímã do grid: diâmetro (mm)'], ima_grid_h: [2, 1, 5, 'Ímã do grid: altura (mm)'], ima_por_lado: [1, 1, 4, 'Ímãs por lado', 1],
 } as const
 // seções das abas Blocos e Grids (chave → título; as tuplas acima não mudam)
 export const SECAO_PISO = {
@@ -47,7 +47,7 @@ export const SECAO_PISO = {
   quina_largura: 'Borda', quina_gasto: 'Borda', lateral_largura: 'Borda', lateral_gasto: 'Borda', ruido_borda: 'Borda',
 } as const
 export const SECAO_GUIAS = { grid_linhas: 'Dimensões', grid_colunas: 'Dimensões', altura_degrau: 'Dimensões',
-  trava_altura: 'Travas', trava_comprimento: 'Travas', trava_largura: 'Travas', trava_haste: 'Travas', trava_folga: 'Travas', ima_grid_d: 'Ímãs do grid', ima_grid_h: 'Ímãs do grid' } as const
+  trava_altura: 'Travas', trava_comprimento: 'Travas', trava_largura: 'Travas', trava_haste: 'Travas', trava_folga: 'Travas', ima_grid_d: 'Ímãs do grid', ima_grid_h: 'Ímãs do grid', ima_por_lado: 'Ímãs do grid' } as const
 type Num<T> = { -readonly [k in keyof T]: number }
 export type Opcoes = Sistema & Num<typeof PISO> & Num<typeof GUIAS> & { textura: TexId; texturaParede: TexId | ''; pedra: KnobsPedra; lisa: KnobsLisa; lajota: KnobsLajota; tijolo: KnobsTijolo; terra: KnobsTerra; areia: KnobsAreia; rachado: KnobsRachado; tabuas: KnobsTabuas; caverna: KnobsCaverna; casco: KnobsCasco; metal: KnobsMetal; agua: KnobsAgua; lava: KnobsLava; paredes: Parede[]; trava: 'nenhuma' | 'clip' | 'macho'; ima_borda: boolean; ima_cruz: boolean; ima_meio: boolean; alivio: boolean; inclinacao_dir: '+y' | '-y' | '+x' | '-x'; pilar: boolean; pilar_saliencia: number; pilar_sobe: number; telhado_forma: 'nenhum' | 'uma' | 'duas' | 'quatro' | 'plano'; telhado_modo: 'removivel' | 'fundido'; telhado_eixo: 'x' | 'y'; telhado_angulo: number; telhado_beiral: number; telhado_borda: number; mureta_altura: number; mureta_espessura: number; ameias: boolean; saia_altura: number; saia_folga: number; texturaTelhado: TexId }
 const ini = (t: object) => Object.fromEntries(Object.entries(t).map(([k, v]) => [k, v[0]]))
