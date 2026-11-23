@@ -1,4 +1,4 @@
-# RETOMAR — estado do projeto (2026-11-21, branch main; publicado até `878a541`; a Rodada Fechamento está só no disco, sem commit)
+# RETOMAR — estado do projeto (2026-11-22, branch main; tudo publicado, árvore limpa; Rodada Fechamento em `4be5ee0`, backlog em `6f2c847`; CI Pages e Checks verdes)
 
 Projeto: **RPG Block Builder**. "Dungeon Blocks" nos documentos é sempre o produto original de referência, nunca o nosso.
 
@@ -91,9 +91,9 @@ Leia este arquivo primeiro. Comandos: `USO.md`. Visão: `README.md`. Inventário
 - **Pendências pequenas do grid:** ângulo do chanfro fixo em 45°; quantidade/espaçamento de ímãs não é livre; o chanfro deixa a rampa do ombro mais íngreme (cotas "nervura/2" não mostram).
 - **Próximo:** imprimir grid + bloco 1×1 (físico) e as pendências pequenas (tempo da Lava, oitões lisos, telhado oco).
 
-## Rodada Fechamento (2026-11-21, sem commit)
+## Rodada Fechamento (2026-11-21, publicada em `4be5ee0`)
 - **CI em dois fluxos:** `pages.yml` segue rápido (`check_temas` + `check_paredes D2`) e segura o deploy. Novo `.github/workflows/checks.yml` (push no main, PR e manual, limite de 40 min) roda `tsc`, `check_temas`, `check_paredes` completo (D1–D16), `check_emenda` e `check_texturas`. Não segura o deploy. No CI (`CI=1`) os dois checks de tempo do `check_paredes` (D10 prévia ≤ 3 s e D12 tempo da rampa) só informam o tempo, porque o runner é mais lento e variável.
-- **Medido neste PC:** D13–D16 juntos = 66/66 PASS em 6 min 50 s (com outro check rodando ao mesmo tempo). O `checks.yml` ainda **não rodou no GitHub**: ver o tempo real no primeiro push.
+- **Medido neste PC:** D13–D16 juntos = 66/66 PASS em 6 min 50 s (com outro check rodando ao mesmo tempo). O `checks.yml` **rodou no GitHub e passou: 17 min 5 s** (Pages: 1 min 13 s).
 - **Emenda:** ver "Pendências conhecidas (web)".
 - **Scripts Python:** não foram movidos. `README.md` e `USO.md` já avisam que só rodam na cópia local; mover quebraria `AQUI`/`spec_encaixe.json` e as docs sem ganho.
 - **Tela cheia real:** continua sem teste (precisa de um Chrome de verdade).
