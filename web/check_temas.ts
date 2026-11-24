@@ -28,7 +28,7 @@ confere('taverna = tabuas/tabuas (piso e parede iguais: texturaParede vazia)', t
 confere('ruina = rachado/tijolo', tp('ruina') === 'rachado/tijolo', tp('ruina'))
 confere('pantano = terra/tijolo', tp('pantano') === 'terra/tijolo', tp('pantano'))
 confere('deserto = areia/tijolo', tp('deserto') === 'areia/tijolo', tp('deserto'))
-confere('cripta (lajota + parede indisponível) = lajota/pedra', tp('cripta') === 'lajota/pedra', tp('cripta'))
+confere('cripta = lajota/nichos, templo = areia/glifos', tp('cripta') === 'lajota/nichos' && tp('templo') === 'areia/glifos', `${tp('cripta')} ${tp('templo')}`)
 confere('caverna = caverna/caverna, navio = tabuas/casco, forja = metal/metal', tp('caverna') === 'caverna/(igual)' && tp('navio') === 'tabuas/casco' && tp('forja') === 'metal/(igual)', `${tp('caverna')} ${tp('navio')} ${tp('forja')}`)
 confere('inundada = agua/pedra, vulcao = lava/pedra; parede de agua/lava cai para pedra', tp('inundada') === 'agua/pedra' && tp('vulcao') === 'lava/pedra' && texParede({ ...padrao(), textura: 'agua' }) === 'pedra' && texParede({ ...padrao(), textura: 'lava' }) === 'pedra' && texParede({ ...padrao(), textura: 'agua', texturaParede: 'lava' }) === 'pedra' && texParede({ ...padrao(), textura: 'agua', texturaParede: 'tijolo' }) === 'tijolo', `${tp('inundada')} ${tp('vulcao')}`)
 confere('padrao() não mudou depois dos temas', JSON.stringify(padrao()) === json0 && base.desgaste === .5 && base.tamanho_pedra === 10, `desgaste ${base.desgaste}, tamanho ${base.tamanho_pedra}`)
