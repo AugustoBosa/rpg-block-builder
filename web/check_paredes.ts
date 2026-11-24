@@ -8,7 +8,8 @@ import { fechada, final, padrao, piso, stl, subida, type Malha } from './src/blo
 import { pedra } from './src/pedra'
 import { avisosGrid, degrau, grid, malha, medidas, regiao } from './src/sistema'
 import { clipSolido, poe, rabo, verticesBorda } from './src/travas'
-import { canto, ladoBloco, orfa, paredesValidas, pilares } from './src/aberturas'
+import { canto, ladoBloco, orfa, paredesValidas, pilares, quadro } from './src/aberturas'
+import { profTex, texParede } from './src/textura'
 import { geoTelhado, telhadoMalha, telhadoSolto } from './src/telhado'
 import { aberturaNova, areaDentro, foraDaArea, paredeNova, parede, perfilAbertura, pisoComParedes, type OpcoesP, type Parede } from './src/parede'
 
@@ -246,6 +247,28 @@ t('D14', 'paralelas e em T não geram pilar; pilar desligado não muda o hash', 
   if (hash(await pisoComParedes({ ...op(), paredes: ps })) !== hash(await pisoComParedes({ ...op({ pilar: false, pilar_saliencia: 3 }), paredes: ps }))) throw new Error('pilar desligado mudou o STL')
   return 'ok'
 })
+t('D14', 'emenda pilar×parede: relevo da face coplanar igual ao da parede (≤ 0,01 mm)', () => {
+  const o = op({ pilar: true }), ps = canto(o, 0, i => 'c' + i), [pl] = pilares(o, ps), P = quadro(o, pl), m = parede(o, pl, true, ps)
+  const ds = o.semente * 13.7, prof = o.profundidade * o.junta_piso, tp = texParede(o)
+  let n = 0, pior = 0
+  for (const q of ps) {
+    const Q = quadro(o, q), cap = Math.max(Math.min(o.teto, q.espessura / 2 - .3), 0)
+    for (const [oq, g, k] of [[Q.o1, -1, 0], [Q.o2, 1, 500]]) for (const [op_, h] of [[P.o1, -1], [P.o2, 1]]) {
+      const [x, y] = P.pt(pl.comprimento / 2, op_) // face do pilar coplanar com esta face da parede (mesma normal externa e mesmo plano)
+      if (Math.abs(g * h * (Q.n[0] * P.n[0] + Q.n[1] * P.n[1]) - 1) > 1e-6 || Math.abs((x - Q.s[0]) * Q.n[0] + (y - Q.s[1]) * Q.n[1] - oq) > 1e-4) continue
+      for (let i = 0; i < m.pos.length; i += 3) { // vértices do miolo da face (longe das pontas, do topo e do fundo, que têm outra textura)
+        const dx = m.pos[i] - P.s[0], dy = m.pos[i + 1] - P.s[1], z = m.pos[i + 2], up = dx * P.d[0] + dy * P.d[1] - pl.inicio, dep = Math.abs(dx * P.n[0] + dy * P.n[1] - op_)
+        if (dep > cap + 1e-3 || z < .01 || up < cap + .01 || up > pl.comprimento - cap - .01 || z > pl.altura - cap - .01) continue
+        const uq = (m.pos[i] - Q.s[0]) * Q.d[0] + (m.pos[i + 1] - Q.s[1]) * Q.d[1] - q.inicio
+        pior = Math.max(pior, Math.abs(dep - Math.min(profTex(o, uq, z + k, ds, prof, tp), cap))); n++
+      }
+    }
+  }
+  if (n < 50) throw new Error(`só ${n} vértices comparados`)
+  if (pior > .01) throw new Error(`degrau de ${pior.toFixed(4)} mm entre pilar e parede`)
+  if (!fechada(m.pos, m.idx)) throw new Error('pilar isolado não fecha')
+  return `${n} vértices, diferença máx ${pior.toExponential(1)} mm`
+})
 t('D14', 'hexágono 1x1, paredes nos lados 0 e 1 com pilar: 0 pilares, malha fecha', async () => {
   const o = op({ formato: 'hexagono', pilar: true }), ps = [0, 1].map(i => paredeNova('h' + i, { tipo: 'aresta', celula: 0, lado: i }, +ladoBloco(o, i)!.L.toFixed(1)))
   if (pilares(o, ps).length !== 0) throw new Error(`${pilares(o, ps).length} pilares no canto de 120°`)
@@ -267,6 +290,12 @@ for (const forma of ['uma', 'duas', 'quatro', 'plano'] as const) for (const [l, 
     const m = telhadoSolto(comCanto({ linhas: l, colunas: c, telhado_forma: forma }))
     if (!fechada(m.pos, m.idx)) throw new Error('fechada: NÃO'); return `fechada, ${m.idx.length / 3} tri`
   })
+t('D15', 'exportação: telhado removível 2x3 a 60° Lisa funde as faces planas (< 80 mil triângulos) e fecha', () => {
+  const m = telhadoSolto(comCanto({ linhas: 2, colunas: 3, telhado_forma: 'duas', telhado_angulo: 60, texturaTelhado: 'lisa' }))
+  if (!fechada(m.pos, m.idx)) throw new Error('fechada: NÃO')
+  if (m.idx.length / 3 > 80000) throw new Error(`${m.idx.length / 3} triângulos`)
+  return `fechada, ${m.idx.length / 3} tri`
+})
 t('D15', 'duas águas: cumeeira = zb + borda + tg × W/2', () => {
   const o = comCanto({ telhado_forma: 'duas' }), g = geoTelhado(o), b = bbox(telhadoMalha(o)), alvo = g.zb + g.b + g.tg * (g.y1 - g.y0) / 2
   if (Math.abs(b.hi[2] - alvo) > .05) throw new Error(`${b.hi[2].toFixed(3)} vs ${alvo.toFixed(3)}`); return `${b.hi[2].toFixed(2)} mm`

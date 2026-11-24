@@ -35,6 +35,7 @@ const caixa = (x0: number, x1: number, y0: number, y1: number, z0: number, z1: n
 
 // Operações que liberam os operandos (a prévia chama isto a cada ajuste: sem vazar WASM).
 const sub = (a: Solido, b: Solido) => { const n = a.subtract(b); a.delete(); b.delete(); return n }
+const fund = (a: Solido) => { const n = a.simplify(.01); a.delete(); return n }
 const uni = (a: Solido, b: Solido) => { const n = a.add(b); a.delete(); b.delete(); return n }
 
 /** Sólido do telhado com base em z = 0. `tex`: textura nas águas (ou no topo da laje do plano). `saia`: anel por dentro das paredes. */
@@ -97,6 +98,7 @@ export function solidoTelhado(o: Opcoes, tex = false, saia = false): Solido {
       v[2] -= rel(u, w, 3000)
     })
     r.delete()
+    m = fund(m) // funde as faces planas do refinamento (erro 0,01 mm; mantém a malha fechada)
   }
   if (sa) {
     const e = es, i = e + 1.2

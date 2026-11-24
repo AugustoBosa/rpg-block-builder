@@ -37,7 +37,7 @@ export { aberturaNova, paredeNova } from './aberturas'
 
 /** Sólido da parede com as aberturas cortadas e os batentes. Pé nominal em z = `baixo` (a parede desce até z = 0), topo em baixo + altura.
  *  Planta: retângulo [0, comprimento] × espessura (conforme `lado`); `dl` engorda a planta em todos os lados. */
-function solido(o: OpcoesP, p: Parede, baixo: number, dl = 0, tex = false, pontas = false) {
+function solido(o: OpcoesP, p: Parede, baixo: number, dl = 0, tex = false, viz?: Parede[]) { // viz (só no pilar): as paredes, para a textura da face coplanar com a delas casar na emenda
   const { d, n, o1, o2, pt, s } = quadro(o, p, dl), e = p.espessura
   const poly = [pt(-dl, o1), pt(p.comprimento + dl, o1), pt(p.comprimento + dl, o2), pt(-dl, o2)]
   const A = poly.reduce((q, [x, y], i) => q + x * poly[(i + 1) % 4][1] - poly[(i + 1) % 4][0] * y, 0)
@@ -63,27 +63,37 @@ function solido(o: OpcoesP, p: Parede, baixo: number, dl = 0, tex = false, ponta
   if (!tex) return m
   // F3: Pedra (pedra.ts) nas duas faces grandes e no topo: a malha é subdividida e cada vértice dessas faces recua pelo relevo (0..teto, limitado à metade da espessura)
   const r = m.refineToLength(.5); m.delete()
-  const ds = o.semente * 13.7, prof = o.profundidade * o.junta_piso, cap = Math.max(Math.min(o.teto, e / 2 - .3), 0), topo = baixo + p.altura
-  const tp = texParede(o), rel = (a: number, b: number, k: number) => Math.min(profTex(o, a, b + k, ds, prof, tp), cap)
-  const face = (u: number, z: number, k: number) => tp === 'tabuas' ? rel(z, u, k) : rel(u, z, k) // Tábuas em pé na parede (gerar.py: uw, vw = pz, gx)
+  const ds = o.semente * 13.7, prof = o.profundidade * o.junta_piso, capDe = (q: Parede) => Math.max(Math.min(o.teto, q.espessura / 2 - .3), 0), cap = capDe(p), topo = baixo + p.altura
+  const tp = texParede(o), rel = (a: number, b: number, k: number, c = cap) => Math.min(profTex(o, a, b + k, ds, prof, tp), c)
+  const face = (u: number, z: number, k: number, c = cap) => tp === 'tabuas' ? rel(z, u, k, c) : rel(u, z, k, c) // Tábuas em pé na parede (gerar.py: uw, vw = pz, gx)
+  // faces das paredes (normal externa g·n, plano em oo, semente k): o pilar usa a textura delas onde a face for coplanar
+  const vz = (viz ?? []).flatMap(q => { const Q = quadro(o, q), c = capDe(q); return [[Q.o1, -1, 0], [Q.o2, 1, 500]].map(([oo, g, k]) => ({ ...Q, q, oo, g, k, c })) })
   const w = r.warp(v => {
-    const dx = v[0] - s[0], dy = v[1] - s[1], u = dx * d[0] + dy * d[1] - p.inicio, ww = dx * n[0] + dy * n[1], z = v[2], alto = Math.abs(z - topo) < 1e-4
-    if (Math.abs(ww - o1) < 1e-4) { const t = face(u, z, 0); v[0] += n[0] * t; v[1] += n[1] * t } // face de trás: recua para +n
-    else if (Math.abs(ww - o2) < 1e-4) { const t = face(u, z, 500); v[0] -= n[0] * t; v[1] -= n[1] * t }
+    const x = v[0], y = v[1], dx = x - s[0], dy = y - s[1], u = dx * d[0] + dy * d[1] - p.inicio, ww = dx * n[0] + dy * n[1], z = v[2], alto = Math.abs(z - topo) < 1e-4
+    const recua = (sx: number, sy: number, t: number) => { // face de normal externa (sx, sy) recua t para dentro
+      for (const a of vz) {
+        const uq = (x - a.s[0]) * a.d[0] + (y - a.s[1]) * a.d[1] - a.q.inicio
+        if (Math.abs(a.g * (a.n[0] * sx + a.n[1] * sy) - 1) < 1e-6 && Math.abs((x - a.s[0]) * a.n[0] + (y - a.s[1]) * a.n[1] - a.oo) < 1e-4 && uq > -p.comprimento && uq < a.q.comprimento + p.comprimento) { t = face(uq, z, a.k, a.c); break }
+      }
+      v[0] -= sx * t; v[1] -= sy * t
+    }
+    if (Math.abs(ww - o1) < 1e-4) recua(-n[0], -n[1], face(u, z, 0)) // face de trás: recua para +n
+    else if (Math.abs(ww - o2) < 1e-4) recua(n[0], n[1], face(u, z, 500))
     if (alto) v[2] -= rel(u, ww, 1000)
-    if (pontas) { // pilar: textura também nas duas pontas (recua para dentro ao longo de d)
-      if (Math.abs(u + dl) < 1e-4) { const t = rel(ww, z, 1500); v[0] += d[0] * t; v[1] += d[1] * t }
-      else if (Math.abs(u - p.comprimento - dl) < 1e-4) { const t = rel(ww, z, 2000); v[0] -= d[0] * t; v[1] -= d[1] * t }
+    if (viz) { // pilar: textura também nas duas pontas (recua para dentro ao longo de d)
+      if (Math.abs(u + dl) < 1e-4) recua(-d[0], -d[1], rel(ww, z, 1500))
+      else if (Math.abs(u - p.comprimento - dl) < 1e-4) recua(d[0], d[1], rel(ww, z, 2000))
     }
   })
   r.delete()
-  return w
+  const q = w.simplify(.01); w.delete() // exportação: funde as faces planas do refinamento (erro 0,01 mm; mantém a malha fechada)
+  return q
 }
 
 /** Sólido ISOLADO de uma parede (F1: lisa), em x, y do bloco e com o pé em z = 0 (sem a parte afundada).
  *  `textura`: relevo da Pedra nas faces grandes e no topo (F3). Aberturas: F2. */
-export function parede(o: OpcoesP, p: Parede, textura = false): Malha {
-  const m = solido(o, p, 0, 0, textura), r = paraMalha(m)
+export function parede(o: OpcoesP, p: Parede, textura = false, viz?: Parede[]): Malha {
+  const m = solido(o, p, 0, 0, textura, viz), r = paraMalha(m)
   m.delete()
   return r
 }
@@ -99,7 +109,7 @@ export async function pisoComParedes(o: OpcoesP, previa = false, cortes?: Float6
   const z0 = o.altura - RELEVO - AFUNDA - .05 // a base entra na laje (zt − 0,6) e passa 0,05 mm dela: fundo coplanar gerava triângulos de área zero
   // paredes exatas (sem engordar): faces coplanares entre paredes e com o piso se fundem na união (sem degrau de 0,02 mm); `desentorta` limpa triângulos de área ~0
   const ps = o.pilar ? [...o.paredes, ...pilares(o, o.paredes)] : o.paredes
-  const ws = ps.map(p => solido(o, p, RELEVO + AFUNDA + .05, 0, !previa, p.id.startsWith('pilar')).translate(0, 0, z0))
+  const ws = ps.map(p => solido(o, p, RELEVO + AFUNDA + .05, 0, !previa, p.id.startsWith('pilar') ? o.paredes : undefined).translate(0, 0, z0))
   if (fundido) { // afunda além do maior relevo do topo das paredes (sem junta aberta sob o beiral); prévia lisa: 0,3 mm
     const s = solidoTelhado(o, !previa), af = previa ? .3 : Math.max(...ps.map(p => Math.max(Math.min(o.teto, p.espessura / 2 - .3), 0))) + .05
     ws.push(s.translate(0, 0, geoTelhado(o).zb - af)); s.delete()
