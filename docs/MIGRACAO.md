@@ -30,7 +30,7 @@ Legenda da coluna **Web**: ✅ feito · ⏳ a portar · 🔁 repensar · ❌ nã
 | 2026-11-07 | Interface com seções recolhíveis; vista 3D com gizmo, corte por eixo, elevação do bloco, modos de vista e cotas; esquemas 2D (planta, frontal, lateral, isométrica) ao lado |
 | 2026-11-06 | Backup de `amostra_hd/` não será feito |
 
-Risco de copyright (avisado ao usuário): medidas configuráveis reduzem o risco, mas não o eliminam. Faltam: encaixe próprio (não publicar `spec_encaixe.json` como padrão), nome próprio (decidido: RPG Block Builder; falta conferir marca no INPI e no USPTO), texturas revisadas (Glifos e Nichos são as mais próximas das originais), termos de uso e revisão por advogado.
+Risco de copyright (avisado ao usuário): medidas configuráveis reduzem o risco, mas não o eliminam. Faltam: encaixe próprio (não publicar `spec_encaixe.json` como padrão), nome próprio (decidido: RPG Block Builder; falta conferir marca no INPI e no USPTO), texturas revisadas (Glifos e Nichos agora têm desenho próprio, feito em 2026-11-23, mas uma revisão final antes de vender continua valendo), termos de uso e revisão por advogado.
 
 ## 2. Inventário
 
@@ -49,10 +49,10 @@ Risco de copyright (avisado ao usuário): medidas configuráveis reduzem o risco
 ### 2.2 Peças
 | Peça | Ajustes próprios | Web |
 |---|---|---|
-| Piso | textura do piso | ✅ 13 texturas |
+| Piso | textura do piso | ✅ 15 texturas |
 | Parede | espessura 4–10, altura 10–60 mm, textura da parede | ✅ (ver §6) |
 | Canto | igual à parede; só conjunto quadrado | ✅ botão "+ Canto" (2 paredes em L, 4 quinas, só quadrado) + pilar automático nas quinas de 90° |
-| Telhado | ângulo 15–40° | ✅ como **rampa**: `inclinacao` 0–40°, 4 direções (no Blender só +Y); paredes ignoradas na rampa. Telhado sobre paredes ✅ (uma, duas, quatro águas, plano com mureta e ameias; removível com saia ou fundido; só quadrado) |
+| Telhado | ângulo 15–40° | ✅ como **rampa**: `inclinacao` 0–40°, 4 direções (no Blender só +Y); paredes ignoradas na rampa. Telhado sobre paredes ✅ (uma, duas, quatro águas, plano com mureta e ameias; removível com saia ou fundido; só quadrado; **oco por padrão**, `telhado_casca` 2 mm, 0 = maciço; textura também nos oitões, beirada e mureta) |
 | Porta / Janela (atalho) | parede + 1 abertura | ⏳ |
 | Baú, Prop, Estátua, Espalhar | — | ❌ (props importados) |
 
@@ -77,10 +77,9 @@ Risco de copyright (avisado ao usuário): medidas configuráveis reduzem o risco
 | — | Relevo | Teto e ganho da junta, para todas | 3 | todas | ✅ |
 
 
-Rodada E2: piso e parede têm textura separada (`Opcoes.texturaParede`, vazio = igual ao piso). Rodada E2b: Rachado, Tábuas, Terra e Areia ✅ no piso e na parede (na parede as Tábuas ficam na horizontal; no Blender giram). Faltam 7: Água, Lava, Nichos, Glifos, Caverna, Casco, Metal.
-Rodada G2: Caverna, Casco e Metal ✅ no piso e na parede (`web/src/caverna.ts`, `casco.ts`, `metal.ts`; Casco e Metal usam u = ao longo da parede e z = altura). Faltam 4: Água, Lava, Nichos, Glifos.
-Rodada G3: Água e Lava ✅ só no piso (`web/src/agua.ts`, `lava.ts`; fora da mancha usam a Pedra com `o.pedra`; na parede caem para Pedra em `texParede`). Teto da Água = `teto` + 0,5 mm (`tetoDe` em `textura.ts`). Faltam 2: Nichos, Glifos. **Rodada de 2026-11-23: Nichos e Glifos ✅ (desenho próprio). As 15 texturas estão prontas; cripta (Lajota/Nichos) e templo (Areia/Glifos) completos.**
-Rodada E1: Lisa, Lajota e Tijolo estão ✅ no piso e na parede (`web/src/lisa.ts`, `lajota.ts`, `tijolo.ts`, auxiliares em `grade.ts`, registro em `textura.ts`, check em `web/check_texturas.ts`). Falta portar as outras 11.
+Rodada E2: piso e parede têm textura separada (`Opcoes.texturaParede`, vazio = igual ao piso). Rodada E2b: Rachado, Tábuas, Terra e Areia ✅ no piso e na parede (na parede as Tábuas ficam na horizontal; no Blender giram). (Na G1 as Tábuas passaram a ficar em pé na parede, como no Blender.)
+Rodada G2: Caverna, Casco e Metal ✅ no piso e na parede (`web/src/caverna.ts`, `casco.ts`, `metal.ts`; Casco e Metal usam u = ao longo da parede e z = altura). Rodada G3: Água e Lava ✅ só no piso (`web/src/agua.ts`, `lava.ts`; fora da mancha usam a Pedra com `o.pedra`; na parede caem para Pedra em `texParede`). Teto da Água = `teto` + 0,5 mm (`tetoDe` em `textura.ts`). Rodada E1: Lisa, Lajota e Tijolo ✅ no piso e na parede (`web/src/lisa.ts`, `lajota.ts`, `tijolo.ts`, auxiliares em `grade.ts`, registro em `textura.ts`, check em `web/check_texturas.ts`).
+**Rodada de 2026-11-23: Nichos (`nichos.ts`) e Glifos (`glifos.ts`) ✅, com desenho próprio (sem código nem visual do original). As 15 texturas estão prontas; cripta (Lajota/Nichos) e templo (Areia/Glifos) completos.** Relevo médio 0,555 / 0,410 mm; piso 1×1 em ~0,57 s. A Lava e a Pedra ficaram mais rápidas (perlin sem alocação, voronoi com `sqrt`, Lava reaproveita o grão da Pedra): 1×1 em 1,4 s e 1,25 s, saída idêntica.
 
 Funções comuns do Blender que as texturas usam (portar junto): `grade` (fiadas), `junta_perfil`, `seixos` (Voronoi 2D), `lasca`, `grao`, `distorce`, `_mancha`.
 
@@ -100,7 +99,7 @@ Até 2 aberturas. Tipo (porta/janela), lado (A/B no canto), posição, largura 3
 Colunas × linhas até 7×7, um pé por célula, parede só na borda de trás, divisão contínua, junta ou bisel. **Web: ✅** como linhas × colunas de 1 a 6 (Rodada D).
 
 ### 2.7 Temas (13 atalhos)
-dungeon, castelo, ruína, taverna, pântano, deserto, inundada, vulcão, caverna, cripta, templo, navio, forja. Cada um escolhe a textura do piso e da parede, o desgaste e o tamanho da pedra (`TEMAS` no `gerar.py`). **Web: ✅** (`web/src/temas.ts`, Rodada D; cripta e templo ficam parciais até Nichos e Glifos). Pântano, caverna e cripta usavam o Espalhar: na web ficam sem esses detalhes.
+dungeon, castelo, ruína, taverna, pântano, deserto, inundada, vulcão, caverna, cripta, templo, navio, forja. Cada um escolhe a textura do piso e da parede, o desgaste e o tamanho da pedra (`TEMAS` no `gerar.py`). **Web: ✅** (`web/src/temas.ts`, Rodada D; cripta = Lajota/Nichos e templo = Areia/Glifos, completos desde 2026-11-23). Pântano, caverna e cripta usavam o Espalhar: na web ficam sem esses detalhes.
 
 ### 2.8 Malha e exportação
 | Etapa | Blender | Web |
@@ -119,7 +118,7 @@ dungeon, castelo, ruína, taverna, pântano, deserto, inundada, vulcão, caverna
 | Abas | 1 Sistema, 2 Grids, 3 Blocos | ✅ |
 | Seções recolhíveis | controles em `<details>`; Pedra avançada em 3 seções | ✅ |
 | Vista 3D (`web/src/vista.ts`) | gizmo de orientação; corte X/Y/Z com posição e inverter (um estado por aba); elevação 0–30 mm (só Sistema); modos Sólido, Inclinação, Normais, Arestas, Matcap | ✅ |
-| Cotas 3D (`web/src/cotas.ts`) | checkbox "Mostrar cotas"; números vêm de `medidas()` | ✅ |
+| Cotas 3D (`web/src/cotas.ts`) | checkbox "Mostrar cotas"; números vêm de `medidas()`; duas fases (cotas forçadas antes), forçadas evitam o slider de elevação, menores não cruzam linhas de cota (2026-11-23); inclui a cota do chanfro do furo | ✅ |
 | Esquemas 2D (`web/src/esquema.ts`) | planta, frontal, lateral e isométrica em SVG, nas abas Sistema e Grids | ✅ |
 | Correção visual | z-fighting ombro/topo do grid resolvido com polygonOffset (só na vista; STL inalterado) | ✅ |
 
@@ -132,12 +131,12 @@ Medido em 35 × 35, pé longo, semente 1:
 | Critério | Meta | Web | Blender |
 |---|---|---|---|
 | `validar.py` | OK | OK | OK |
-| Emenda | 0,000 mm | 0,0000 mm | 0,000 mm |
+| Emenda | 0,000 mm | 0,0000 mm (inclui hexágono 2×3 e 3×2) | 0,000 mm |
 | Triângulos | ~240 mil | 216 mil | 242 mil |
 | Facetas p90 | 17–23° | 14,4° | 20,7° |
 | Arestas ≥ 60° | originais 0,1–0,3 % | 1,7 % | 2,9 % |
 | Relevo em 200 × 200 mm | igual | p50 1,509 / p95 1,895 | 1,510 / 1,892 |
-| Tempo do STL final | — | ~2 s no navegador | ~1 min |
+| Tempo do STL final | — | ~1,3 s (Pedra 1×1, 2026-11-23; era ~2 s) | ~1 min |
 
 Diferenças da web em relação ao Blender (melhorias, não portar de volta):
 1. **Ruído próprio** (`web/src/ruido.ts`: Perlin + fBm, Voronoi 3D com F1 e distância à borda). Não copia o Blender (GPL). A mesma semente sorteia pedras diferentes; a estatística é a mesma.
@@ -152,18 +151,18 @@ Como comparar uma textura nova com o Blender sem se enganar: a janela de 16 mm d
 | Passo | Entrega | Estimativa |
 |---|---|---|
 | 1 | Piloto do piso de Pedra | ✅ feito (2026-11-06) |
-| 2 | Parede, canto e telhado, com portas e janelas (`manifold-3d`), na aba Blocos | ~1 semana |
-| 3 | As outras 14 texturas (piso e parede) | 2–3 semanas |
-| 4 | Conjuntos, temas, interface, Web Worker, hospedagem | ~1 semana |
+| 2 | Parede, canto e telhado, com portas e janelas (`manifold-3d`), na aba Blocos | ✅ feito (2026-11-08 a 2026-11-23; telhado oco e texturizado) |
+| 3 | As outras 14 texturas (piso e parede) | ✅ feito: 15 de 15 (2026-11-23) |
+| 4 | Conjuntos, temas, interface, Web Worker, hospedagem | ✅ feito |
 | 1b | Encaixe próprio e ajustável; hexágono; grid e degrau; blocos N × M; 3 abas; celular; site no Pages | ✅ feito (2026-11-06/07), falta a aprovação |
-| depois | Gerador de grid próprio (§5) | a estimar |
-| depois | Props importados (qualquer piso, sempre fundidos) | a definir |
+| depois | Gerador de grid próprio (§5) | ✅ feito (2026-11-21) |
+| depois | Props importados (qualquer piso, sempre fundidos) | a definir (falta a licença) |
 
 Pendências técnicas conhecidas:
-1. A geração do STL final roda na thread principal (a tela trava ~2 s). Levar para um Web Worker.
-2. O `validar.py` só conhece a célula de 35 mm. Ele precisa ler a largura e o comprimento do JSON.
-3. Arestas com 60° ou mais ainda acima das originais (1,7 % contra 0,1–0,3 %).
-4. Hospedagem: a decidir (site estático; qualquer serviço de páginas estáticas serve).
+1. ~~A geração do STL final roda na thread principal~~ **feito** (Web Worker, 2026-11-08).
+2. O `validar.py` só conhece a célula de 35 mm e reprova o encaixe próprio; fica como referência local (o `gerar.py` importa `estanque` dele). Para conferir a malha, use o `cli.ts` ("fechada: sim") e os checks de `web/`.
+3. Arestas com 60° ou mais ainda acima das originais (1,7 % contra 0,1–0,3 %): fechado na G4 como geometria do contorno do bloco (o topo texturizado tem só 0,04 %).
+4. ~~Hospedagem~~ **feito**: GitHub Pages, a cada push no `main`.
 
 ## 5. Gerador de grid (decidido em 2026-11-06; ✅ implementado em 2026-11-21, spec `docs/superpowers/specs/2026-11-20-grid-completo-design.md`)
 
@@ -183,4 +182,4 @@ Infraestrutura semelhante ao grid original (placa com um furo por célula), com 
 Regras: o furo do grid e o pé do bloco usam os mesmos parâmetros de encaixe (mudar um muda o outro). O grid original serve só como referência de função, nunca de geometria.
 
 ## 6. Paredes com aberturas (2026-11-08)
-Implementadas via `docs/WORKFLOW_PAREDES.md` (F0–F5, D1–D11 aceitos): paredes independentes ancoradas em aresta ou eixo, unidas ao piso por booleana (afundadas 0,6 mm), aberturas reta/arco/abatido/ogiva com peitoril e batente, parte fora da parede vira tracejado, textura Pedra nas faces e no topo. Check: `web/check_paredes.ts`.
+Implementadas via `docs/WORKFLOW_PAREDES.md` (F0–F5, D1–D11 aceitos): paredes independentes ancoradas em aresta ou eixo, unidas ao piso por booleana (afundadas 0,6 mm), aberturas reta/arco/abatido/ogiva com peitoril e batente, parte fora da parede vira tracejado, textura Pedra nas faces e no topo. Check: `web/check_paredes.ts` (hoje D1–D16, 149 casos). Em 2026-11-23: o pilar usa as mesmas coordenadas, semente e teto da parede nas faces coplanares (sem degrau); a exportação passa `simplify(.01)` do manifold em cada sólido de parede, pilar e telhado (só na exportação) e descarta fragmentos soltos menores que 5 mm³ (`MIN_FRAG` em `parede.ts`), com aviso na interface.

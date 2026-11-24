@@ -10,11 +10,11 @@ Os dados medidos do produto original de referência (catálogo, índices e `spec
 
 **Licença:** MIT (ver `LICENSE`). A biblioteca manifold-3d usada na web é Apache-2.0, compatível com a MIT.
 
-## Estado (2026-11-07)
+## Estado (2026-11-23)
 
 | Parte | Estado |
 |---|---|
-| Ferramenta web (`web/`) | **Aba 1 · Sistema:** formato da célula (quadrado com largura e comprimento independentes, ou hexágono) e encaixe próprio parametrizado. **Aba 2 · Grids:** grid e degrau (adaptador de nível), sempre nas medidas do Sistema. **Aba 3 · Blocos:** piso de Pedra de N × M células (um pé por célula). Vista 3D com corte, elevação, modos e cotas; esquemas 2D. STL final no navegador |
+| Ferramenta web (`web/`) | **Aba 1 · Sistema:** formato da célula (quadrado com largura e comprimento independentes, ou hexágono) e encaixe próprio parametrizado. **Aba 2 · Grids:** grid e degrau (adaptador de nível) nas medidas do Sistema, com chanfro do furo (ângulo livre), travas (clip ou macho/fêmea) e ímãs (até 4 por lado). **Aba 3 · Blocos:** piso de N × M células com **15 texturas** (piso e parede separados) e 13 temas; paredes com portas e janelas, canto com pilar, rampa e telhado (uma, duas, quatro águas ou plano com mureta; removível ou fundido; oco por padrão). Vista 3D com corte, elevação, modos e cotas; esquemas 2D. STL final no navegador, em Web Worker |
 | Gerador em Blender (`gerar.py`) | **Congelado.** Fica só como referência de qualidade e de receita das texturas. O plugin (painel) foi descontinuado em 2026-11-06 |
 | Ferramentas de medição (Python) | Ativas: conferem os STL da web e do Blender |
 | Impressão | Nada foi impresso ainda |

@@ -10,19 +10,23 @@ Instalar (uma vez): `npm --prefix web install`.
 
 1. Rode `npm --prefix web run dev`.
 2. Abra `http://localhost:5173`.
-3. Ajuste os sliders. A prévia usa malha de 0,5 mm e muda na hora.
-4. Clique **Baixar STL (malha final)**. O STL sai com malha de 0,125 mm, suavizada e reduzida. Leva cerca de 2 s, e a tela trava nesse tempo.
+3. Ajuste os controles. A prévia usa malha mais grossa e muda na hora (a parede e o telhado saem lisos na prévia; o STL sai texturizado).
+4. Clique **Baixar STL**. O STL sai com malha de 0,125 mm, suavizada e reduzida. É gerado num Web Worker (a tela não trava), com botão Cancelar. Piso 1×1 leva cerca de 1 a 2 s; 2×3 com paredes e telhado, cerca de 15 s. O telhado removível tem botão próprio (**Baixar telhado**), e o grid tem **Baixar clip**.
+5. Na exportação, fragmentos soltos menores que 5 mm³ são descartados (aparece um aviso).
 
-Versão para hospedar: `npm --prefix web run build` grava o site estático em `web/dist/`.
+Versão para hospedar: `npm --prefix web run build` grava o site estático em `web/dist/`. Cada push no `main` publica no GitHub Pages.
 
-### Ajustes do piloto (piso de Pedra)
-| Grupo | Ajustes |
+Nada é salvo: cada abertura começa do padrão.
+
+### Abas e ajustes
+| Aba | O que ajusta |
 |---|---|
-| Bloco | largura e comprimento (20–80 mm), pé longo ou curto, folga do pé |
-| Superfície | semente, desgaste, tamanho da pedra, profundidade, posição X/Y no mapa (emenda com o vizinho) |
-| Borda | quina (largura e gasto), lateral (largura e gasto), ruído da borda |
-| Relevo | teto do relevo, ganho da junta |
-| Pedra avançada (3 seções: Forma das pedras, Superfície, Desgaste) | os 13 ajustes internos da Pedra (vão, bisel, cascalho, rachaduras, lascas, grão...) |
+| 1 · Sistema | formato (quadrado ou hexágono, 15–100 mm), encaixe (reto + chanfro, cônico ou ímã), altura do pé, recuo, chanfro, conicidade, ombro, nervura, folgas, ímã, fundo, chanfro do furo (largura e ângulo 30–75°) |
+| 2 · Grids | grid e degrau N × M; travas (clip, macho/fêmea), ímãs na borda, cruzamento e meio (1–4 por lado; o que não cabe é reduzido com aviso), alívio sob o fundo |
+| 3 · Blocos | linhas × colunas (1–6), tema, **textura do piso e da parede** (15: Pedra, Lisa, Lajota, Tijolo, Terra, Areia, Rachado, Tábuas, Caverna, Casco, Metal, Água, Lava, Nichos, Glifos), semente, desgaste, tamanho da pedra, posição X/Y no mapa (emenda com o vizinho), borda, relevo, rampa; seções **Paredes** (portas, janelas, canto, pilar) e **Telhado** (forma, modo, ângulo, beiral, mureta, ameias, casca, saia) |
+| Avançado | ajustes internos de cada textura (a Pedra tem 13), mostrados só para a textura escolhida |
+
+Vista 3D: corte por eixo, elevação do bloco, modos (Sólido, Inclinação, Normais, Arestas, Matcap), cotas e esquemas 2D. A casca do telhado é em mm (0 = maciço).
 
 ## 2. Linha de comando (mesmo código da web)
 
@@ -30,7 +34,18 @@ Versão para hospedar: `npm --prefix web run build` grava o site estático em `w
 cd web
 npx tsx cli.ts <pasta> [--opção valor ...]
 ```
-Grava o STL e diz se a malha fecha. `--peca piso|grid|degrau` (padrão: piso), `--formato quadrado|hexagono` (quadrado: `--largura` e `--comprimento` independentes; hexágono: `--largura` é a medida entre lados). As outras opções são as mesmas da web: sistema (`--largura 60`, `--recuo 4`, `--ima_d 6`...), piso (`--linhas 2 --colunas 3`, `--semente 3`, `--posicao_x 1` em células...), grid e degrau (`--grid_linhas 2 --grid_colunas 3 --altura_degrau 30`). Ajustes da Pedra: `--pedra_<nome>` (por exemplo, `--pedra_vao 0.8`).
+Grava o STL e diz se a malha fecha e quanto tempo levou. `--peca piso|grid|degrau` (padrão: piso), `--formato quadrado|hexagono` (quadrado: `--largura` e `--comprimento` independentes; hexágono: `--largura` é a medida entre lados). As outras opções são as mesmas da web: sistema (`--largura 60`, `--recuo 4`, `--ima_d 6`, `--chanfro_furo_ang 60`...), piso (`--linhas 2 --colunas 3`, `--semente 3`, `--posicao_x 1` em células...), grid e degrau (`--grid_linhas 2 --grid_colunas 3 --altura_degrau 30`, `--ima_por_lado 3`). Textura: `--textura lava` e `--textura_parede tijolo` (as 15 ids: pedra, lisa, lajota, tijolo, terra, areia, rachado, tabuas, caverna, casco, metal, agua, lava, nichos, glifos). Ajustes de uma textura: `--<textura>_<nome>` (por exemplo, `--pedra_vao 0.8`). A CLI gera só o piso, o grid e o degrau; paredes e telhado são pela web e pelos checks.
+
+### Checks (rodar de dentro de `web/`)
+| Comando | O que confere | Tempo |
+|---|---|---|
+| `npx tsc --noEmit` | tipos | segundos |
+| `npx tsx check_temas.ts` | os 13 temas aplicam as texturas certas | segundos |
+| `npx tsx check_paredes.ts [D2 D15 ...]` | paredes, aberturas, rampa, canto, pilar, telhado, grid, travas, exportação; `D2` = 5 hashes de referência (`ref_hashes.json`) | completo ~8 min |
+| `npx tsx check_texturas.ts` | as 15 texturas: malha fecha, emenda 0,0000 mm, média de relevo, parede unida | ~8 min |
+| `npx tsx check_emenda.ts` | emenda entre vizinhos (quadrado e hexágono, 1×1, 2×3, 3×2; Pedra e Tábuas) | ~3,5 min |
+
+No GitHub, `pages.yml` roda `check_temas` + `check_paredes D2` antes de publicar (~1 min); `checks.yml` roda a bateria completa (~17 min) e não segura o deploy.
 
 ## 3. Medir um STL
 
