@@ -100,8 +100,9 @@ export async function pisoComParedes(o: OpcoesP, previa = false, cortes?: Float6
   // paredes exatas (sem engordar): faces coplanares entre paredes e com o piso se fundem na união (sem degrau de 0,02 mm); `desentorta` limpa triângulos de área ~0
   const ps = o.pilar ? [...o.paredes, ...pilares(o, o.paredes)] : o.paredes
   const ws = ps.map(p => solido(o, p, RELEVO + AFUNDA + .05, 0, !previa, p.id.startsWith('pilar')).translate(0, 0, z0))
-  if (fundido) { // afunda 0,3 mm no topo das paredes
-    const s = solidoTelhado(o, !previa); ws.push(s.translate(0, 0, geoTelhado(o).zb - .3)); s.delete()
+  if (fundido) { // afunda além do maior relevo do topo das paredes (sem junta aberta sob o beiral); prévia lisa: 0,3 mm
+    const s = solidoTelhado(o, !previa), af = previa ? .3 : Math.max(...ps.map(p => Math.max(Math.min(o.teto, p.espessura / 2 - .3), 0))) + .05
+    ws.push(s.translate(0, 0, geoTelhado(o).zb - af)); s.delete()
   }
   const f = new Manifold(new Mesh({ numProp: 3, vertProperties: base.pos, triVerts: base.idx }))
   const u = Manifold.union([f, ...ws]), r = paraMalha(u)

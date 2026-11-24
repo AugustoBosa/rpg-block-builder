@@ -324,6 +324,29 @@ for (const forma of ['uma', 'duas', 'quatro', 'plano'] as const) for (const [l, 
     if (!fechada(m.pos, m.idx)) throw new Error('fechada: NÃO')
     if (bbox(m).hi[2] < geoTelhado(o).zb + 1) throw new Error('telhado não entrou'); return 'fechada, com telhado'
   })
+for (const forma of ['duas', 'quatro'] as const) for (const [l, c] of [[1, 1], [2, 3]] as const)
+  t('D15', `telhado oco ${forma} ${l}x${c}: removível e fundido fecham, casca tira volume`, async () => {
+    const b = { linhas: l, colunas: c, telhado_forma: forma }, oco = comCanto(b), maci = comCanto({ ...b, telhado_casca: 0 })
+    const mo = telhadoSolto(oco), vo = volume(mo), vm = volume(telhadoSolto(maci))
+    if (!fechada(mo.pos, mo.idx)) throw new Error('removível: fechada NÃO')
+    if (vo > vm * .8 || vo < vm * .02) throw new Error(`volume ${vo.toFixed(0)} vs maciço ${vm.toFixed(0)}`)
+    const mf = await pisoComParedes({ ...oco, telhado_modo: 'fundido' }); if (!fechada(mf.pos, mf.idx)) throw new Error('fundido: fechada NÃO')
+    return `removível fechada, ${(vo / vm * 100).toFixed(0)}% do maciço; fundido fechado`
+  })
+t('D15', 'oitão texturizado: vértices da face de topo não são planos', () => {
+  const o = comCanto({ telhado_forma: 'duas', telhado_eixo: 'x' }), g = geoTelhado(o), m = telhadoSolto(o)
+  let n = 0, lo = 1e9, hi = -1e9
+  for (let i = 0; i < m.pos.length; i += 3) if (m.pos[i] > g.x1 - 3 && m.pos[i + 2] > 1) { n++; lo = Math.min(lo, m.pos[i]); hi = Math.max(hi, m.pos[i]) }
+  if (!n || hi - lo < .1) throw new Error(`${n} vértices, desvio ${(hi - lo).toFixed(3)} mm`); return `${n} vértices, desvio ${(hi - lo).toFixed(2)} mm`
+})
+t('D15', 'fundido: sem junta aberta (base do telhado ≤ menor topo texturizado das paredes)', () => {
+  const o = comCanto({ telhado_forma: 'duas', telhado_modo: 'fundido' }), p = o.paredes[0], m = parede(o, p, true), b = bbox(m)
+  const [k, d] = b.hi[0] - b.lo[0] < b.hi[1] - b.lo[1] ? [0, b.hi[0] - b.lo[0]] : [1, b.hi[1] - b.lo[1]] // eixo da espessura
+  let topoMin = 1e9 // menor z do topo: vértices no meio da espessura e a até `teto` do topo
+  for (let i = 0; i < m.pos.length; i += 3) if (m.pos[i + 2] > p.altura - o.teto - .01 && Math.abs(m.pos[i + k] - b.lo[k] - d / 2) < d / 2 - .05) topoMin = Math.min(topoMin, m.pos[i + 2])
+  const af = Math.max(...o.paredes.map(q => Math.max(Math.min(o.teto, q.espessura / 2 - .3), 0))) + .05 // mesmo cálculo de pisoComParedes
+  if (af < p.altura - topoMin) throw new Error(`afunda ${af.toFixed(2)} < relevo ${(p.altura - topoMin).toFixed(2)}`); return `afunda ${af.toFixed(2)} ≥ relevo ${(p.altura - topoMin).toFixed(2)} mm`
+})
 t('D15', 'telhado ignorado na rampa, no hexágono e fundido sem paredes', async () => {
   const f = { telhado_forma: 'duas', telhado_modo: 'fundido' }
   for (const [nome, a, b] of [

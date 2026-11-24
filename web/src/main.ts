@@ -116,14 +116,14 @@ montaParedes(paredesDiv, o, previa)
   escolha(d, 'Modo', o.telhado_modo, [['removivel', 'Removível (STL próprio)'], ['fundido', 'Fundido ao bloco']], v => { o.telhado_modo = v as Opcoes['telhado_modo']; previa() })
   escolha(d, 'Cumeeira ao longo de (uma água: sobe para)', o.telhado_eixo, [['x', 'X'], ['y', 'Y']], v => { o.telhado_eixo = v as Opcoes['telhado_eixo']; previa() })
   escolha(d, 'Textura do telhado', o.texturaTelhado, Object.entries(TEX).map(([k, t]) => [k, t.nome]) as [string, string][], v => { o.texturaTelhado = v as TexId; previa() })
-  const n = (rot: string, k: 'telhado_angulo' | 'telhado_beiral' | 'telhado_borda' | 'mureta_altura' | 'mureta_espessura' | 'saia_altura' | 'saia_folga', min: number, max: number, passo: number) =>
+  const n = (rot: string, k: 'telhado_angulo' | 'telhado_beiral' | 'telhado_borda' | 'mureta_altura' | 'mureta_espessura' | 'saia_altura' | 'saia_folga' | 'telhado_casca', min: number, max: number, passo: number) =>
     controle(d, rot, o[k], min, max, v => { o[k] = v }, passo)
   n('Ângulo (graus)', 'telhado_angulo', 15, 60, 1); n('Beiral (mm)', 'telhado_beiral', 0, 6, .5); n('Borda das águas (mm)', 'telhado_borda', 1, 4, .1)
   n('Mureta: altura (mm)', 'mureta_altura', 0, 10, .5); n('Mureta: espessura (mm)', 'mureta_espessura', 1, 4, .1)
   const ck = Object.assign(document.createElement('input'), { type: 'checkbox', checked: o.ameias })
   ck.onchange = () => { o.ameias = ck.checked; previa() }
   d.append(campo('Ameias', ck))
-  n('Saia: altura (mm)', 'saia_altura', 0, 6, .5); n('Saia: folga (mm)', 'saia_folga', 0, 1, .05)
+  n('Casca do telhado (mm)', 'telhado_casca', 1.2, 5, .1); n('Saia: altura (mm)', 'saia_altura', 0, 6, .5); n('Saia: folga (mm)', 'saia_folga', 0, 1, .05)
 }
 // tema: grava textura, desgaste e tamanho da pedra nos controles; sem tema escolhido, nada muda
 const temaSel = document.createElement('select'), texSel = document.createElement('select'), texParSel = document.createElement('select')

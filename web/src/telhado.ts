@@ -40,7 +40,9 @@ const uni = (a: Solido, b: Solido) => { const n = a.add(b); a.delete(); b.delete
 /** Sólido do telhado com base em z = 0. `tex`: textura nas águas (ou no topo da laje do plano). `saia`: anel por dentro das paredes. */
 export function solidoTelhado(o: Opcoes, tex = false, saia = false): Solido {
   const g = geoTelhado(o), { x0, x1, y0, y1, P } = g
-  let m: Solido
+  const sa = saia && g.ps.length > 0 && o.saia_altura > 0 // saia recuada: espessura + 2 × saliência (pilar entra até aí) + folga
+  const es = sa ? Math.max(...g.ps.map(p => p.espessura)) + (o.pilar && pilares(o, g.ps).length ? 2 * o.pilar_saliencia : 0) + o.saia_folga : 0
+  let m: Solido, oco = false
   if (o.telhado_forma === 'plano') {
     const me = o.mureta_espessura, mh = o.mureta_altura
     m = caixa(x0, x1, y0, y1, 0, 3)
@@ -53,29 +55,51 @@ export function solidoTelhado(o: Opcoes, tex = false, saia = false): Solido {
     }
   } else {
     m = caixa(x0, x1, y0, y1, 0, g.b + g.tg * Math.max(x1 - x0, y1 - y0) + 1)
-    for (const [a, bb, c] of P) { const k = Math.hypot(a, bb, 1), n = m.trimByPlane([a / k, bb / k, -1 / k], -c / k); m.delete(); m = n } // fica z ≤ c + a·x + b·y
+    const apara = (s: Solido, dc: number) => { // fica z ≤ c − dc·k + a·x + b·y; dc = casca: espessura normal a cada água
+      for (const [a, bb, c] of P) { const k = Math.hypot(a, bb, 1), n = s.trimByPlane([a / k, bb / k, -1 / k], -(c - dc * k) / k); s.delete(); s = n }
+      return s
+    }
+    m = apara(m, 0)
+    // casca: miolo aberto por baixo. Com saia, o anel de apoio (parede + saia) fica maciço: miolo recuado até a face interna da saia
+    const e = o.telhado_casca, ex = Math.max(x0 + e, sa ? g.bx0 + es + 1.2 : 0), ey = Math.max(y0 + e, sa ? g.by0 + es + 1.2 : 0)
+    if (e > 0 && x0 + x1 - 2 * ex > 2 && y0 + y1 - 2 * ey > 2) { // miolo degenerado (bloco pequeno ou casca grossa): fica maciço
+      const mi = apara(caixa(ex, x0 + x1 - ex, ey, y0 + y1 - ey, -1, g.b + g.tg * Math.max(x1 - x0, y1 - y0) + 1), e)
+      if (mi.isEmpty()) mi.delete(); else { m = sub(m, mi); oco = true }
+    }
   }
   if (tex) {
     const cos = Math.cos(o.telhado_angulo * Math.PI / 180), ds = o.semente * 13.7, prof = o.profundidade * o.junta_piso
-    const cap = Math.min(o.teto, Math.max(g.b - .5, .3)), me = o.mureta_espessura
+    const me = o.mureta_espessura, mh = o.mureta_altura, pl = o.telhado_forma === 'plano'
+    const cap = Math.max(Math.min(o.teto, Math.max(g.b - .5, .3), pl ? me / 2 - .3 : 9, oco ? o.telhado_casca - .4 : 9), 0) // plano: mureta fina; oco: não fura a casca
+    const rel = (a: number, b: number, k: number) => Math.min(profTex(o, a, b + k, ds, prof, o.texturaTelhado), cap)
     const r = m.refineToLength(.5)
     m.delete()
     m = r.warp(v => {
-      const [x, y, z] = v, t = g.topo(x, y)
-      if (Math.abs(z - t) > 1e-4) return
+      const [x, y, z] = v, t = g.topo(x, y), ep = 1e-4
+      // faces verticais (oitões, beirada, mureta por fora e por dentro) recuam para dentro do sólido, como nas paredes; semente distinta por face
+      const im = pl && mh > 0 && z > 3 + ep // faces internas da mureta (acima da laje)
+      if (Math.abs(x - x0) < ep) v[0] += rel(y, z, 1500)
+      else if (Math.abs(x - x1) < ep) v[0] -= rel(y, z, 2000)
+      else if (Math.abs(y - y0) < ep) v[1] += rel(x, z, 2500)
+      else if (Math.abs(y - y1) < ep) v[1] -= rel(x, z, 3000)
+      else if (im && Math.abs(x - x0 - me) < ep) v[0] -= rel(y, z, 3500)
+      else if (im && Math.abs(x - x1 + me) < ep) v[0] += rel(y, z, 4000)
+      else if (im && Math.abs(y - y0 - me) < ep) v[1] -= rel(x, z, 4500)
+      else if (im && Math.abs(y - y1 + me) < ep) v[1] += rel(x, z, 5000)
+      if (pl && mh > 0 && Math.abs(z - 3 - mh) < ep) v[2] -= rel(x, y, 1000) // topo da mureta
+      if (Math.abs(z - t) > ep) return
       let u = x, w = y // plano: textura em x, y no topo da laje, fora da mureta
-      if (o.telhado_forma === 'plano') { if (x <= x0 + me || x >= x1 - me || y <= y0 + me || y >= y1 - me) return }
+      if (pl) { if (x <= x0 + me || x >= x1 - me || y <= y0 + me || y >= y1 - me) return }
       else { // água ativa: u ao longo da cumeeira (horizontal no plano), w = distância horizontal / cos (comprimento real na água)
         const [a, bb, c] = P.reduce((p, q) => q[2] + q[0] * x + q[1] * y < p[2] + p[0] * x + p[1] * y ? q : p)
         const h = Math.hypot(a, bb); u = (-bb * x + a * y) / h; w = (c + a * x + bb * y - g.b) / (g.tg * cos) // w cresce para a cumeeira
       }
-      v[2] -= Math.min(profTex(o, u, w + 3000, ds, prof, o.texturaTelhado), cap)
+      v[2] -= rel(u, w, 3000)
     })
     r.delete()
   }
-  if (saia && g.ps.length && o.saia_altura > 0) {
-    const pil = o.pilar && pilares(o, g.ps).length ? 2 * o.pilar_saliencia : 0 // o pilar entra até espessura + 2 × saliência
-    const e = Math.max(...g.ps.map(p => p.espessura)) + pil + o.saia_folga, i = e + 1.2
+  if (sa) {
+    const e = es, i = e + 1.2
     let s = sub(caixa(g.bx0 + e, g.bx1 - e, g.by0 + e, g.by1 - e, -o.saia_altura, .5), caixa(g.bx0 + i, g.bx1 - i, g.by0 + i, g.by1 - i, -o.saia_altura - 1, 1))
     // a saia não atravessa paredes em eixo (que cruzam o interior): subtrai a planta delas, engordada pela folga
     for (const p of g.ps.filter(p => p.ancora.tipo === 'eixo')) {
