@@ -12,7 +12,7 @@ import { canto, ladoBloco, orfa, paredesValidas, pilares, quadro } from './src/a
 import { profTex, texParede } from './src/textura'
 import { geoTelhado, solidoTelhado, telhadoMalha, telhadoSolto } from './src/telhado'
 import { Manifold } from './src/wasm'
-import { aberturaNova, areaDentro, foraDaArea, paredeNova, parede, perfilAbertura, pisoComParedes, type OpcoesP, type Parede } from './src/parede'
+import { avisosPiso, aberturaNova, areaDentro, foraDaArea, paredeNova, parede, perfilAbertura, pisoComParedes, type OpcoesP, type Parede } from './src/parede'
 
 const op = (e: Record<string, unknown> = {}): OpcoesP => ({ ...padrao(), paredes: [], ...e }) as OpcoesP
 const hash = (m: Malha) => createHash('sha256').update(Buffer.from(stl(m))).digest('hex')
@@ -381,6 +381,17 @@ for (const modo of ['removivel', 'fundido'] as const)
     if (modo === 'fundido') { const n = partes(m); if (n.length !== 1) throw new Error(`fundido em ${n.length} partes`) }
     return `${v.toFixed(2)} de 0.4 mm³, fechada`
   })
+t('D15', 'exportação: 3x3 quatro águas fundido sem ilhas (1 componente, fechada, com aviso); 1x1 e 2x3 seguem inteiros', async () => {
+  const o = comCanto({ linhas: 3, colunas: 3, telhado_forma: 'quatro', telhado_modo: 'fundido' }), m = await pisoComParedes(o), d = avisosPiso.slice(), n = partes(m)
+  if (!fechada(m.pos, m.idx)) throw new Error('fechada: NÃO')
+  if (n.length !== 1) throw new Error(`${n.length} componentes`)
+  if (!d.length) throw new Error('sem aviso de descarte')
+  for (const [l, c] of [[1, 1], [2, 3]] as const) {
+    const q = comCanto({ linhas: l, colunas: c, telhado_forma: 'quatro', telhado_modo: 'fundido' }), e = await pisoComParedes(q) // peças legítimas ficam: 1 componente grande, fechada
+    if (!fechada(e.pos, e.idx) || partes(e).length !== 1) throw new Error(`${l}x${c}: ${partes(e).length} componentes`)
+  }
+  return `1 componente; ${d[0]}`
+})
 t('D15', 'oitão texturizado: vértices da face de topo não são planos', () => {
   const o = comCanto({ telhado_forma: 'duas', telhado_eixo: 'x' }), g = geoTelhado(o), m = telhadoSolto(o)
   let n = 0, lo = 1e9, hi = -1e9

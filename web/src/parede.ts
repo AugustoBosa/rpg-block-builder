@@ -102,6 +102,8 @@ export { areaDentro, foraDaArea, perfilAbertura } from './aberturas' // F2: geom
 
 /** F1. Piso final (Pedra) unido às paredes. `previa`: piso cru (sem suavizar/reduzir), como a prévia da interface.
  *  Sem paredes devolve exatamente o piso de antes (regressão D2). */
+export const avisosPiso: string[] = []
+const MIN_FRAG = 5 // mm³: componentes menores que isto (e que não são a maior) são fragmentos do relevo e saem na exportação
 export async function pisoComParedes(o: OpcoesP, previa = false, cortes?: Float64Array): Promise<Malha> {
   const c = piso(o, cortes), base: Malha = previa ? { pos: c.pos, idx: c.idx } : await final(c)
   const fundido = temTelhado(o) && o.telhado_modo === 'fundido' && o.paredes.length > 0 // fundido sem paredes ficaria solto no ar
@@ -115,7 +117,14 @@ export async function pisoComParedes(o: OpcoesP, previa = false, cortes?: Float6
     ws.push(s.translate(0, 0, geoTelhado(o).zb - af)); s.delete()
   }
   const f = new Manifold(new Mesh({ numProp: 3, vertProperties: base.pos, triVerts: base.idx }))
-  const u = Manifold.union([f, ...ws]), r = paraMalha(u)
+  let u = Manifold.union([f, ...ws])
+  avisosPiso.length = 0
+  if (!previa) { // exportação: descarta fragmentos flutuantes minúsculos (ilhas do relevo na borda); paredes e telhado ficam
+    const ps2 = u.decompose(), vs = ps2.map(q => q.volume()), mx = Math.max(...vs), ok = ps2.filter((_, i) => vs[i] >= MIN_FRAG || vs[i] === mx)
+    if (ok.length < ps2.length) { u.delete(); u = Manifold.compose(ok); avisosPiso.push(`${ps2.length - ok.length} fragmento(s) minúsculo(s) descartado(s).`) }
+    for (const q of ps2) q.delete()
+  }
+  const r = paraMalha(u)
   for (const x of [u, f, ...ws]) x.delete()
   desentorta(r)
   return r

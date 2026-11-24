@@ -187,7 +187,7 @@ baixar.onclick = async () => { // roda num worker; os parâmetros ficam congelad
     a.href = URL.createObjectURL(new Blob([r.stl], { type: 'model/stl' }))
     a.download = nome + '.stl'
     a.click()
-    estado.textContent = `${r.tri} triângulos em ${((performance.now() - t) / 1000).toFixed(1)} s`
+    estado.textContent = `${r.tri} triângulos em ${((performance.now() - t) / 1000).toFixed(1)} s ${(r.av ?? []).join(' ')}`
   } catch (e) { estado.textContent = e === 'cancelado' ? 'Cancelado.' : `Erro: ${e}` }
   finally { baixar.disabled = baixarTelhado.disabled = baixarClip.disabled = false; cancela.hidden = true }
 }

@@ -1,6 +1,6 @@
 // Gera as malhas fora da thread principal (WASM do manifold + relevo da Pedra). Só números entram e saem (buffers transferidos).
 import { cortesParte, stl, type Malha, type Opcoes } from './bloco'
-import { pisoComParedes } from './parede'
+import { avisosPiso, pisoComParedes } from './parede'
 import { telhadoMalha, telhadoSolto, temTelhado } from './telhado'
 import { avisosGrid, corpo, degrau, grid, malha } from './sistema'
 import { clipSolido } from './travas'
@@ -11,7 +11,7 @@ export type Pedido =
   | { id: number; tipo: 'cortes'; o: Opcoes; i: number; n: number } // parte i de n do relevo do topo
 export type Resposta =
   | { id: number; ms: number; m: (Malha | null)[]; av?: string[] } // prévia: [peça 0, peça 1]
-  | { id: number; stl: ArrayBuffer; tri: number }
+  | { id: number; stl: ArrayBuffer; tri: number; av?: string[] }
   | { id: number; de: number; nl: number; c: Float64Array }
   | { id: number; etapa: string }
   | { id: number; erro: string }
@@ -42,7 +42,7 @@ w.onmessage = async ({ data: q }) => {
       else if (q.peca === 'clip') { const c = clipSolido(q.o); m = malha(c); c.delete() }
       else m = gera(q.peca, q.o)
       const buf = stl(m)
-      w.postMessage({ id: q.id, stl: buf, tri: m.idx.length / 3 }, [buf])
+      w.postMessage({ id: q.id, stl: buf, tri: m.idx.length / 3, av: q.peca === 'piso' ? avisosPiso.slice() : undefined }, [buf])
     }
   } catch (e) {
     w.postMessage({ id: q.id, erro: String(e) })

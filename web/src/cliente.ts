@@ -61,7 +61,7 @@ export async function exporta(q: Extract<Sem<Pedido>, { tipo: 'exporta' }>, etap
     for (const p of partes) cortes.set(p.c, p.de)
     q = { ...q, cortes }
   }
-  return filaExporta.pede<{ stl: ArrayBuffer, tri: number }>(q, etapa)
+  return filaExporta.pede<{ stl: ArrayBuffer, tri: number, av?: string[] }>(q, etapa)
 }
 export function cancelaExporta() {
   ciclo++
