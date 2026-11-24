@@ -62,7 +62,9 @@ export function solidoTelhado(o: Opcoes, tex = false, saia = false): Solido {
     }
     m = apara(m, 0)
     // casca: miolo aberto por baixo. Com saia, o anel de apoio (parede + saia) fica maciço: miolo recuado até a face interna da saia
-    const e = o.telhado_casca, ex = Math.max(x0 + e, sa ? g.bx0 + es + 1.2 : 0), ey = Math.max(y0 + e, sa ? g.by0 + es + 1.2 : 0)
+    const e = o.telhado_casca > 0 ? Math.max(o.telhado_casca, 1.2) : 0 // 0 = maciço; abaixo de 1,2 mm sobe para 1,2
+    const ap = g.ps.length ? (sa ? es + 1.2 : Math.max(...g.ps.map(p => p.espessura)) + (o.pilar && pilares(o, g.ps).length ? 2 * o.pilar_saliencia : 0)) : 0 // sem saia, o miolo também não passa sobre o topo das paredes
+    const ex = g.ps.length ? Math.max(x0 + e, g.bx0 + ap) : x0 + e, ey = g.ps.length ? Math.max(y0 + e, g.by0 + ap) : y0 + e
     if (e > 0 && x0 + x1 - 2 * ex > 2 && y0 + y1 - 2 * ey > 2) { // miolo degenerado (bloco pequeno ou casca grossa): fica maciço
       const mi = apara(caixa(ex, x0 + x1 - ex, ey, y0 + y1 - ey, -1, g.b + g.tg * Math.max(x1 - x0, y1 - y0) + 1), e)
       if (mi.isEmpty()) mi.delete(); else { m = sub(m, mi); oco = true }
@@ -71,7 +73,7 @@ export function solidoTelhado(o: Opcoes, tex = false, saia = false): Solido {
   if (tex) {
     const cos = Math.cos(o.telhado_angulo * Math.PI / 180), ds = o.semente * 13.7, prof = o.profundidade * o.junta_piso
     const me = o.mureta_espessura, mh = o.mureta_altura, pl = o.telhado_forma === 'plano'
-    const cap = Math.max(Math.min(o.teto, Math.max(g.b - .5, .3), pl ? me / 2 - .3 : 9, oco ? o.telhado_casca - .4 : 9), 0) // plano: mureta fina; oco: não fura a casca
+    const cap = Math.max(Math.min(o.teto, Math.max(g.b - .5, .3), pl ? me / 2 - .3 : 9, oco ? Math.max(o.telhado_casca, 1.2) - .4 : 9), 0) // plano: mureta fina; oco: não fura a casca
     const rel = (a: number, b: number, k: number) => Math.min(profTex(o, a, b + k, ds, prof, o.texturaTelhado), cap)
     const r = m.refineToLength(.5)
     m.delete()

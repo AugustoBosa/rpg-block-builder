@@ -123,7 +123,7 @@ montaParedes(paredesDiv, o, previa)
   const ck = Object.assign(document.createElement('input'), { type: 'checkbox', checked: o.ameias })
   ck.onchange = () => { o.ameias = ck.checked; previa() }
   d.append(campo('Ameias', ck))
-  n('Casca do telhado (mm)', 'telhado_casca', 1.2, 5, .1); n('Saia: altura (mm)', 'saia_altura', 0, 6, .5); n('Saia: folga (mm)', 'saia_folga', 0, 1, .05)
+  n('Casca do telhado (mm, 0 = maciço)', 'telhado_casca', 0, 5, .1); n('Saia: altura (mm)', 'saia_altura', 0, 6, .5); n('Saia: folga (mm)', 'saia_folga', 0, 1, .05)
 }
 // tema: grava textura, desgaste e tamanho da pedra nos controles; sem tema escolhido, nada muda
 const temaSel = document.createElement('select'), texSel = document.createElement('select'), texParSel = document.createElement('select')

@@ -10,7 +10,8 @@ import { avisosGrid, degrau, grid, malha, medidas, regiao } from './src/sistema'
 import { clipSolido, poe, rabo, verticesBorda } from './src/travas'
 import { canto, ladoBloco, orfa, paredesValidas, pilares, quadro } from './src/aberturas'
 import { profTex, texParede } from './src/textura'
-import { geoTelhado, telhadoMalha, telhadoSolto } from './src/telhado'
+import { geoTelhado, solidoTelhado, telhadoMalha, telhadoSolto } from './src/telhado'
+import { Manifold } from './src/wasm'
 import { aberturaNova, areaDentro, foraDaArea, paredeNova, parede, perfilAbertura, pisoComParedes, type OpcoesP, type Parede } from './src/parede'
 
 const op = (e: Record<string, unknown> = {}): OpcoesP => ({ ...padrao(), paredes: [], ...e }) as OpcoesP
@@ -284,6 +285,12 @@ t('D14', 'L em eixo (lado centro) com pilar: 1 pilar, fecha, não aumenta o bbox
   return `fechada, dentro do bbox, pilar ${pl[0].comprimento.toFixed(1)} mm`
 })
 // ---- D15: telhado ----
+const partes = (m: Malha) => { // tamanhos das componentes conexas (por vértice compartilhado)
+  const pai = Array.from({ length: m.pos.length / 3 }, (_, i) => i), raiz = (i: number): number => pai[i] === i ? i : (pai[i] = raiz(pai[i]))
+  for (let i = 0; i < m.idx.length; i += 3) { pai[raiz(m.idx[i + 1])] = raiz(m.idx[i]); pai[raiz(m.idx[i + 2])] = raiz(m.idx[i]) }
+  const c = new Map<number, number>(); for (let i = 0; i < m.idx.length; i++) { const r = raiz(m.idx[i]); c.set(r, (c.get(r) ?? 0) + 1) }
+  return [...c.values()]
+}
 const comCanto = (e: Record<string, unknown>) => { const o = op(e); return { ...o, paredes: canto(o, 0, i => 'c' + i) } }
 for (const forma of ['uma', 'duas', 'quatro', 'plano'] as const) for (const [l, c] of [[1, 1], [2, 3]] as const)
   t('D15', `telhado ${forma} removível ${l}x${c}: fecha`, () => {
@@ -361,6 +368,18 @@ for (const forma of ['duas', 'quatro'] as const) for (const [l, c] of [[1, 1], [
     if (vo > vm * .8 || vo < vm * .02) throw new Error(`volume ${vo.toFixed(0)} vs maciço ${vm.toFixed(0)}`)
     const mf = await pisoComParedes({ ...oco, telhado_modo: 'fundido' }); if (!fechada(mf.pos, mf.idx)) throw new Error('fundido: fechada NÃO')
     return `removível fechada, ${(vo / vm * 100).toFixed(0)}% do maciço; fundido fechado`
+  })
+// teto maciço sobre o topo das paredes (sem saia): o miolo oco não passa sobre elas
+for (const modo of ['removivel', 'fundido'] as const)
+  t('D15', `telhado oco sem saia (${modo}) duas águas 1x1, beiral 2, casca 2: teto sobre o topo da parede`, async () => {
+    const o = comCanto({ telhado_forma: 'duas', telhado_modo: modo, telhado_beiral: 2, telhado_casca: 2, saia_altura: 0 }), g = geoTelhado(o), s = solidoTelhado(o, false, false)
+    const px = (g.bx0 + g.bx1) / 2, py = g.by1 - o.paredes[0].espessura / 2, c = Manifold.cube([1, 1, .4]).translate([px - .5, py - .5, .3]), i = s.intersect(c), v = i.volume() // meio do topo da parede em +y
+    s.delete(); c.delete(); i.delete()
+    if (v < .35) throw new Error(`teto sobre a parede: ${v.toFixed(3)} de 0.4 mm³ (miolo passa sobre a parede)`)
+    const m = modo === 'fundido' ? await pisoComParedes(o) : telhadoSolto(o)
+    if (!fechada(m.pos, m.idx)) throw new Error('fechada: NÃO')
+    if (modo === 'fundido') { const n = partes(m); if (n.length !== 1) throw new Error(`fundido em ${n.length} partes`) }
+    return `${v.toFixed(2)} de 0.4 mm³, fechada`
   })
 t('D15', 'oitão texturizado: vértices da face de topo não são planos', () => {
   const o = comCanto({ telhado_forma: 'duas', telhado_eixo: 'x' }), g = geoTelhado(o), m = telhadoSolto(o)
@@ -478,6 +497,14 @@ for (const f of ['quadrado', 'hexagono'] as const)
     const n = (va - vb) / cil(o.ima_grid_d + 2 * o.folga_ima, o.ima_grid_h + .2)
     if (n < 3) throw new Error(`só ${n.toFixed(1)} ímãs`); return `${n.toFixed(1)} ímãs${avisosGrid.length ? ' (aviso: ' + avisosGrid[0] + ')' : ''}`
   })
+t('D16', 'ima_por_lado 4 no hexágono padrão: reduz com aviso, fecha, furos não se fundem', () => {
+  const o = xg({ formato: 'hexagono', ima_borda: true, ima_por_lado: 4 }), a = grid(o, 1, 1), b = grid(o, 1, 1, o), va = a.volume(), vb = b.volume(), mb = malha(b)
+  if (!avisosGrid.some(w => w.includes('reduzido'))) throw new Error('sem aviso de redução')
+  if (!fechada(mb.pos, mb.idx)) throw new Error('fechada: NÃO')
+  const n = (va - vb) / cil(o.ima_grid_d + 2 * o.folga_ima, o.ima_grid_h + .2)
+  if (Math.abs(n - Math.round(n)) > .05 || n < 6) throw new Error(`removido = ${n.toFixed(2)} ímãs (furos fundidos ou sumiram)`)
+  return `${Math.round(n)} ímãs inteiros; ${avisosGrid[0]}`
+})
 t('D16', 'ímã grande não cabe: pulado com aviso', () => { const o = xg({ ima_meio: true, ima_grid_d: 10 }); grid(o, 2, 3, o); if (!avisosGrid.length) throw new Error('sem aviso'); return avisosGrid[0] })
 t('D16', 'alívio com fundo 3: fecha, piso ≥ 1 mm; sem fundo: igual', () => {
   const o = xg({ fundo: 3, alivio: true }), v0 = grid(o, 2, 3).volume(), v1 = grid(o, 2, 3, o).volume() // sem x = sem alívio

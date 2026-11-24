@@ -182,21 +182,26 @@ export function grid(s: Sistema, linhas: number, colunas: number, x?: ExtrasGrid
   }
   if (x && (x.ima_borda || x.ima_cruz || x.ima_meio)) {
     const dI = x.ima_grid_d + 2 * x.folga_ima, hI = x.ima_grid_h + .2
-    let pul = 0; const n = Math.max(1, Math.round(x.ima_por_lado || 1))
+    let pul = 0, red = 0; const n0 = Math.max(1, Math.round(x.ima_por_lado || 1))
     const livre = cortes.length ? g(Manifold.union([furos, ...cortes])) : furos
+    const pts = (a: [number, number], b: [number, number]) => { // ímãs por lado: o vão entre furos vizinhos fica ≥ 0,8 mm
+      const n = Math.max(1, Math.min(n0, Math.floor(Math.hypot(b[0] - a[0], b[1] - a[1]) / (dI + .8)) - 1)); if (n < n0) red++
+      return divide(a, b, n)
+    }
     const fura = (forma: (d: number, h: number) => Solido, cabe = true) => { // teste do engordado de 0,8 mm contra os furos e os recortes de trava
       if (!cabe || g(g(forma(dI + 1.6, hI + .8)).intersect(livre)).volume() > 1e-3) { pul++; return }
       m = g(m.subtract(g(forma(dI, hI))))
     }
     if (x.ima_borda) {
       const zOmbro = fundo(s) + s.folga_fundo + medidas(s).hPe
-      for (const q of regiao(s, linhas, colunas).seg) for (const p of divide([q[0], q[1]], [q[2], q[3]], n)) fura((d, h) => imaH(p, [q[4], q[5]], d, h, zOmbro / 2), dI + 1.6 <= zOmbro)
+      for (const q of regiao(s, linhas, colunas).seg) for (const p of pts([q[0], q[1]], [q[2], q[3]])) fura((d, h) => imaH(p, [q[4], q[5]], d, h, zOmbro / 2), dI + 1.6 <= zOmbro)
     }
     if (x.ima_cruz || x.ima_meio) {
       const pi = pontosInternos(cs.map(([cx, cy]) => contorno(c, 0).map(([px, py]) => [cx + px, cy + py] as [number, number])), c.hex)
       if (x.ima_cruz) for (const p of pi.cruz) fura((d, h) => imaV(p, d, h))
-      if (x.ima_meio) for (const [a, b] of pi.meio) for (const p of divide(a, b, n)) fura((d, h) => imaV(p, d, h))
+      if (x.ima_meio) for (const [a, b] of pi.meio) for (const p of pts(a, b)) fura((d, h) => imaV(p, d, h))
     }
+    if (red) avisosGrid.push(`Ímãs por lado reduzido em ${red} lado(s): os furos se fundiriam.`)
     if (pul) avisosGrid.push(`Ímã do grid não cabe em ${pul} ponto(s): aumente o recuo ou diminua o ímã.`)
   }
   if (x?.alivio && fundo(s) <= 1.4) avisosGrid.push('Alívio precisa de fundo fechado (> 1,4 mm): sem efeito.')
