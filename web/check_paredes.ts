@@ -206,6 +206,23 @@ t('D12', 'rampa: piso 1×1 ≤ tempo sem rampa + 10 %', async () => {
   const a = await med({}), b = await med({ inclinacao: 30 })
   if (b > a * 1.1 + 50 && !process.env.CI) throw new Error(`${b.toFixed(0)} ms vs ${a.toFixed(0)} ms`); return `${b.toFixed(0)} ms vs ${a.toFixed(0)} ms`
 })
+// ---- D17: escada (degraus de piso plano) ----
+for (const [nome, e] of [['1x1 quadrado', {}], ['2x3 quadrado', { linhas: 2, colunas: 3 }]] as [string, Record<string, unknown>][])
+  for (const dir of DIRS)
+    t('D17', `escada 4 degraus ${dir}, ${nome}: fecha e sobe escada_altura`, async () => {
+      const o = op({ ...e, escada_degraus: 4, inclinacao_dir: dir }), m = await pisoComParedes(o), b = bbox(m), alto = o.altura + subida(o)
+      if (!fechada(m.pos, m.idx)) throw new Error('fechada: NÃO')
+      if (Math.abs(b.hi[2] - alto) > 1) throw new Error(`topo ${b.hi[2].toFixed(2)}, esperado ${alto.toFixed(2)} ± 1`)
+      let i = 0; for (let v = 1; v < m.pos.length / 3; v++) if (m.pos[v * 3 + 2] > m.pos[i * 3 + 2]) i = v // vértice de maior z
+      const coord = m.pos[i * 3 + (dir[1] === 'x' ? 0 : 1)]
+      if ((dir[0] === '-' ? -coord : coord) <= 0) throw new Error('escada sobe para o lado errado')
+      return `fechada, topo ${b.hi[2].toFixed(2)} (≈ ${alto.toFixed(2)}), sobe para ${dir}`
+    })
+t('D17', 'escada ignora as paredes (mesmo hash que sem paredes)', async () => {
+  const o = op({ escada_degraus: 4 }), com = { ...o, paredes: [naAresta(o, 0, 'a')] }
+  if (hash(await pisoComParedes(com)) !== hash(await pisoComParedes(o))) throw new Error('paredes entraram na escada')
+  return 'iguais'
+})
 // ---- D13: atalho de canto ----
 for (const [l, c] of [[1, 1], [2, 3]] as const) for (const q of [0, 1, 2, 3])
   t('D13', `canto na quina ${q}, ${l}x${c}: 2 paredes do lado inteiro, malha fecha`, async () => {

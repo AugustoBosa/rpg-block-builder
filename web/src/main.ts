@@ -1,4 +1,4 @@
-import { GUIAS, padrao, PISO, SECAO_GUIAS, SECAO_PISO, type Opcoes } from './bloco'
+import { GUIAS, inclinado, padrao, PISO, SECAO_GUIAS, SECAO_PISO, type Opcoes } from './bloco'
 import { cancelaExporta, exporta, previa as pedePrevia } from './cliente'
 import { TEX, texParede, type TexId } from './textura'
 import { paredesValidas, tracejado3D } from './aberturas'
@@ -42,7 +42,7 @@ function previa(res = resRapida()) {
       mostraTracejado(passo === 3 ? snap.paredes.flatMap(w => tracejado3D(snap, w)) : [])
       const ar = document.getElementById('avisoRampa')
       const semApoio = temTelhado(snap) && !snap.paredes.length
-      if (ar) ar.textContent = snap.inclinacao > 0 && o.paredes.length ? '⚠ Paredes desligadas na rampa (inclinação > 0).'
+      if (ar) ar.textContent = inclinado(snap) && o.paredes.length ? '⚠ Paredes desligadas na rampa/escada.'
         : snap.telhado_forma !== 'nenhum' && !temTelhado(snap) ? '⚠ Telhado só no bloco quadrado e sem rampa (ignorado).'
         : semApoio ? (snap.telhado_modo === 'fundido' ? '⚠ Telhado fundido precisa de paredes (ignorado).' : '⚠ Telhado sem paredes para apoiar.') : ''
       $('baixarClip').hidden = !(passo === 2 && snap.trava === 'clip')

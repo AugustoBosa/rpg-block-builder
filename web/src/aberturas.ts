@@ -1,6 +1,6 @@
 // Aberturas (porta e janela = só o vão): perfil 2D (u ao longo da parede, v para cima), parte dentro e parte fora do retângulo da parede.
 // Geometria pura (sem WASM); o corte do sólido está em parede.ts.
-import type { Opcoes } from './bloco'
+import { inclinado, type Opcoes } from './bloco'
 import { celula, regiao } from './sistema'
 import type { Abertura, Ancora, Linha, Parede } from './parede'
 
@@ -106,7 +106,7 @@ export function foraDaArea(p: Parede, a: Abertura): Linha[] {
 }
 
 /** Paredes cuja âncora existe no bloco atual (uma aresta some se linhas, colunas ou formato mudam): as outras são ignoradas. */
-export const paredesValidas = (o: Opcoes) => o.inclinacao > 0 ? [] : o.paredes.filter(p => !orfa(o, p))
+export const paredesValidas = (o: Opcoes) => inclinado(o) ? [] : o.paredes.filter(p => !orfa(o, p))
 /** Parede em aresta cujo lado não existe mais no bloco atual (ignorada na prévia, no STL e no esquema). */
 export const orfa = (o: Opcoes, p: Parede) => p.ancora.tipo === 'aresta' && !ladoBloco(o, p.ancora.lado)
 

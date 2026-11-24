@@ -20,7 +20,7 @@ import type { KnobsNichos } from './nichos'
 import type { KnobsGlifos } from './glifos'
 import { profTex, TEX, tetoDe, type TexId } from './textura'
 import type { Parede } from './parede'
-import { corpos, distBorda, distSeg, malha, regiao, SISTEMA, type Malha, type Regiao, type Sistema } from './sistema'
+import { assento, corpos, distBorda, distSeg, malha, regiao, SISTEMA, type Malha, type Regiao, type Sistema } from './sistema'
 export type { Malha }
 
 export const RELEVO = 2.6 // mm: o corpo termina RELEVO abaixo do topo
@@ -32,6 +32,7 @@ export const PISO = { // nome: [padrão, mín, máx, rótulo, passo?] (sem passo
   semente: [1, 0, 9999, 'Semente', 1], desgaste: [.5, 0, 1, 'Desgaste'], tamanho_pedra: [10, 5, 25, 'Tamanho da pedra (mm)'],
   profundidade: [.5, .4, .7, 'Profundidade'], posicao_x: [0, -8, 8, 'Posição X no mapa (células)', .5], posicao_y: [0, -8, 8, 'Posição Y no mapa (células)', .5],
   inclinacao: [0, 0, 40, 'Inclinação da rampa (graus)', 1],
+  escada_degraus: [0, 0, 12, 'Escada: degraus', 1], escada_altura: [15.5, 4, 40, 'Escada: subida total (mm)'],
   quina_largura: [1.8, 0, 5, 'Quina: largura (mm)'], quina_gasto: [1, 0, 3, 'Quina: gasto'], lateral_largura: [2, 0, 5, 'Lateral: largura (mm)'],
   lateral_gasto: [1, 0, 3, 'Lateral: gasto'], ruido_borda: [.3, .05, 2, 'Ruído da borda'], teto: [2.5, .5, 2.5, 'Teto do relevo (mm)'],
   junta_piso: [2.4, .5, 5, 'Ganho da junta (× profundidade)'], resolucao: [.125, .1, 1, 'Malha (mm)'],
@@ -44,7 +45,7 @@ export const GUIAS = { // grid e degrau (aba própria)
 } as const
 // seções das abas Blocos e Grids (chave → título; as tuplas acima não mudam)
 export const SECAO_PISO = {
-  linhas: 'Peça', colunas: 'Peça', altura: 'Peça', posicao_x: 'Peça', posicao_y: 'Peça', inclinacao: 'Peça',
+  linhas: 'Peça', colunas: 'Peça', altura: 'Peça', posicao_x: 'Peça', posicao_y: 'Peça', inclinacao: 'Peça', escada_degraus: 'Peça', escada_altura: 'Peça',
   semente: 'Textura', desgaste: 'Textura', tamanho_pedra: 'Textura', profundidade: 'Textura', teto: 'Textura', junta_piso: 'Textura',
   quina_largura: 'Borda', quina_gasto: 'Borda', lateral_largura: 'Borda', lateral_gasto: 'Borda', ruido_borda: 'Borda',
 } as const
@@ -126,17 +127,27 @@ export function cortesParte(o: Opcoes, i: number, n: number) {
   return { de, nl, c }
 }
 
-/** Rampa: eixo (0 = x, 1 = y), sinal, tangente e o começo da subida (mínimo da coordenada com sinal sobre o contorno). */
+/** Rampa e escada: eixo (0 = x, 1 = y), sinal, `sobe(x, y)` = quanto o topo sobe no ponto (mm) e `espelho` = perto de um espelho da escada.
+ *  Escada (≥ 2 degraus) tem prioridade: n degraus de piso plano, o 1º no nível 0 e o último em `escada_altura`. */
 function rampa(o: Opcoes, r: Regiao) {
-  const tg = Math.tan(o.inclinacao * Math.PI / 180), ei = o.inclinacao_dir[1] === 'x' ? 0 : 1, sn = o.inclinacao_dir[0] === '-' ? -1 : 1
-  const s = r.seg.flatMap(g => [sn * g[ei], sn * g[ei + 2]]), s0 = Math.min(...s)
-  return { tg, sobe: (x: number, y: number) => tg * (sn * (ei ? y : x) - s0), ext: Math.max(...s) - s0 }
+  const esc = o.escada_degraus >= 2, n = o.escada_degraus, tg = Math.tan(o.inclinacao * Math.PI / 180), ei = o.inclinacao_dir[1] === 'x' ? 0 : 1, sn = o.inclinacao_dir[0] === '-' ? -1 : 1
+  const s = r.seg.flatMap(g => [sn * g[ei], sn * g[ei + 2]]), s0 = Math.min(...s), ext = Math.max(...s) - s0
+  const t = (x: number, y: number) => sn * (ei ? y : x) - s0, p = ext / n // p: largura de cada degrau
+  return {
+    tg, ext,
+    sobe: (x: number, y: number) => esc ? o.escada_altura * Math.min(n - 1, Math.max(0, Math.floor(t(x, y) / p))) / (n - 1) : tg * t(x, y),
+    espelho: (x: number, y: number) => esc && Math.abs(t(x, y) - Math.round(t(x, y) / p) * p) < .5, // a < 0,5 mm de um espelho: sem suavizar nem reduzir
+  }
 }
-/** Quanto o topo sobe de uma ponta à outra da rampa (mm); 0 sem rampa. */
-export const subida = (o: Opcoes) => { const k = rampa(o, regiao(o, o.linhas, o.colunas)); return k.tg * k.ext }
+/** Rampa ou escada: a laje sobe e as paredes saem. */
+export const inclinado = (o: Opcoes) => o.escada_degraus >= 2 || o.inclinacao > 0
+/** Subida de um degrau padrão (mm): altura do degrau menos o assento. */
+export const subidaNivel = (o: Opcoes) => o.altura_degrau - assento(o)
+/** Quanto o topo sobe de uma ponta à outra (mm); 0 sem rampa. */
+export const subida = (o: Opcoes) => { if (o.escada_degraus >= 2) return o.escada_altura; const k = rampa(o, regiao(o, o.linhas, o.colunas)); return k.tg * k.ext }
 
 /** Malha crua (sem suavizar). zt = topo do corpo. `cortes` (opcional): relevo do topo já calculado por cortesParte. */
-export function piso(o: Opcoes, cortes?: Float64Array): Malha & { zt: number; r: Regiao } {
+export function piso(o: Opcoes, cortes?: Float64Array): Malha & { zt: number; r: Regiao; espelho: (x: number, y: number) => boolean } {
   const r = regiao(o, o.linhas, o.colunas), zt = o.altura - RELEVO
   const cp = malha(corpos(o, r.cs, zt))
   const P: number[] = Array.from(cp.pos), T: number[] = Array.from(cp.idx)
@@ -164,7 +175,7 @@ export function piso(o: Opcoes, cortes?: Float64Array): Malha & { zt: number; r:
     if (ct < 0) ct = corte[L] = cortes ? cortes[L] : f.corte(L, rn) // 1ª vez em precisão dupla, as seguintes em Float32 (como sempre foi)
     // a coluna da lateral encolhe até o relevo daquele ponto: a textura desce pela lateral, sem parede fina em volta (o fundo z0 fica)
     let zf = z0 + (z - z0) * (1 - ct / (z1 - z0))
-    if (rp.tg) zf += rp.sobe(x, y) * k / (nz - 1) // rampa: o fundo (k = 0) fica, o topo sobe tudo; a laje vira cunha
+    zf += rp.sobe(x, y) * k / (nz - 1) // rampa ou escada: o fundo (k = 0) fica, o topo sobe tudo; a laje vira cunha ou escada
     P.push(x + dx * lado, y + dy * lado, zf)
     return (id[n] = base + (P.length / 3 - 1 - base))
   }
@@ -182,13 +193,14 @@ export function piso(o: Opcoes, cortes?: Float64Array): Malha & { zt: number; r:
     P.push(cx, cy, z0)
     for (let m = 0; m < lp.length; m++) T.push(ctr, v(lp[(m + 1) % lp.length], 0), v(lp[m], 0))
   })
-  return { pos: new Float32Array(P), idx: new Uint32Array(T), zt, r }
+  return { pos: new Float32Array(P), idx: new Uint32Array(T), zt, r, espelho: rp.espelho }
 }
 
 /** Suaviza (4 passadas, fator 0,5) o relevo longe da borda e reduz para ~240 mil triângulos (alvo ∝ n^0,75), com a borda travada. */
-export async function final(m: Malha & { zt: number; r: Regiao }): Promise<Malha> {
-  const { pos, idx, zt, r: reg } = m, nv = pos.length / 3, nt = idx.length / 3
+export async function final(m: Malha & { zt: number; r: Regiao; espelho: (x: number, y: number) => boolean }): Promise<Malha> {
+  const { pos, idx, zt, r: reg, espelho } = m, nv = pos.length / 3, nt = idx.length / 3
   const dentro = (i: number, b: number) => distBorda(reg, pos[i * 3], pos[i * 3 + 1]) > b
+  const perto = (i: number) => espelho(pos[i * 3], pos[i * 3 + 1])
   // vizinhos (CSR): cada aresta aparece 2× numa malha fechada, então a média não muda
   const cont = new Uint32Array(nv + 1)
   for (let t = 0; t < idx.length; t++) cont[idx[t] + 1] += 2
@@ -199,7 +211,7 @@ export async function final(m: Malha & { zt: number; r: Regiao }): Promise<Malha
     viz[cur[a]++] = b; viz[cur[b]++] = a
   }
   const suave = [] as number[]
-  for (let i = 0; i < nv; i++) if (dentro(i, .2) && pos[i * 3 + 2] > zt) suave.push(i)
+  for (let i = 0; i < nv; i++) if (dentro(i, .2) && pos[i * 3 + 2] > zt && !perto(i)) suave.push(i)
   for (let it = 0; it < SUAVIZA; it++) {
     const ant = pos.slice()
     for (const i of suave) for (let c = 0; c < 3; c++) {
@@ -209,7 +221,7 @@ export async function final(m: Malha & { zt: number; r: Regiao }): Promise<Malha
     }
   }
   const trava = new Uint8Array(nv)
-  for (let i = 0; i < nv; i++) trava[i] = dentro(i, BORDA_FIXA) && pos[i * 3 + 2] > zt + 1e-4 ? 0 : 1 // corpo e encaixe travados
+  for (let i = 0; i < nv; i++) trava[i] = dentro(i, BORDA_FIXA) && pos[i * 3 + 2] > zt + 1e-4 && !perto(i) ? 0 : 1 // corpo, encaixe e espelho da escada travados
   await MeshoptSimplifier.ready
   const alvo = TRI_MIN * (reg.area / 35 ** 2) ** .75
   // a redução às vezes deixa triângulo de área zero ou aresta repetida: tenta um alvo maior; a última opção é a malha sem redução

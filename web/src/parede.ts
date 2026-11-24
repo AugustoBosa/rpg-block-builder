@@ -1,7 +1,7 @@
 // Paredes sem cobertura sobre o piso de Pedra (ver docs/WORKFLOW_PAREDES.md). F0: tipos travados + esqueleto; cada função
 // lança "F<n>" até a fase que a implementa. Sem paredes, nada muda no piso.
 import { CrossSection, desentorta, Manifold, Mesh, paraMalha } from './wasm'
-import { fechada, final, piso, RELEVO, type Malha, type Opcoes } from './bloco'
+import { fechada, final, inclinado, piso, RELEVO, type Malha, type Opcoes } from './bloco'
 import { perfilAbertura, pilares, quadro } from './aberturas'
 import { profTex, texParede } from './textura'
 import { geoTelhado, solidoTelhado, temTelhado } from './telhado'
@@ -107,7 +107,7 @@ const MIN_FRAG = 5 // mm³: componentes menores que isto (e que não são a maio
 export async function pisoComParedes(o: OpcoesP, previa = false, cortes?: Float64Array): Promise<Malha> {
   const c = piso(o, cortes), base: Malha = previa ? { pos: c.pos, idx: c.idx } : await final(c)
   const fundido = temTelhado(o) && o.telhado_modo === 'fundido' && o.paredes.length > 0 // fundido sem paredes ficaria solto no ar
-  if (!o.paredes.length || o.inclinacao > 0) return base // rampa: paredes ignoradas
+  if (!o.paredes.length || inclinado(o)) return base // rampa ou escada: paredes ignoradas
   const z0 = o.altura - RELEVO - AFUNDA - .05 // a base entra na laje (zt − 0,6) e passa 0,05 mm dela: fundo coplanar gerava triângulos de área zero
   // paredes exatas (sem engordar): faces coplanares entre paredes e com o piso se fundem na união (sem degrau de 0,02 mm); `desentorta` limpa triângulos de área ~0
   const ps = o.pilar ? [...o.paredes, ...pilares(o, o.paredes)] : o.paredes

@@ -1,14 +1,14 @@
 // Telhado sobre as paredes (docs/superpowers/specs/2026-11-20-telhado-design.md): sólido maciço por CSG, base em z = 0;
 // cada água é um plano z ≤ c + a·x + b·y aparando uma caixa. Removível (STL próprio, com saia) ou fundido ao bloco (parede.ts).
-import type { Malha, Opcoes } from './bloco'
+import { inclinado, type Malha, type Opcoes } from './bloco'
 import { paredesValidas, pilares, quadro } from './aberturas'
 import { regiao } from './sistema'
 import { profTex } from './textura'
 import { desentorta, Manifold, paraMalha } from './wasm'
 
 type Solido = InstanceType<typeof Manifold>
-/** Telhado vale só no bloco quadrado e sem rampa. */
-export const temTelhado = (o: Opcoes) => o.telhado_forma !== 'nenhum' && o.formato === 'quadrado' && !(o.inclinacao > 0)
+/** Telhado vale só no bloco quadrado e sem rampa nem escada. */
+export const temTelhado = (o: Opcoes) => o.telhado_forma !== 'nenhum' && o.formato === 'quadrado' && !inclinado(o)
 
 /** Retângulo do bloco (sem beiral), retângulo do telhado (com beiral), base zb e os planos das águas (altura local do topo = min dos planos). */
 export function geoTelhado(o: Opcoes) {
