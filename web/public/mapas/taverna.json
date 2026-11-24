@@ -1,0 +1,1037 @@
+{
+  "versao": 1,
+  "nome": "Taverna",
+  "sistema": {
+    "largura": 35,
+    "comprimento": 35,
+    "altura_pe": 6,
+    "recuo": 4,
+    "chanfro": 0.8,
+    "conicidade": 0,
+    "ombro": 2.5,
+    "nervura": 3,
+    "folga": 0.15,
+    "folga_fundo": 0.3,
+    "ima_d": 0,
+    "ima_h": 2,
+    "folga_ima": 0.15,
+    "fundo": 0,
+    "chanfro_furo": 0,
+    "chanfro_furo_ang": 45,
+    "formato": "quadrado"
+  },
+  "niveis": [
+    {
+      "id": "terreo",
+      "nome": "Térreo",
+      "base": 0,
+      "altura_parede": 30,
+      "celulas": {
+        "0,0": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "K"
+        },
+        "1,0": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "K"
+        },
+        "2,0": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "K"
+        },
+        "3,0": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "S"
+        },
+        "4,0": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "S"
+        },
+        "5,0": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "S"
+        },
+        "6,0": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "S"
+        },
+        "7,0": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "S"
+        },
+        "8,0": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "S"
+        },
+        "9,0": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "S"
+        },
+        "0,1": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "K"
+        },
+        "1,1": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "K"
+        },
+        "2,1": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "K"
+        },
+        "3,1": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "S"
+        },
+        "4,1": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "S"
+        },
+        "5,1": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "S"
+        },
+        "6,1": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "S"
+        },
+        "7,1": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "S"
+        },
+        "8,1": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "S"
+        },
+        "9,1": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "S"
+        },
+        "0,2": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "K"
+        },
+        "1,2": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "K"
+        },
+        "2,2": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "K"
+        },
+        "3,2": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "S"
+        },
+        "4,2": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "S"
+        },
+        "5,2": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "S"
+        },
+        "6,2": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "S"
+        },
+        "7,2": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "S"
+        },
+        "8,2": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "S"
+        },
+        "9,2": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "S"
+        },
+        "0,3": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "K"
+        },
+        "1,3": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "K"
+        },
+        "2,3": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "K"
+        },
+        "3,3": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "S"
+        },
+        "4,3": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "S"
+        },
+        "5,3": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "S"
+        },
+        "6,3": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "S"
+        },
+        "7,3": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "S"
+        },
+        "8,3": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "S"
+        },
+        "9,3": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "S"
+        },
+        "0,4": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "K"
+        },
+        "1,4": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "K"
+        },
+        "2,4": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "K"
+        },
+        "3,4": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "S"
+        },
+        "4,4": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "S"
+        },
+        "5,4": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "S"
+        },
+        "6,4": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "S"
+        },
+        "7,4": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "S"
+        },
+        "8,4": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "S"
+        },
+        "9,4": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "S"
+        },
+        "0,5": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "K"
+        },
+        "1,5": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "K"
+        },
+        "2,5": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "K"
+        },
+        "3,5": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "C"
+        },
+        "4,5": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "C"
+        },
+        "5,5": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "C"
+        },
+        "6,5": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "C"
+        },
+        "7,5": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "C"
+        },
+        "8,5": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "C"
+        },
+        "9,5": {
+          "tex": "tabuas",
+          "tipo": "escada",
+          "sala": "C",
+          "dir": "-y"
+        },
+        "0,6": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "K"
+        },
+        "1,6": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "K"
+        },
+        "2,6": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "K"
+        },
+        "3,6": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "C"
+        },
+        "4,6": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "C"
+        },
+        "5,6": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "C"
+        },
+        "6,6": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "C"
+        },
+        "7,6": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "C"
+        },
+        "8,6": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "C"
+        },
+        "9,6": {
+          "tex": "tabuas",
+          "tipo": "escada",
+          "sala": "C",
+          "dir": "-y"
+        },
+        "0,7": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "K"
+        },
+        "1,7": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "K"
+        },
+        "2,7": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "K"
+        },
+        "3,7": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "C"
+        },
+        "4,7": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "C"
+        },
+        "5,7": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "C"
+        },
+        "6,7": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "C"
+        },
+        "7,7": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "C"
+        },
+        "8,7": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "C"
+        },
+        "9,7": {
+          "tex": "tabuas",
+          "tipo": "escada",
+          "sala": "C",
+          "dir": "-y"
+        }
+      },
+      "arestas": {
+        "-1,0,0": {
+          "tipo": "parede"
+        },
+        "0,-1,1": {
+          "tipo": "parede"
+        },
+        "1,-1,1": {
+          "tipo": "parede"
+        },
+        "2,0,0": {
+          "tipo": "parede"
+        },
+        "2,-1,1": {
+          "tipo": "parede"
+        },
+        "3,-1,1": {
+          "tipo": "parede"
+        },
+        "4,-1,1": {
+          "tipo": "janela"
+        },
+        "5,-1,1": {
+          "tipo": "parede"
+        },
+        "6,-1,1": {
+          "tipo": "parede"
+        },
+        "7,-1,1": {
+          "tipo": "parede"
+        },
+        "8,-1,1": {
+          "tipo": "janela"
+        },
+        "9,0,0": {
+          "tipo": "parede"
+        },
+        "9,-1,1": {
+          "tipo": "parede"
+        },
+        "-1,1,0": {
+          "tipo": "parede"
+        },
+        "2,1,0": {
+          "tipo": "parede"
+        },
+        "9,1,0": {
+          "tipo": "parede"
+        },
+        "-1,2,0": {
+          "tipo": "parede"
+        },
+        "2,2,0": {
+          "tipo": "porta"
+        },
+        "9,2,0": {
+          "tipo": "janela"
+        },
+        "-1,3,0": {
+          "tipo": "janela"
+        },
+        "2,3,0": {
+          "tipo": "parede"
+        },
+        "9,3,0": {
+          "tipo": "parede"
+        },
+        "-1,4,0": {
+          "tipo": "parede"
+        },
+        "2,4,0": {
+          "tipo": "parede"
+        },
+        "3,4,1": {
+          "tipo": "parede"
+        },
+        "4,4,1": {
+          "tipo": "parede"
+        },
+        "5,4,1": {
+          "tipo": "porta"
+        },
+        "6,4,1": {
+          "tipo": "parede"
+        },
+        "7,4,1": {
+          "tipo": "parede"
+        },
+        "8,4,1": {
+          "tipo": "parede"
+        },
+        "9,4,0": {
+          "tipo": "parede"
+        },
+        "9,4,1": {
+          "tipo": "parede"
+        },
+        "-1,5,0": {
+          "tipo": "parede"
+        },
+        "2,5,0": {
+          "tipo": "parede"
+        },
+        "9,5,0": {
+          "tipo": "parede"
+        },
+        "-1,6,0": {
+          "tipo": "parede"
+        },
+        "2,6,0": {
+          "tipo": "parede"
+        },
+        "9,6,0": {
+          "tipo": "parede"
+        },
+        "0,7,1": {
+          "tipo": "parede"
+        },
+        "-1,7,0": {
+          "tipo": "parede"
+        },
+        "1,7,1": {
+          "tipo": "parede"
+        },
+        "2,7,0": {
+          "tipo": "parede"
+        },
+        "2,7,1": {
+          "tipo": "parede"
+        },
+        "3,7,1": {
+          "tipo": "parede"
+        },
+        "4,7,1": {
+          "tipo": "parede"
+        },
+        "5,7,1": {
+          "tipo": "porta"
+        },
+        "6,7,1": {
+          "tipo": "parede"
+        },
+        "7,7,1": {
+          "tipo": "parede"
+        },
+        "8,7,1": {
+          "tipo": "parede"
+        },
+        "9,7,0": {
+          "tipo": "parede"
+        },
+        "9,7,1": {
+          "tipo": "parede"
+        }
+      },
+      "colunas": {},
+      "salas": [
+        {
+          "id": "K",
+          "nome": "Cozinha",
+          "tema": "taverna",
+          "max": [
+            3,
+            3
+          ],
+          "cortes": []
+        },
+        {
+          "id": "S",
+          "nome": "Salão",
+          "tema": "taverna",
+          "max": [
+            3,
+            3
+          ],
+          "cortes": []
+        },
+        {
+          "id": "C",
+          "nome": "Corredor",
+          "tema": "taverna",
+          "max": [
+            3,
+            3
+          ],
+          "cortes": []
+        }
+      ]
+    },
+    {
+      "id": "primeiro",
+      "nome": "1º andar",
+      "base": 1,
+      "altura_parede": 30,
+      "celulas": {
+        "0,2": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "1"
+        },
+        "1,2": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "1"
+        },
+        "2,2": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "1"
+        },
+        "3,2": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "2"
+        },
+        "4,2": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "2"
+        },
+        "5,2": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "2"
+        },
+        "6,2": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "3"
+        },
+        "7,2": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "3"
+        },
+        "8,2": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "3"
+        },
+        "9,2": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "C"
+        },
+        "0,3": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "1"
+        },
+        "1,3": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "1"
+        },
+        "2,3": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "1"
+        },
+        "3,3": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "2"
+        },
+        "4,3": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "2"
+        },
+        "5,3": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "2"
+        },
+        "6,3": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "3"
+        },
+        "7,3": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "3"
+        },
+        "8,3": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "3"
+        },
+        "9,3": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "C"
+        },
+        "0,4": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "1"
+        },
+        "1,4": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "1"
+        },
+        "2,4": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "1"
+        },
+        "3,4": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "2"
+        },
+        "4,4": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "2"
+        },
+        "5,4": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "2"
+        },
+        "6,4": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "3"
+        },
+        "7,4": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "3"
+        },
+        "8,4": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "3"
+        },
+        "9,4": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "C"
+        },
+        "0,5": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "C"
+        },
+        "1,5": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "C"
+        },
+        "2,5": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "C"
+        },
+        "3,5": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "C"
+        },
+        "4,5": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "C"
+        },
+        "5,5": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "C"
+        },
+        "6,5": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "C"
+        },
+        "7,5": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "C"
+        },
+        "8,5": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "C"
+        },
+        "9,5": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "C"
+        },
+        "9,6": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "C"
+        },
+        "9,7": {
+          "tex": "tabuas",
+          "tipo": "piso",
+          "sala": "C"
+        }
+      },
+      "arestas": {
+        "-1,2,0": {
+          "tipo": "parede"
+        },
+        "0,1,1": {
+          "tipo": "parede"
+        },
+        "1,1,1": {
+          "tipo": "janela"
+        },
+        "2,2,0": {
+          "tipo": "parede"
+        },
+        "2,1,1": {
+          "tipo": "parede"
+        },
+        "3,1,1": {
+          "tipo": "parede"
+        },
+        "4,1,1": {
+          "tipo": "parede"
+        },
+        "5,2,0": {
+          "tipo": "parede"
+        },
+        "5,1,1": {
+          "tipo": "parede"
+        },
+        "6,1,1": {
+          "tipo": "parede"
+        },
+        "7,1,1": {
+          "tipo": "janela"
+        },
+        "8,2,0": {
+          "tipo": "parede"
+        },
+        "8,1,1": {
+          "tipo": "parede"
+        },
+        "9,2,0": {
+          "tipo": "parede"
+        },
+        "9,1,1": {
+          "tipo": "parede"
+        },
+        "-1,3,0": {
+          "tipo": "parede"
+        },
+        "2,3,0": {
+          "tipo": "parede"
+        },
+        "5,3,0": {
+          "tipo": "parede"
+        },
+        "8,3,0": {
+          "tipo": "parede"
+        },
+        "9,3,0": {
+          "tipo": "parede"
+        },
+        "0,4,1": {
+          "tipo": "parede"
+        },
+        "-1,4,0": {
+          "tipo": "parede"
+        },
+        "1,4,1": {
+          "tipo": "porta"
+        },
+        "2,4,0": {
+          "tipo": "parede"
+        },
+        "2,4,1": {
+          "tipo": "parede"
+        },
+        "3,4,1": {
+          "tipo": "parede"
+        },
+        "4,4,1": {
+          "tipo": "porta"
+        },
+        "5,4,0": {
+          "tipo": "parede"
+        },
+        "5,4,1": {
+          "tipo": "parede"
+        },
+        "6,4,1": {
+          "tipo": "parede"
+        },
+        "7,4,1": {
+          "tipo": "porta"
+        },
+        "8,4,0": {
+          "tipo": "parede"
+        },
+        "8,4,1": {
+          "tipo": "parede"
+        },
+        "9,4,0": {
+          "tipo": "parede"
+        },
+        "0,5,1": {
+          "tipo": "parede"
+        },
+        "-1,5,0": {
+          "tipo": "parede"
+        },
+        "1,5,1": {
+          "tipo": "parede"
+        },
+        "2,5,1": {
+          "tipo": "parede"
+        },
+        "3,5,1": {
+          "tipo": "parede"
+        },
+        "4,5,1": {
+          "tipo": "parede"
+        },
+        "5,5,1": {
+          "tipo": "parede"
+        },
+        "6,5,1": {
+          "tipo": "parede"
+        },
+        "7,5,1": {
+          "tipo": "parede"
+        },
+        "8,5,1": {
+          "tipo": "parede"
+        },
+        "9,5,0": {
+          "tipo": "parede"
+        },
+        "9,6,0": {
+          "tipo": "parede"
+        },
+        "8,6,0": {
+          "tipo": "parede"
+        },
+        "9,7,0": {
+          "tipo": "parede"
+        },
+        "9,7,1": {
+          "tipo": "parede"
+        },
+        "8,7,0": {
+          "tipo": "parede"
+        }
+      },
+      "colunas": {},
+      "salas": [
+        {
+          "id": "1",
+          "nome": "Quarto 1",
+          "tema": "taverna",
+          "max": [
+            3,
+            3
+          ],
+          "cortes": []
+        },
+        {
+          "id": "2",
+          "nome": "Quarto 2",
+          "tema": "taverna",
+          "max": [
+            3,
+            3
+          ],
+          "cortes": []
+        },
+        {
+          "id": "3",
+          "nome": "Quarto 3",
+          "tema": "taverna",
+          "max": [
+            3,
+            3
+          ],
+          "cortes": []
+        },
+        {
+          "id": "C",
+          "nome": "Corredor",
+          "tema": "taverna",
+          "max": [
+            3,
+            3
+          ],
+          "cortes": []
+        }
+      ]
+    }
+  ]
+}

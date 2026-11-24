@@ -1,0 +1,17 @@
+[
+  {
+    "arquivo": "masmorra.json",
+    "nome": "Masmorra",
+    "descricao": "Três salas de pedra ligadas por corredores, 2 colunas na sala principal (quadrado, 35 mm)"
+  },
+  {
+    "arquivo": "taverna.json",
+    "nome": "Taverna",
+    "descricao": "Térreo com cozinha e salão, escada e 1º andar com três quartos (quadrado, 35 mm)"
+  },
+  {
+    "arquivo": "caverna.json",
+    "nome": "Caverna",
+    "descricao": "Caverna irregular com lago, rampa e plataforma (hexágono, 35 mm)"
+  }
+]

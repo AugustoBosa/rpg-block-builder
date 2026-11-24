@@ -73,13 +73,17 @@ const vis = { tx: 0, ty: 0, z: 1, pronto: false }
 const lw = (px: number) => px / vis.z
 const local = (e: PointerEvent | WheelEvent): { x: number; y: number } => { const b = cv.getBoundingClientRect(); return { x: e.clientX - b.left, y: e.clientY - b.top } }
 const mundo = (p: { x: number; y: number }): Pt => [(p.x - vis.tx) / vis.z, (p.y - vis.ty) / vis.z]
+/** Enquadra as células de todos os níveis (+1 célula de margem); mapa vazio: 32 × 32 células. */
 function enquadra() {
   const W = cv.clientWidth, H = cv.clientHeight, [px, py] = passo(ed.m.sistema)
-  vis.z = Math.min(W, H) / (32 * Math.max(px, py))
-  vis.tx = W / 2 - 15.5 * px * vis.z
-  vis.ty = H / 2 - 15.5 * py * vis.z
+  const ps = ed.m.niveis.flatMap(n => Object.keys(n.celulas)).map(k => k.split(',').map(Number)).map(([c, r]) => centroMundo(ed.m.sistema, c, r))
+  const [x0, x1, y0, y1] = ps.length ? [Math.min(...ps.map(p => p[0])) - px, Math.max(...ps.map(p => p[0])) + px, Math.min(...ps.map(p => p[1])) - py, Math.max(...ps.map(p => p[1])) + py] : [-.5 * px, 31.5 * px, -.5 * py, 31.5 * py]
+  vis.z = Math.min(W / (x1 - x0), H / (y1 - y0))
+  vis.tx = W / 2 - (x0 + x1) / 2 * vis.z
+  vis.ty = H / 2 - (y0 + y1) / 2 * vis.z
   vis.pronto = true
 }
+export const reenquadra = () => { vis.pronto = false }
 function zoomEm(sx: number, sy: number, f: number) {
   const wx = (sx - vis.tx) / vis.z, wy = (sy - vis.ty) / vis.z
   vis.z = Math.min(20, Math.max(.02, vis.z * f))

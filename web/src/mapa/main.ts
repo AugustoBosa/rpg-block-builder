@@ -3,7 +3,7 @@ import { TEX, type TexId } from '../textura'
 import { TEMAS } from '../temas'
 import type { Sistema } from '../sistema'
 import { abrir, cria, salvar } from './modelo'
-import { ajusta, aoMudar, atualiza, carrega, desfaz, edita, ed, gira, iniciaEditor, refaz, type Ferr } from './editor2d'
+import { ajusta, aoMudar, atualiza, carrega, desfaz, edita, ed, gira, iniciaEditor, reenquadra, refaz, type Ferr } from './editor2d'
 
 // Padrões de SISTEMA (sistema.ts) copiados aqui: importar sistema.ts puxaria o WASM, que não cabe nesta página.
 const PADRAO = {
@@ -67,6 +67,22 @@ arquivoEl.onchange = async () => {
   arquivoEl.value = ''
   if (!f) return
   try { carrega(abrir(await f.text())) } catch (e) { alert((e as Error).message) }
+}
+// Modelos prontos: lista de public/mapas/indice.json (caminho relativo: o site roda em subpasta). Carregar entra no desfazer.
+const modeloEl = $<HTMLSelectElement>('modelo'), vazioModelo = modeloEl.innerHTML
+fetch('mapas/indice.json').then(r => { if (!r.ok) throw new Error(String(r.status)); return r.json() }).then((lista: { arquivo: string; nome: string; descricao: string }[]) => {
+  modeloEl.innerHTML = vazioModelo + lista.map(x => `<option value="${esc(x.arquivo)}" title="${esc(x.descricao)}">${esc(x.nome)}</option>`).join('')
+}).catch(() => { modeloEl.disabled = true; modeloEl.title = 'Modelos indisponíveis' })
+modeloEl.onchange = async () => {
+  const arq = modeloEl.value
+  modeloEl.value = ''
+  if (!arq) return
+  try {
+    const txt = await fetch(`mapas/${arq}`).then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.text() })
+    const m = abrir(txt)
+    reenquadra()
+    edita(() => { ed.m = m; ed.niv = 0; ed.sala = '' })
+  } catch (e) { alert(`Não foi possível abrir o modelo: ${(e as Error).message}`) }
 }
 $('salvarBtn').onclick = () => {
   const url = URL.createObjectURL(new Blob([salvar(ed.m)], { type: 'application/json' })), a = document.createElement('a')
