@@ -1,4 +1,4 @@
-# RETOMAR — estado do projeto (2026-11-22, branch main; tudo publicado, árvore limpa; Rodada Fechamento em `4be5ee0`, backlog em `6f2c847`; CI Pages e Checks verdes)
+# RETOMAR — estado do projeto (2026-11-23, branch main; rodada de 2026-11-23 commitada localmente em `2fab892`..`1b635b4`, ainda sem push; antes disso `592892d` estava publicado, CI verde)
 
 Projeto: **RPG Block Builder**. "Dungeon Blocks" nos documentos é sempre o produto original de referência, nunca o nosso.
 
@@ -99,7 +99,7 @@ Leia este arquivo primeiro. Comandos: `USO.md`. Visão: `README.md`. Inventário
 - **Tela cheia real:** continua sem teste (precisa de um Chrome de verdade).
 
 ## Backlog para a próxima sessão (anotado em 2026-11-22; o usuário volta com sessão nova e modelo maior)
-Fechamento publicado em `4be5ee0`; CI verde (Pages 1 min 13 s; Checks 17 min 5 s). Ordem sugerida, nada começado:
+**Atualização de 2026-11-23: os itens 2, 4, 5, 7 e a parte das cotas a 375 px do item 6 foram feitos** (ver "Rodada 2026-11-23"). Sobram os que dependem do usuário: 1 (imprimir), 3 (props/licença), 6 (tela cheia real), 8 (salvar, adiado) e 9 (jurídico). Tabela original, de 2026-11-22:
 | # | Item | O que trava | Tempo |
 |---|------|-------------|-------|
 | 1 | **Imprimir grid 1×1 + bloco 1×1** (físico, usuário) | Tudo: o encaixe nunca foi testado na mão | 1 dia |
@@ -112,6 +112,20 @@ Fechamento publicado em `4be5ee0`; CI verde (Pages 1 min 13 s; Checks 17 min 5 s
 | 8 | **Salvar e carregar projeto** (o usuário adiou; não propor antes) | Cada abertura começa do zero | 2–3 dias |
 | 9 | **Final:** nome no INPI, USPTO e lojas de STL; termos de uso; advogado | Publicar e vender | 2–3 h + 1–3 semanas |
 Menores, sem urgência: ângulo do chanfro do grid fixo em 45° e ímãs sem quantidade livre; costura do pilar com a parede (só se vê ao imprimir); `desentorta` desloca vértices 0,01 mm; `validar.py` reprova o encaixe próprio (atualizar ou aposentar); decidir a skill `technical-drawing`; bloco 2×3 com ~1 milhão de triângulos.
+
+## Rodada 2026-11-23: pendências de código e desempenho fechadas (commits locais `2fab892`..`1b635b4`; push só quando o usuário pedir)
+Tudo o que não dependia do usuário foi feito. Bateria no código final: `tsc` ok, `check_temas` ok, `check_paredes` 149/149, `check_emenda` tudo PASS, `check_texturas` 0 falhas, build ok, D2 (5 hashes) idêntico em toda etapa. Navegador (1024 e 375 px): sem estouro, console limpo, temas Cripta e Templo aplicam Lajota/Nichos e Areia/Glifos, telhado de duas águas aparece.
+- **Texturas (`060bbf4`):** Nichos e Glifos, desenho próprio (relevo médio 0,555 / 0,410 mm; 1×1 em ~0,57 s). **As 15 texturas estão prontas.** Cripta e templo completos.
+- **Velocidade (`a11eb35`):** `perlin` sem alocação, `voronoi` com `sqrt`, Lava reaproveita o grão da Pedra (`P.grao`). Saída idêntica. Piso 1×1: Lava 2,36 → 1,41 s; Pedra 2,0 → 1,25 s.
+- **Grid (`2fab892`):** `chanfro_furo_ang` (30–75°, padrão 45° = hash igual), `ima_por_lado` (1–4; reduz com aviso quando os furos se fundiriam), cota do chanfro no 3D e no esquema.
+- **Cotas (`2fab892`):** duas fases (forçadas antes), forçadas fogem do slider, menores não cruzam linhas de cota.
+- **Emenda do hexágono N×M (`78b4af6`):** 2×3 e 3×2 contra os vizinhos que ladrilham, por lado: 0,0000 mm.
+- **Telhado (`1028c12`, `ffd6963`):** textura nos oitões, beirada e mureta; **oco** (`telhado_casca`, padrão 2 mm, 0 = maciço; teto sólido sobre as paredes; 1×1 duas águas 12 478 → 8 594 mm³); fundido afunda o relevo do topo da parede + 0,05 mm (sem junta aberta sob o beiral).
+- **Exportação (`67e5364`, `1b635b4`):** `simplify(.01)` do manifold por sólido (telhado solto 2×3 a 60° Lisa: 365 mil → 36 mil triângulos; piso sozinho não muda); pilar sem degrau na face coplanar com a parede (1,8 mm → 2e-6 mm); descarta fragmentos < 5 mm³ só na exportação, com aviso (3×3 quatro águas fundido tinha 5 ilhas de 1–2 mm).
+- **Decisões de 2026-11-23:** Nichos/Glifos criados já; manter ~920 mil triângulos no 2×3; telhado oco feito.
+- **Fechados sem código:** `desentorta` (deslocamento de 0,01 mm é limpeza intencional); `validar.py` fica só como referência local (`gerar.py` importa `estanque` dele).
+- **Fica para o usuário:** imprimir grid + bloco 1×1; props (licença); salvar/carregar projeto (adiado); jurídico; tela cheia real em Chrome de verdade; skill `technical-drawing`.
+- **Pendências pequenas que sobraram:** o teste de junta do telhado fundido compara a fórmula do afundamento (margem 2,55 contra 2,51 mm), não mede a malha; o `check_emenda` leva ~3,5 min; os checks novos não foram rodados contra o código antigo.
 
 ## Pendências conhecidas (web)
 - **Verificado em 2026-11-08 após `c0288de`:** HUD de Desempenho vermelho (borda e ⚠ ao passar do orçamento), tracejado das aberturas no 3D, `check_paredes.ts` completo (42/42 PASS). **Ainda não verificado:** vista em tela cheia real (só emulada). **Achado (resolvido na rodada A):** a 375 px os cards abertos cobriam o modelo; agora começam recolhidos no celular.

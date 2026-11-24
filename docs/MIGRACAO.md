@@ -68,8 +68,8 @@ Risco de copyright (avisado ao usuário): medidas configuráveis reduzem o risco
 | 6 | Areia | Ondulações e dunas | 6 | ambos | ✅ |
 | 7 | Água | Pedra com poças, ondas, pedras saindo | 5 + Pedra | só piso | ✅ (teto +0,5 mm) |
 | 8 | Lava | Pedra com rio de lava, fluxo e crosta | 6 + Pedra | só piso | ✅ |
-| 9 | Nichos | Nichos em arco; parte com caveira ou pote | 9 | ambos | ⏳ desenho próprio, diferente do Dungeon Blocks (decisão de 2026-11-22) |
-| 10 | Glifos | Painel rebaixado com símbolos | 8 | ambos | ⏳ desenho próprio, diferente do Dungeon Blocks (decisão de 2026-11-22) |
+| 9 | Nichos | Nichos em arco; parte com caveira ou pote | 9 | ambos | ✅ desenho próprio (`web/src/nichos.ts`, 2026-11-23): silharia com recessos de arco abatido e moldura; sem caveira ou pote |
+| 10 | Glifos | Painel rebaixado com símbolos | 8 | ambos | ✅ desenho próprio (`web/src/glifos.ts`, 2026-11-23): lajotas com sinais de traços e anel gerados por regra própria |
 | 11 | Caverna | Rocha em lajes, fendas, rugas | 11 | ambos | ✅ |
 | 12 | Casco | Tábuas de navio sobrepostas, cavilhas | 13 | ambos | ✅ |
 | 13 | Metal | Chapas, costura, rebites, amassados, corrosão | 12 | ambos | ✅ |
@@ -79,7 +79,7 @@ Risco de copyright (avisado ao usuário): medidas configuráveis reduzem o risco
 
 Rodada E2: piso e parede têm textura separada (`Opcoes.texturaParede`, vazio = igual ao piso). Rodada E2b: Rachado, Tábuas, Terra e Areia ✅ no piso e na parede (na parede as Tábuas ficam na horizontal; no Blender giram). Faltam 7: Água, Lava, Nichos, Glifos, Caverna, Casco, Metal.
 Rodada G2: Caverna, Casco e Metal ✅ no piso e na parede (`web/src/caverna.ts`, `casco.ts`, `metal.ts`; Casco e Metal usam u = ao longo da parede e z = altura). Faltam 4: Água, Lava, Nichos, Glifos.
-Rodada G3: Água e Lava ✅ só no piso (`web/src/agua.ts`, `lava.ts`; fora da mancha usam a Pedra com `o.pedra`; na parede caem para Pedra em `texParede`). Teto da Água = `teto` + 0,5 mm (`tetoDe` em `textura.ts`). Faltam 2: Nichos, Glifos.
+Rodada G3: Água e Lava ✅ só no piso (`web/src/agua.ts`, `lava.ts`; fora da mancha usam a Pedra com `o.pedra`; na parede caem para Pedra em `texParede`). Teto da Água = `teto` + 0,5 mm (`tetoDe` em `textura.ts`). Faltam 2: Nichos, Glifos. **Rodada de 2026-11-23: Nichos e Glifos ✅ (desenho próprio). As 15 texturas estão prontas; cripta (Lajota/Nichos) e templo (Areia/Glifos) completos.**
 Rodada E1: Lisa, Lajota e Tijolo estão ✅ no piso e na parede (`web/src/lisa.ts`, `lajota.ts`, `tijolo.ts`, auxiliares em `grade.ts`, registro em `textura.ts`, check em `web/check_texturas.ts`). Falta portar as outras 11.
 
 Funções comuns do Blender que as texturas usam (portar junto): `grade` (fiadas), `junta_perfil`, `seixos` (Voronoi 2D), `lasca`, `grao`, `distorce`, `_mancha`.
@@ -167,7 +167,7 @@ Pendências técnicas conhecidas:
 
 ## 5. Gerador de grid (decidido em 2026-11-06; ✅ implementado em 2026-11-21, spec `docs/superpowers/specs/2026-11-20-grid-completo-design.md`)
 
-Feito: chanfro na entrada do furo (aba Sistema); travas clip (STL próprio) ou macho/fêmea nos vértices da borda, quadrado e hexágono; ímãs do grid (4 × 2 mm por padrão) na borda, no cruzamento e no meio da nervura; alívio sob o fundo fechado. Recorte que não cabe é pulado com aviso. Fora: ângulo do chanfro ≠ 45°, quantidade/espaçamento livre de ímãs.
+Feito: chanfro na entrada do furo (aba Sistema); travas clip (STL próprio) ou macho/fêmea nos vértices da borda, quadrado e hexágono; ímãs do grid (4 × 2 mm por padrão) na borda, no cruzamento e no meio da nervura; alívio sob o fundo fechado. Recorte que não cabe é pulado com aviso. Rodada de 2026-11-23: ângulo do chanfro do furo livre (`chanfro_furo_ang`, 30–75°, padrão 45°) e ímãs por lado (`ima_por_lado`, 1–4; reduz com aviso o que não cabe).
 
 Infraestrutura semelhante ao grid original (placa com um furo por célula), com geometria própria. O furo tem o mesmo formato do bloco: quadrado ou hexágono. Gerador próprio na web, com o máximo de parâmetros.
 
