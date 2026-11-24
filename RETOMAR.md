@@ -1,4 +1,4 @@
-# RETOMAR — estado do projeto (2026-11-23, branch main; rodada de 2026-11-23 commitada localmente em `2fab892`..`1b635b4`, ainda sem push; antes disso `592892d` estava publicado, CI verde)
+# RETOMAR — estado do projeto (2026-11-24, branch main; tudo publicado, `origin/main` == `ce92ba5`, árvore limpa, CI verde; notas "sem push" abaixo estão velhas)
 
 Projeto: **RPG Block Builder**. "Dungeon Blocks" nos documentos é sempre o produto original de referência, nunca o nosso.
 
