@@ -2,11 +2,12 @@
 import { abrir, apaga, arestaCanonica, centroMundo, chave, pinta, poeAresta, salvar, tiraAresta, vizinho, type ArestaMapa, type Dir, type Mapa, type Nivel } from './modelo'
 import type { Sistema } from '../sistema'
 import type { TexId } from '../textura'
+import { dividir } from './divisao'
 
 export type Ferr = 'piso' | 'apagar' | 'parede' | 'porta' | 'janela' | 'arco' | 'coluna' | 'rampa' | 'escada' | 'sala' | 'corte'
 export const ed = { m: undefined as unknown as Mapa, niv: 0, sala: '', tex: 'pedra' as TexId, ferr: 'piso' as Ferr, dir: '+x' as Dir }
 
-const COR: Record<TexId, string> = {
+export const COR: Record<TexId, string> = {
   pedra: '#7d766a', lisa: '#a3a3a0', lajota: '#a68e68', tijolo: '#9a5b3e', terra: '#6e5238', areia: '#c8b07a', rachado: '#6d6b67', tabuas: '#8c6a44',
   caverna: '#4f4a58', casco: '#5f7079', metal: '#8b9199', agua: '#2f6ea0', lava: '#c4501f', nichos: '#56606b', glifos: '#4e6e58',
 }
@@ -29,7 +30,7 @@ function verts(s: Sistema): Pt[] {
   const w = s.largura / 2, h = s.comprimento / 2
   return [[w, -h], [w, h], [-w, h], [-w, -h]]
 }
-function lados(s: Sistema, c: number, r: number): [Pt, Pt][] {
+export function lados(s: Sistema, c: number, r: number): [Pt, Pt][] {
   const [cx, cy] = centroMundo(s, c, r), V = verts(s)
   return V.map((a, i) => { const b = V[(i + 1) % V.length]; return [[cx + a[0], cy + a[1]], [cx + b[0], cy + b[1]]] })
 }
@@ -105,7 +106,27 @@ function redesenha() {
   if (b) desenhaNivel(b, .25, false)
   desenhaNivel(nivel(), 1, true)
   desenhaSala()
+  desenhaPecas()
   ctx.globalAlpha = 1
+}
+/** Contorno tracejado de cada peça do nível atual (bbox das células da peça). */
+let pecasMemo = { k: '', v: [] as ReturnType<typeof dividir> }
+function desenhaPecas() {
+  const s = ed.m.sistema, k = JSON.stringify([s, nivel()])
+  if (k !== pecasMemo.k) pecasMemo = { k, v: dividir(ed.m, nivel().id) } // pan/zoom não redivide
+  ctx.strokeStyle = '#7fd1ff'
+  ctx.lineWidth = lw(1)
+  ctx.setLineDash([3, 2])
+  for (const it of pecasMemo.v) {
+    const xs: number[] = [], ys: number[] = []
+    for (const k of it.celulas) {
+      const [c, r] = k.split(',').map(Number)
+      for (const [a] of lados(s, c, r)) { xs.push(a[0]); ys.push(a[1]) }
+    }
+    const x0 = Math.min(...xs), y0 = Math.min(...ys)
+    ctx.strokeRect(x0, y0, Math.max(...xs) - x0, Math.max(...ys) - y0)
+  }
+  ctx.setLineDash([])
 }
 /** Grade fina de células só na área visível (some quando há células demais para desenhar). */
 function grade() {

@@ -94,7 +94,34 @@ $('salvarBtn').onclick = () => {
 $('desfazer').onclick = desfaz
 $('refazer').onclick = refaz
 nomeEl.onchange = () => edita(() => { ed.m.nome = nomeEl.value.trim() || 'Mapa' })
-$('alternaVista').onclick = () => { const v = $('vista3d'), c = $('cv'); v.hidden = !v.hidden; c.hidden = !v.hidden }
+// Vista 3D: módulo carregado na primeira vez (import dinâmico: o 2D não paga o three)
+type Vista3d = typeof import('./vista3d')
+let v3p: Promise<Vista3d> | undefined, em3d = false, ultimo = '', tempo = 0
+const cvEl = $('cv'), vista3dEl = $('vista3d'), barra3dEl = $('barra3d'), caixasEl = $<HTMLInputElement>('soCaixas'), progEl = $('progresso')
+$('alternaVista').onclick = async () => {
+  em3d = !em3d
+  vista3dEl.hidden = !em3d; cvEl.hidden = em3d; barra3dEl.hidden = !em3d
+  if (!em3d) return
+  v3p ??= import('./vista3d').then(v => {
+    v.iniciaVista3d(vista3dEl, (x, y) => { progEl.textContent = `Peças 3D: ${x}/${y}` })
+    v.soCaixas(caixasEl.checked)
+    return v
+  })
+  const v = await v3p
+  if (em3d) { ultimo = salvar(ed.m); v.mostraMapa(ed.m) }
+}
+caixasEl.onchange = () => { v3p?.then(v => v.soCaixas(caixasEl.checked)) }
+/** Com a vista 3D visível, mudança do mapa regera a 3D (300 ms de espera; ignora mudanças que não são do mapa). */
+function agendaVista() {
+  if (!em3d || !v3p) return
+  clearTimeout(tempo)
+  tempo = window.setTimeout(async () => {
+    const s = salvar(ed.m)
+    if (s === ultimo) return
+    ultimo = s
+    ;(await v3p!).mostraMapa(ed.m)
+  }, 300)
+}
 
 // Barra: ferramentas e textura
 $('ferramentas').innerHTML = FERRAMENTAS.map(([f, nome, tecla]) => `<button data-ferr="${f}">${nome} <small>${tecla}</small></button>`).join('')
@@ -143,4 +170,5 @@ salasEl.onchange = e => {
 
 iniciaEditor($<HTMLCanvasElement>('cv'))
 aoMudar(renderUI)
+aoMudar(agendaVista)
 carrega(cria(sistemaPadrao('quadrado', 35), 'Mapa'))
