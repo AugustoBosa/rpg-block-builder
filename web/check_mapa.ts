@@ -265,4 +265,32 @@ const sQ2 = sis('quadrado', { largura: 35, comprimento: 35 }), sH2 = sis('hexago
   confere('malha fechada (previa): peça com porta, rampa e hexágono', f1 && f2 && f3, `porta ${f1}, rampa ${f2}, hex ${f3}`)
 }
 
+{ // 8. suportes (rápido, sem malha): grids 7×7 cobrem 1 vez em 6×6, 6×1, 1×6, 1×1; degrau base 2 3×3 → qtd 2; aviso de nível elevado sem escada/rampa
+  const m7 = cria(sQ2, 'G')
+  for (let c = 0; c < 7; c++) for (let r = 0; r < 7; r++) pinta(m7, 'terreo', c, r, { tex: 'pedra', tipo: 'piso', sala: 's1' })
+  const g7 = tileset(m7).suportes.filter(x => x.tipo === 'grid'), cobG = new Map<string, number>()
+  for (const x of g7) for (let r = x.r0; r < x.r0 + x.linhas; r++) for (let c = x.c0; c < x.c0 + x.colunas; c++) cobG.set(`${c},${r}`, (cobG.get(`${c},${r}`) ?? 0) + 1)
+  const tamG = g7.map(x => `${x.linhas}x${x.colunas}`).sort().join(' ')
+  confere('grids 7×7: cobrem as 49 células 1 vez em 6×6, 6×1, 1×6, 1×1', cobG.size === 49 && [...cobG.values()].every(v => v === 1) && tamG === '1x1 1x6 6x1 6x6', tamG)
+
+  const mD = cria(sQ2, 'D')
+  mD.niveis.push({ id: 'alto', nome: 'Alto', base: 2, altura_parede: 30, celulas: {}, arestas: {}, colunas: {}, salas: [{ id: 's1', nome: 'Sala', tema: '', max: [3, 3], cortes: [] }] })
+  for (let c = 0; c < 3; c++) for (let r = 0; r < 3; r++) pinta(mD, 'alto', c, r, { tex: 'pedra', tipo: 'piso', sala: 's1' })
+  const qD = tileset(mD).extras.get('degrau:3x3')?.qtd
+  confere('degrau: nível base 2 com 3×3 células → extras "degrau:3x3" qtd 2', qD === 2, `qtd ${qD}`)
+
+  const mE = cria(sQ2, 'E')
+  mE.niveis.push({ id: 'andar', nome: 'Andar', base: 1, altura_parede: 30, celulas: {}, arestas: {}, colunas: {}, salas: [{ id: 's1', nome: 'Sala', tema: '', max: [3, 3], cortes: [] }] })
+  pinta(mE, 'andar', 0, 0, { tex: 'pedra', tipo: 'piso', sala: 's1' })
+  const semEscada = tileset(mE).avisos.includes('Nível "Andar" está elevado e não tem escada nem rampa de acesso.')
+  pinta(mE, 'terreo', 0, 0, { tex: 'pedra', tipo: 'escada', dir: '+x', sala: 's1' })
+  const comEscada = tileset(mE).avisos.some(a => a.includes('está elevado'))
+  confere('aviso: nível base 1 sem escada/rampa avisa; com uma célula escada não avisa', semEscada && !comEscada, `sem ${semEscada}, com ${!comEscada}`)
+
+  const mH2 = cria(sH2, 'H'), NH = mH2.niveis[0]; NH.salas = [{ id: 's1', nome: 'Sala', tema: '', max: [3, 3], cortes: [] }]
+  for (let c = 0; c < 5; c++) for (let r = 0; r < 4; r++) if (c || r) pinta(mH2, 'terreo', c, r, { tex: 'pedra', tipo: 'piso', sala: 's1' })
+  const gH = tileset(mH2).suportes.filter(x => x.tipo === 'grid')
+  confere('hex: nenhum grid com mais de 1 coluna começa em coluna ímpar', gH.length > 0 && gH.every(x => x.colunas === 1 || x.c0 % 2 === 0), `${gH.length} grids`)
+}
+
 if (falhas) process.exit(1)

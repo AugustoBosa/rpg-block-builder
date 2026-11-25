@@ -18,6 +18,9 @@ export interface Peca {
 }
 /** `rot`: quartos de volta que levam a peça canônica à posição do mapa (no hexágono, 2 = 180°). */
 export interface Instancia { chave: string; nivel: string; c0: number; r0: number; linhas: number; colunas: number; rot: 0 | 1 | 2 | 3; celulas: string[]; peca: Peca }
+/** Grid (base 0, `pilha` 1) ou degraus empilhados (`pilha` = base do nível) num retângulo do mapa. */
+export interface Suporte { tipo: 'grid' | 'degrau'; nivel: string; c0: number; r0: number; linhas: number; colunas: number; pilha: number }
+type Ret = { c0: number; r0: number; linhas: number; colunas: number; cels: string[] }
 
 /** Aplica uma transformação às entradas e colunas; `dir` gira junto (`voltas` quartos). */
 const transforma = (p: Peca, cr: (c: number, r: number) => P2, lado: (i: number) => number, linhas: number, colunas: number, voltas: number): Peca => {
@@ -64,6 +67,32 @@ function canonica(p: Peca, s: Sistema): { peca: Peca; rot: 0 | 1 | 2 | 3; chave:
   return { peca: m.peca, rot: (s.formato === 'hexagono' ? m.r : (4 - m.r) % 4) as 0 | 1 | 2 | 3, chave: m.chave }
 }
 
+/** Retângulos sobre as células de `lista` (ordem r, c): da primeira livre cresce o maior que `cabe` aceita, até maxL×maxC. Hex: com mais de 1 coluna só começa em coluna par. Marca `usado`. */
+function retangulos(lista: P2[], usado: Set<string>, maxL: number, maxC: number, hex: boolean, cabe: (c0: number, r0: number, L: number, C: number) => boolean): Ret[] {
+  const out: Ret[] = []
+  for (const [c0, r0] of lista) {
+    if (usado.has(chave(c0, r0))) continue
+    const maxCol = hex && (c0 & 1) ? 1 : maxC
+    let L = 1, C = 1
+    for (let l = 1; l <= maxL; l++) for (let c = 1; c <= maxCol; c++) if (l * c > L * C || (l * c === L * C && c > C)) if (cabe(c0, r0, l, c)) { L = l; C = c }
+    const cels: string[] = []
+    for (let r = r0; r < r0 + L; r++) for (let c = c0; c < c0 + C; c++) { usado.add(chave(c, r)); cels.push(chave(c, r)) }
+    out.push({ c0, r0, linhas: L, colunas: C, cels })
+  }
+  return out
+}
+
+/** Suportes (grids ou degraus) de um conjunto de células: mesma divisão das peças, sem olhar paredes nem salas. */
+function suportesDe(ks: Set<string>, tipo: Suporte['tipo'], nivel: string, pilha: number, max: number, hex: boolean): Suporte[] {
+  const usado = new Set<string>()
+  const lista = [...ks].map(k => k.split(',').map(Number) as P2).sort(([c1, r1], [c2, r2]) => r1 - r2 || c1 - c2)
+  const cabe = (c0: number, r0: number, L: number, C: number) => {
+    for (let r = r0; r < r0 + L; r++) for (let c = c0; c < c0 + C; c++) if (!ks.has(chave(c, r)) || usado.has(chave(c, r))) return false
+    return true
+  }
+  return retangulos(lista, usado, max, max, hex, cabe).map(q => ({ tipo, nivel, c0: q.c0, r0: q.r0, linhas: q.linhas, colunas: q.colunas, pilha }))
+}
+
 export function dividir(m: Mapa, nivelId: string): Instancia[] { return dividirComAvisos(m, nivelId, []) }
 
 /** Divide um nível em peças (retângulos por sala, sem barreira por dentro). Paredes ficam na dona; reforços nas quinas côncavas. */
@@ -85,33 +114,25 @@ function dividirComAvisos(m: Mapa, nivelId: string, avisos: string[]): Instancia
     return n.arestas[k] !== undefined || (n.salas.find(x => x.id === A.sala)?.cortes ?? []).includes(k)
   }
 
-  // 1. retângulos: da primeira célula livre (ordem r, c), o maior retângulo até sala.max
-  const atrib = new Map<string, number>()
-  const pos: { c0: number; r0: number; linhas: number; colunas: number; cels: string[] }[] = []
+  // 1. retângulos por sala: da primeira célula livre (ordem r, c), o maior que cabe até sala.max
+  const usado = new Set<string>(), pos: Ret[] = []
   const todas = Object.keys(n.celulas).map(k => k.split(',').map(Number) as P2)
   for (const sa of n.salas) {
     const lista = todas.filter(([c, r]) => n.celulas[chave(c, r)].sala === sa.id).sort(([c1, r1], [c2, r2]) => r1 - r2 || c1 - c2)
-    for (const [c0, r0] of lista) {
-      if (atrib.has(chave(c0, r0))) continue
-      const maxC = hex && (c0 & 1) ? 1 : sa.max[1] // hex: peça com mais de 1 coluna só começa em coluna par
-      const cabe = (L: number, C: number) => {
-        for (let r = r0; r < r0 + L; r++) for (let c = c0; c < c0 + C; c++) {
-          const x = cel(c, r)
-          if (!x || x.sala !== sa.id || atrib.has(chave(c, r))) return false
-          for (let i = 0; i < K; i++) {
-            const [c2, r2] = vizinho(s, c, r, i)
-            if (c2 >= c0 && c2 < c0 + C && r2 >= r0 && r2 < r0 + L && barreira(c, r, i)) return false
-          }
+    pos.push(...retangulos(lista, usado, sa.max[0], sa.max[1], hex, (c0, r0, L, C) => {
+      for (let r = r0; r < r0 + L; r++) for (let c = c0; c < c0 + C; c++) {
+        const x = cel(c, r)
+        if (!x || x.sala !== sa.id || usado.has(chave(c, r))) return false
+        for (let i = 0; i < K; i++) {
+          const [c2, r2] = vizinho(s, c, r, i)
+          if (c2 >= c0 && c2 < c0 + C && r2 >= r0 && r2 < r0 + L && barreira(c, r, i)) return false
         }
-        return true
       }
-      let L = 1, C = 1
-      for (let l = 1; l <= sa.max[0]; l++) for (let c = 1; c <= maxC; c++) if (l * c > L * C || (l * c === L * C && c > C)) if (cabe(l, c)) { L = l; C = c }
-      const lst: string[] = []
-      for (let r = r0; r < r0 + L; r++) for (let c = c0; c < c0 + C; c++) { atrib.set(chave(c, r), pos.length); lst.push(chave(c, r)) }
-      pos.push({ c0, r0, linhas: L, colunas: C, cels: lst })
-    }
+      return true
+    }))
   }
+  const atrib = new Map<string, number>()
+  pos.forEach((q, j) => q.cels.forEach(k => atrib.set(k, j)))
 
   const ent: Entrada[][] = pos.map(() => [])
   const cols: { c: number; r: number; lado: number }[][] = pos.map(() => [])
@@ -188,10 +209,18 @@ function dividirComAvisos(m: Mapa, nivelId: string, avisos: string[]): Instancia
   return out
 }
 
-/** Divisão de todos os níveis: peças únicas (chave → peça e quantidade), instâncias e avisos. */
+/** Divisão de todos os níveis: peças únicas (chave → peça e quantidade), instâncias, suportes (grids e degraus), extras (contagem por tipo e tamanho) e avisos. */
 export function tileset(m: Mapa) {
   const avisos: string[] = [], instancias = m.niveis.flatMap(x => dividirComAvisos(m, x.id, avisos))
   const pecas = new Map<string, { peca: Peca; qtd: number }>()
   for (const it of instancias) { const e = pecas.get(it.chave); if (e) e.qtd++; else pecas.set(it.chave, { peca: it.peca, qtd: 1 }) }
-  return { pecas, instancias, avisos }
+  const hex = m.sistema.formato === 'hexagono', base0 = m.niveis.filter(x => x.base === 0)
+  const grades = new Set<string>(); base0.forEach(n => Object.keys(n.celulas).forEach(k => grades.add(k)))
+  const suportes: Suporte[] = suportesDe(grades, 'grid', base0[0]?.id ?? '', 1, 6, hex)
+  for (const n of m.niveis) if (n.base > 0) suportes.push(...suportesDe(new Set(Object.keys(n.celulas)), 'degrau', n.id, n.base, 3, hex))
+  const extras = new Map<string, { tipo: Suporte['tipo']; linhas: number; colunas: number; qtd: number }>()
+  for (const x of suportes) { const k = `${x.tipo}:${x.linhas}x${x.colunas}`, e = extras.get(k); if (e) e.qtd += x.pilha; else extras.set(k, { tipo: x.tipo, linhas: x.linhas, colunas: x.colunas, qtd: x.pilha }) }
+  const acesso = m.niveis.some(n => Object.values(n.celulas).some(c => c.tipo !== 'piso'))
+  for (const n of m.niveis) if (n.base > 0 && !acesso) avisos.push(`Nível "${n.nome}" está elevado e não tem escada nem rampa de acesso.`)
+  return { pecas, instancias, avisos, suportes, extras }
 }
