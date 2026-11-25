@@ -4,6 +4,7 @@ import { TEMAS } from '../temas'
 import type { Sistema } from '../sistema'
 import { abrir, cria, salvar } from './modelo'
 import { ajusta, aoMudar, atualiza, carrega, desfaz, edita, ed, gira, iniciaEditor, reenquadra, refaz, type Ferr } from './editor2d'
+import { cancelaExportacao, estimativa, exportaMapa, exportaPeca, planoExporta } from './exporta'
 
 // Padrões de SISTEMA (sistema.ts) copiados aqui: importar sistema.ts puxaria o WASM, que não cabe nesta página.
 const PADRAO = {
@@ -84,13 +85,13 @@ modeloEl.onchange = async () => {
     edita(() => { ed.m = m; ed.niv = 0; ed.sala = '' })
   } catch (e) { alert(`Não foi possível abrir o modelo: ${(e as Error).message}`) }
 }
-$('salvarBtn').onclick = () => {
-  const url = URL.createObjectURL(new Blob([salvar(ed.m)], { type: 'application/json' })), a = document.createElement('a')
-  a.href = url
-  a.download = ed.m.nome.replace(/[\\/:*?"<>|]/g, '_') + '.json'
-  a.click()
-  setTimeout(() => URL.revokeObjectURL(url), 1000)
+const nomeArq = () => ed.m.nome.replace(/[\\/:*?"<>|]/g, '_')
+function baixa(nome: string, b: Blob) {
+  const url = URL.createObjectURL(b), a = document.createElement('a')
+  a.href = url; a.download = nome; a.click()
+  setTimeout(() => URL.revokeObjectURL(url), 60000)
 }
+$('salvarBtn').onclick = () => baixa(nomeArq() + '.json', new Blob([salvar(ed.m)], { type: 'application/json' }))
 $('desfazer').onclick = desfaz
 $('refazer').onclick = refaz
 nomeEl.onchange = () => edita(() => { ed.m.nome = nomeEl.value.trim() || 'Mapa' })
@@ -168,7 +169,42 @@ salasEl.onchange = e => {
   })
 }
 
+// Exportação: estimativa e lista de peças atualizadas após cada mudança (250 ms de espera); a geração só roda ao clicar
+const expBtn = $<HTMLButtonElement>('exportaBtn'), cancelaBtn = $<HTMLButtonElement>('cancelaExp'), progExpEl = $('progExp'), estimEl = $('estimativa'), pecaSel = $<HTMLSelectElement>('pecaSel')
+let sinalExp: { cancelado: boolean } | undefined, tempoExp = 0
+const mensagem = (err: unknown) => err === 'cancelado' ? 'Exportação cancelada.' : `Erro: ${err instanceof Error ? err.message : String(err)}`
+function atualizaExporta() {
+  const e = estimativa(ed.m), { itens } = planoExporta(ed.m)
+  estimEl.textContent = `${e.pecas} peças únicas, ${e.arquivos} arquivos, ~${e.mb.toFixed(0)} MB, ~${e.minutos < 1 ? 'menos de 1' : e.minutos.toFixed(0)} min`
+  pecaSel.innerHTML = '<option value="">Baixar uma peça…</option>' + itens.map(i => `<option value="${esc(i.id)}">${esc(i.id)} · ${esc(i.desc)}</option>`).join('')
+}
+expBtn.onclick = async () => {
+  const e = estimativa(ed.m)
+  if (e.mb > 500 && !confirm(`A exportação tem ~${e.mb.toFixed(0)} MB. Continuar?`)) return
+  const sinal = sinalExp = { cancelado: false }
+  expBtn.disabled = true; cancelaBtn.hidden = false
+  try {
+    const b = await exportaMapa(ed.m, s => { progExpEl.textContent = s }, sinal)
+    baixa(`${nomeArq()}_tileset.zip`, b)
+    progExpEl.textContent = 'Exportação pronta.'
+  } catch (err) { progExpEl.textContent = mensagem(err) }
+  finally { expBtn.disabled = false; cancelaBtn.hidden = true; sinalExp = undefined }
+}
+cancelaBtn.onclick = () => { if (sinalExp) { cancelaExportacao(sinalExp); progExpEl.textContent = 'Cancelando...' } }
+pecaSel.onchange = async () => {
+  const id = pecaSel.value
+  pecaSel.value = ''
+  if (!id) return
+  try {
+    const r = await exportaPeca(ed.m, id, s => { progExpEl.textContent = s })
+    baixa(r.nome, r.blob)
+    progExpEl.textContent = `${id} pronto.`
+  } catch (err) { progExpEl.textContent = mensagem(err) }
+}
+
 iniciaEditor($<HTMLCanvasElement>('cv'))
 aoMudar(renderUI)
 aoMudar(agendaVista)
+aoMudar(() => { clearTimeout(tempoExp); tempoExp = window.setTimeout(atualizaExporta, 250) })
 carrega(cria(sistemaPadrao('quadrado', 35), 'Mapa'))
+atualizaExporta()
