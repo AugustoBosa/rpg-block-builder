@@ -1,7 +1,8 @@
 // Paredes sem cobertura sobre o piso de Pedra (ver docs/WORKFLOW_PAREDES.md). F0: tipos travados + esqueleto; cada função
 // lança "F<n>" até a fase que a implementa. Sem paredes, nada muda no piso.
 import { CrossSection, desentorta, Manifold, Mesh, paraMalha } from './wasm'
-import { fechada, final, inclinado, piso, RELEVO, type Malha, type Opcoes } from './bloco'
+import { fechada, final, inclinado, piso, RELEVO, relevoGrande, type Malha, type Opcoes } from './bloco'
+import { OBJETOS, solidoObjeto } from './miniaturas'
 import { perfilAbertura, pilares, quadro } from './aberturas'
 import { profTex, texParede } from './textura'
 import { geoTelhado, solidoTelhado, temTelhado } from './telhado'
@@ -26,6 +27,7 @@ export interface Parede {
   espessura: number     // mm
   lado: 'fora' | 'centro' | 'dentro' // de que lado da linha a espessura cresce
   aberturas: Abertura[]
+  ameias?: boolean      // muralha (escala Cidade): dentes de 3 mm no topo
 }
 export type OpcoesP = Opcoes // Opcoes já traz `paredes`
 /** Polilinha 2D (u ao longo da parede, v para cima, mm, origem no começo e no pé da parede). */
@@ -58,6 +60,13 @@ function solido(o: OpcoesP, p: Parede, baixo: number, dl = 0, tex = false, viz?:
         .intersect(CrossSection.square([p.comprimento, p.altura]))
       const sol = poe(Manifold.extrude(anel, e + 2 * bt.saliencia), o2 + bt.saliencia)
       const n1 = m; m = m.add(sol); n1.delete(); sol.delete(); anel.delete()
+    }
+  }
+  if (p.ameias) { // ameia 3, vão 3, ameia 3...: centrado, com ameia nas duas pontas
+    const L = p.comprimento, n = Math.max(0, Math.floor((L - 3) / 6)), a0 = (L - 3 - 6 * n) / 2, H = p.altura
+    for (let i = 0; i < n; i++) {
+      const a = a0 + 3 + 6 * i, corte = poe(Manifold.extrude([[[a, H - 3], [a + 3, H - 3], [a + 3, H + 1], [a, H + 1]]], T), o2 + .5)
+      const n0 = m; m = m.subtract(corte); n0.delete(); corte.delete()
     }
   }
   if (!tex) return m
@@ -107,11 +116,20 @@ const MIN_FRAG = 5 // mm³: componentes menores que isto (e que não são a maio
 export async function pisoComParedes(o: OpcoesP, previa = false, cortes?: Float64Array): Promise<Malha> {
   const c = piso(o, cortes), base: Malha = previa ? { pos: c.pos, idx: c.idx } : await final(c)
   const fundido = temTelhado(o) && o.telhado_modo === 'fundido' && o.paredes.length > 0 // fundido sem paredes ficaria solto no ar
-  if (!o.paredes.length || inclinado(o)) return base // rampa ou escada: paredes ignoradas
+  const obs = o.objetos ?? []
+  if ((!o.paredes.length || inclinado(o)) && !obs.length) return base // rampa ou escada: paredes ignoradas
   const z0 = o.altura - RELEVO - AFUNDA - .05 // a base entra na laje (zt − 0,6) e passa 0,05 mm dela: fundo coplanar gerava triângulos de área zero
   // paredes exatas (sem engordar): faces coplanares entre paredes e com o piso se fundem na união (sem degrau de 0,02 mm); `desentorta` limpa triângulos de área ~0
-  const ps = o.pilar ? [...o.paredes, ...pilares(o, o.paredes)] : o.paredes
-  const ws = ps.map(p => solido(o, p, RELEVO + AFUNDA + .05, 0, !previa, p.id.startsWith('pilar') ? o.paredes : undefined).translate(0, 0, z0))
+  const ps = inclinado(o) ? [] : o.pilar ? [...o.paredes, ...pilares(o, o.paredes)] : o.paredes
+  // miniaturas: chão 1 mm abaixo do topo nominal, no ponto mais baixo do relevo grande sob a planta; descem até 0,3 mm abaixo do topo do corpo
+  const rg = relevoGrande(o, c.r), zt = o.altura - RELEVO
+  const mini = obs.map(ob => {
+    const R = OBJETOS[ob.tipo].raio * ob.tam
+    const hm = rg ? Math.min(...[[0, 0], ...[0, 1, 2, 3, 4, 5, 6, 7].map(i => [R * Math.cos(i * Math.PI / 4), R * Math.sin(i * Math.PI / 4)])].map(([dx, dy]) => rg(ob.x + dx, ob.y + dy))) : 0
+    const chao = o.altura - 1 + hm
+    return solidoObjeto(ob, chao, chao - (zt - .3))
+  })
+  const ws = [...mini, ...ps.map(p => solido(o, p, RELEVO + AFUNDA + .05, 0, !previa, p.id.startsWith('pilar') ? o.paredes : undefined).translate(0, 0, z0))]
   if (fundido) { // afunda além do maior relevo do topo das paredes (sem junta aberta sob o beiral); prévia lisa: 0,3 mm
     const s = solidoTelhado(o, !previa), af = previa ? .3 : Math.max(...ps.map(p => Math.max(Math.min(o.teto, p.espessura / 2 - .3), 0))) + .05
     ws.push(s.translate(0, 0, geoTelhado(o).zb - af)); s.delete()

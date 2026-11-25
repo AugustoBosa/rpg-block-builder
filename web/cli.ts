@@ -13,6 +13,7 @@ for (let i = 0; i < args.length; i += 2) {
   const k = args[i].replace(/^--/, ''), v = args[i + 1]
   if (k === 'peca') peca = v
   else if (k === 'formato') o.formato = v as typeof o.formato
+  else if (k === 'relevo_tipo') { if (!['colina', 'montanha', 'vulcao'].includes(v)) throw new Error(`relevo desconhecido: ${v}`); o.relevo_tipo = v as typeof o.relevo_tipo }
   else if (k === 'textura') { if (!(v in TEX)) throw new Error(`textura desconhecida: ${v}`); o.textura = v as TexId }
   else if (k === 'textura_parede') { if (!(v in TEX)) throw new Error(`textura desconhecida: ${v}`); o.texturaParede = v as TexId }
   else if (new RegExp(`^(${Object.keys(TEX).join("|")})_`).test(k)) (o as any)[k.split('_')[0]][k.slice(k.indexOf('_') + 1)] = +v // ex.: --pedra_vao 0.8, --lajota_lado 1

@@ -2,7 +2,7 @@
 import { TEX, type TexId } from '../textura'
 import { TEMAS } from '../temas'
 import type { Sistema } from '../sistema'
-import { abrir, cria, salvar } from './modelo'
+import { abrir, cria, maxPadrao, OBJ, OBJ_ESCALA, salvar, type Escala } from './modelo'
 import { ajusta, aoMudar, atualiza, carrega, desfaz, edita, ed, gira, iniciaEditor, reenquadra, refaz, type Ferr } from './editor2d'
 import { cancelaExportacao, estimativa, exportaMapa, exportaPeca, planoExporta } from './exporta'
 
@@ -15,8 +15,27 @@ const sistemaPadrao = (formato: Sistema['formato'], largura: number): Sistema =>
 
 const FERRAMENTAS: [Ferr, string, string][] = [
   ['piso', 'Piso', 'P'], ['apagar', 'Apagar', 'E'], ['parede', 'Parede', 'W'], ['porta', 'Porta', 'D'], ['janela', 'Janela', 'J'], ['arco', 'Arco', 'A'],
-  ['coluna', 'Coluna', 'C'], ['rampa', 'Rampa', 'M'], ['escada', 'Escada', 'S'], ['sala', 'Sala', 'T'], ['corte', 'Corte', 'X'],
+  ['coluna', 'Coluna', 'C'], ['rampa', 'Rampa', 'M'], ['escada', 'Escada', 'S'], ['sala', 'Sala', 'T'], ['corte', 'Corte', 'X'], ['objeto', 'Objeto', 'O'],
 ]
+// ferramentas de cada escala (o resto some da barra); na Cidade, parede = muralha com ameias
+const FERR_ESCALA: Record<Escala, Ferr[]> = {
+  combate: ['piso', 'apagar', 'parede', 'porta', 'janela', 'arco', 'coluna', 'rampa', 'escada', 'sala', 'corte'],
+  cidade: ['piso', 'apagar', 'parede', 'porta', 'objeto', 'sala', 'corte'],
+  reino: ['piso', 'apagar', 'objeto', 'sala', 'corte'],
+}
+const ROTULO_CIDADE: Partial<Record<Ferr, string>> = { parede: 'Muralha', porta: 'Portão', sala: 'Bairro' }
+const escalaDe = () => ed.m.escala ?? 'combate'
+function montaFerramentas() {
+  const e = escalaDe()
+  $('ferramentas').innerHTML = FERRAMENTAS.filter(([f]) => FERR_ESCALA[e].includes(f))
+    .map(([f, nome, tecla]) => `<button data-ferr="${f}">${(e === 'cidade' && ROTULO_CIDADE[f]) || nome} <small>${tecla}</small></button>`).join('')
+  objetoEl.innerHTML = OBJ_ESCALA[e].map(k => `<option value="${k}">${OBJ[k]}</option>`).join('')
+  objetoEl.hidden = !OBJ_ESCALA[e].length
+  if (OBJ_ESCALA[e].length && !OBJ_ESCALA[e].includes(ed.obj)) ed.obj = OBJ_ESCALA[e][0]
+  objetoEl.value = ed.obj
+  if (!FERR_ESCALA[e].includes(ed.ferr)) ed.ferr = 'piso'
+  sentidoEl.hidden = e !== 'combate'
+}
 const ENT: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }
 const esc = (t: string) => t.replace(/[&<>"]/g, c => ENT[c])
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T
@@ -28,9 +47,11 @@ const nomeEl = $<HTMLInputElement>('nome'), formatoEl = $<HTMLSelectElement>('fo
 const arquivoEl = $<HTMLInputElement>('arquivo'), texEl = $<HTMLSelectElement>('textura'), sentidoEl = $<HTMLButtonElement>('sentido')
 const niveisEl = $('niveis'), nomeNivelEl = $<HTMLInputElement>('nomeNivel'), baseEl = $<HTMLInputElement>('base')
 const excluirEl = $<HTMLButtonElement>('excluirNivel'), salasEl = $('salas'), estadoEl = $('estado')
+const objetoEl = $<HTMLSelectElement>('objeto'), escalaEl = $<HTMLSelectElement>('escala')
 
 function renderUI() {
   const m = ed.m, n = nivelAtual(), celulas = m.niveis.reduce((t, x) => t + Object.keys(x.celulas).length, 0)
+  montaFerramentas()
   nomeEl.value = m.nome
   document.querySelectorAll<HTMLButtonElement>('[data-ferr]').forEach(b => b.classList.toggle('ativo', b.dataset.ferr === ed.ferr))
   sentidoEl.textContent = `Sentido: ${ed.dir} (tecla R)`
@@ -44,13 +65,13 @@ function renderUI() {
     <div class="linha"><select data-f="tema"><option value="">—</option>${Object.entries(TEMAS).map(([k, t]) => `<option value="${k}"${k === s.tema ? ' selected' : ''}>${t.nome}</option>`).join('')}</select></div>
     <div class="linha">Máx. linhas <input type="number" min="1" max="6" data-f="lin" value="${s.max[0]}"> colunas <input type="number" min="1" max="6" data-f="col" value="${s.max[1]}"></div>
   </div>`).join('')
-  estadoEl.textContent = `${m.sistema.formato === 'hexagono' ? 'Hexágono' : 'Quadrado'} de ${m.sistema.largura} mm · ${celulas} células · ${m.niveis.length} nível(is)`
+  estadoEl.textContent = `${{ combate: 'Combate', cidade: 'Cidade', reino: 'Reino' }[escalaDe()]} ·${m.sistema.formato === 'hexagono' ? 'Hexágono' : 'Quadrado'} de ${m.sistema.largura} mm · ${celulas} células · ${m.niveis.length} nível(is)`
 }
 
 function novoNivel() {
   edita(() => {
     const id = proximoId('n', ed.m.niveis.map(x => x.id)), base = Math.min(12, nivelAtual().base + 1)
-    ed.m.niveis.push({ id, nome: `Nível ${ed.m.niveis.length + 1}`, base, altura_parede: 30, celulas: {}, arestas: {}, colunas: {}, salas: [{ id: 's1', nome: 'Sala 1', tema: '', max: [3, 3], cortes: [] }] })
+    ed.m.niveis.push({ id, nome: `Nível ${ed.m.niveis.length + 1}`, base, altura_parede: nivelAtual().altura_parede, celulas: {}, arestas: {}, colunas: {}, salas: [{ id: 's1', nome: 'Sala 1', tema: '', max: maxPadrao(ed.m.escala), cortes: [] }] })
     ed.niv = ed.m.niveis.length - 1
     ed.sala = 's1'
   })
@@ -60,7 +81,7 @@ function novoNivel() {
 $('novo').onclick = () => {
   const cheio = ed.m.niveis.some(n => Object.keys(n.celulas).length > 0)
   if (cheio && !confirm('Criar um mapa novo descarta o atual. Continuar?')) return
-  carrega(cria(sistemaPadrao(formatoEl.value as Sistema['formato'], lim(larguraEl.value, 15, 100)), nomeEl.value.trim() || 'Mapa'))
+  carrega(cria(sistemaPadrao(formatoEl.value as Sistema['formato'], lim(larguraEl.value, 15, 100)), nomeEl.value.trim() || 'Mapa', escalaEl.value as Escala))
 }
 $('abrirBtn').onclick = () => arquivoEl.click()
 arquivoEl.onchange = async () => {
@@ -125,7 +146,7 @@ function agendaVista() {
 }
 
 // Barra: ferramentas e textura
-$('ferramentas').innerHTML = FERRAMENTAS.map(([f, nome, tecla]) => `<button data-ferr="${f}">${nome} <small>${tecla}</small></button>`).join('')
+objetoEl.onchange = () => { ed.obj = objetoEl.value; ed.ferr = 'objeto'; atualiza() }
 $('ferramentas').onclick = e => {
   const b = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-ferr]')
   if (b) { ed.ferr = b.dataset.ferr as Ferr; atualiza() }
@@ -151,7 +172,7 @@ excluirEl.onclick = () => {
 // Barra: salas do nível
 $('novaSala').onclick = () => edita(() => {
   const n = nivelAtual(), id = proximoId('s', n.salas.map(x => x.id))
-  n.salas.push({ id, nome: `Sala ${n.salas.length + 1}`, tema: '', max: [3, 3], cortes: [] })
+  n.salas.push({ id, nome: `Sala ${n.salas.length + 1}`, tema: '', max: maxPadrao(ed.m.escala), cortes: [] })
   ed.sala = id
 })
 salasEl.onclick = e => {

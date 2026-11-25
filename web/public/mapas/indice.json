@@ -13,5 +13,15 @@
     "arquivo": "caverna.json",
     "nome": "Caverna",
     "descricao": "Caverna irregular com lago, rampa e plataforma (hexágono, 35 mm)"
+  },
+  {
+    "arquivo": "cidade.json",
+    "nome": "Cidade murada (escala Cidade)",
+    "descricao": "Muralha com ameias, portão ao sul, torres nos cantos, casas, árvores e um bosque (quadrado, 35 mm)"
+  },
+  {
+    "arquivo": "reino.json",
+    "nome": "Reino (escala Reino)",
+    "descricao": "Mar, rio, cordilheira com vulcão, colinas, florestas, uma cidade e um castelo; cada hex é uma peça solta (hexágono, 35 mm)"
   }
 ]

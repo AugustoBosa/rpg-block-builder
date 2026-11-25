@@ -20,6 +20,7 @@ import type { KnobsNichos } from './nichos'
 import type { KnobsGlifos } from './glifos'
 import { profTex, TEX, tetoDe, type TexId } from './textura'
 import type { Parede } from './parede'
+import type { Objeto } from './miniaturas'
 import { assento, corpos, distBorda, distSeg, malha, regiao, SISTEMA, type Malha, type Regiao, type Sistema } from './sistema'
 export type { Malha }
 
@@ -36,6 +37,7 @@ export const PISO = { // nome: [padrão, mín, máx, rótulo, passo?] (sem passo
   quina_largura: [1.8, 0, 5, 'Quina: largura (mm)'], quina_gasto: [1, 0, 3, 'Quina: gasto'], lateral_largura: [2, 0, 5, 'Lateral: largura (mm)'],
   lateral_gasto: [1, 0, 3, 'Lateral: gasto'], ruido_borda: [.3, .05, 2, 'Ruído da borda'], teto: [2.5, .5, 2.5, 'Teto do relevo (mm)'],
   junta_piso: [2.4, .5, 5, 'Ganho da junta (× profundidade)'], resolucao: [.125, .1, 1, 'Malha (mm)'],
+  relevo_altura: [20, 2, 60, 'Relevo: altura (mm)'],
 } as const
 export const GUIAS = { // grid e degrau (aba própria)
   grid_linhas: [3, 1, 12, 'Linhas', 1], grid_colunas: [3, 1, 12, 'Colunas', 1], altura_degrau: [24, 10, 80, 'Degrau: altura (mm)'],
@@ -48,13 +50,15 @@ export const SECAO_PISO = {
   linhas: 'Peça', colunas: 'Peça', altura: 'Peça', posicao_x: 'Peça', posicao_y: 'Peça', inclinacao: 'Peça', escada_degraus: 'Peça', escada_altura: 'Peça',
   semente: 'Textura', desgaste: 'Textura', tamanho_pedra: 'Textura', profundidade: 'Textura', teto: 'Textura', junta_piso: 'Textura',
   quina_largura: 'Borda', quina_gasto: 'Borda', lateral_largura: 'Borda', lateral_gasto: 'Borda', ruido_borda: 'Borda',
+  relevo_altura: 'Terreno',
 } as const
 export const SECAO_GUIAS = { grid_linhas: 'Dimensões', grid_colunas: 'Dimensões', altura_degrau: 'Dimensões',
   trava_altura: 'Travas', trava_comprimento: 'Travas', trava_largura: 'Travas', trava_haste: 'Travas', trava_folga: 'Travas', ima_grid_d: 'Ímãs do grid', ima_grid_h: 'Ímãs do grid', ima_por_lado: 'Ímãs do grid' } as const
 type Num<T> = { -readonly [k in keyof T]: number }
-export type Opcoes = Sistema & Num<typeof PISO> & Num<typeof GUIAS> & { textura: TexId; texturaParede: TexId | ''; pedra: KnobsPedra; lisa: KnobsLisa; lajota: KnobsLajota; tijolo: KnobsTijolo; terra: KnobsTerra; areia: KnobsAreia; rachado: KnobsRachado; tabuas: KnobsTabuas; caverna: KnobsCaverna; casco: KnobsCasco; metal: KnobsMetal; agua: KnobsAgua; lava: KnobsLava; nichos: KnobsNichos; glifos: KnobsGlifos; paredes: Parede[]; trava: 'nenhuma' | 'clip' | 'macho'; ima_borda: boolean; ima_cruz: boolean; ima_meio: boolean; alivio: boolean; inclinacao_dir: '+y' | '-y' | '+x' | '-x'; pilar: boolean; pilar_saliencia: number; pilar_sobe: number; telhado_forma: 'nenhum' | 'uma' | 'duas' | 'quatro' | 'plano'; telhado_modo: 'removivel' | 'fundido'; telhado_eixo: 'x' | 'y'; telhado_angulo: number; telhado_beiral: number; telhado_borda: number; mureta_altura: number; mureta_espessura: number; ameias: boolean; saia_altura: number; saia_folga: number; telhado_casca: number; texturaTelhado: TexId }
+export type Opcoes = Sistema & Num<typeof PISO> & Num<typeof GUIAS> & { textura: TexId; texturaParede: TexId | ''; pedra: KnobsPedra; lisa: KnobsLisa; lajota: KnobsLajota; tijolo: KnobsTijolo; terra: KnobsTerra; areia: KnobsAreia; rachado: KnobsRachado; tabuas: KnobsTabuas; caverna: KnobsCaverna; casco: KnobsCasco; metal: KnobsMetal; agua: KnobsAgua; lava: KnobsLava; nichos: KnobsNichos; glifos: KnobsGlifos; paredes: Parede[]; trava: 'nenhuma' | 'clip' | 'macho'; ima_borda: boolean; ima_cruz: boolean; ima_meio: boolean; alivio: boolean; inclinacao_dir: '+y' | '-y' | '+x' | '-x'; pilar: boolean; pilar_saliencia: number; pilar_sobe: number; telhado_forma: 'nenhum' | 'uma' | 'duas' | 'quatro' | 'plano'; telhado_modo: 'removivel' | 'fundido'; telhado_eixo: 'x' | 'y'; telhado_angulo: number; telhado_beiral: number; telhado_borda: number; mureta_altura: number; mureta_espessura: number; ameias: boolean; saia_altura: number; saia_folga: number; telhado_casca: number; texturaTelhado: TexId; relevo_tipo: Relevo; objetos: Objeto[] }
+export type Relevo = '' | 'colina' | 'montanha' | 'vulcao'
 const ini = (t: object) => Object.fromEntries(Object.entries(t).map(([k, v]) => [k, v[0]]))
-export const padrao = (): Opcoes => ({ ...ini(SISTEMA), ...ini(PISO), ...ini(GUIAS), formato: 'quadrado', trava: 'nenhuma', ima_borda: false, ima_cruz: false, ima_meio: false, alivio: false, textura: 'pedra', texturaParede: '', inclinacao_dir: '+y', pilar: false, pilar_saliencia: 1.5, pilar_sobe: 2, telhado_forma: 'nenhum', telhado_modo: 'removivel', telhado_eixo: 'x', telhado_angulo: 35, telhado_beiral: 2, telhado_borda: 2, mureta_altura: 4, mureta_espessura: 2, ameias: true, saia_altura: 3, saia_folga: .3, telhado_casca: 2, texturaTelhado: 'casco', ...Object.fromEntries(Object.entries(TEX).map(([id, t]) => [id, ini(t.knobs)])), paredes: [] } as any)
+export const padrao = (): Opcoes => ({ ...ini(SISTEMA), ...ini(PISO), ...ini(GUIAS), formato: 'quadrado', trava: 'nenhuma', ima_borda: false, ima_cruz: false, ima_meio: false, alivio: false, textura: 'pedra', texturaParede: '', inclinacao_dir: '+y', pilar: false, pilar_saliencia: 1.5, pilar_sobe: 2, telhado_forma: 'nenhum', telhado_modo: 'removivel', telhado_eixo: 'x', telhado_angulo: 35, telhado_beiral: 2, telhado_borda: 2, mureta_altura: 4, mureta_espessura: 2, ameias: true, saia_altura: 3, saia_folga: .3, telhado_casca: 2, texturaTelhado: 'casco', relevo_tipo: '', objetos: [], ...Object.fromEntries(Object.entries(TEX).map(([id, t]) => [id, ini(t.knobs)])), paredes: [] } as any)
 
 /** Rede do topo da laje: xy por ponto, triângulos e o contorno de cada célula (anti-horário).
  *  Todas as células caem na mesma rede global, então os pontos dos lados comuns são os mesmos. */
@@ -139,6 +143,21 @@ function rampa(o: Opcoes, r: Regiao) {
     espelho: (x: number, y: number) => esc && Math.abs(t(x, y) - Math.round(t(x, y) / p) * p) < .5, // a < 0,5 mm de um espelho: sem suavizar nem reduzir
   }
 }
+const MARGEM_RELEVO = 3 // mm: faixa da borda sem relevo grande (emenda 0 com o vizinho plano)
+/** Relevo grande da escala Reino: quanto o topo sobe no ponto (mm); null sem relevo. Vai a 0 na borda. */
+export function relevoGrande(o: Opcoes, r: Regiao): ((x: number, y: number) => number) | null {
+  if (!o.relevo_tipo) return null
+  const xs = r.seg.flatMap(g => [g[0], g[2]]), ys = r.seg.flatMap(g => [g[1], g[3]])
+  const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys)
+  const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, R = Math.min(x1 - x0, y1 - y0) / 2, A = o.relevo_altura, ds = o.semente * 13.7, t = o.relevo_tipo
+  return (x, y) => {
+    const p = Math.min(1, Math.hypot(x - cx, y - cy) / R)
+    const h = t === 'colina' ? .5 * (1 + Math.cos(Math.PI * p))
+      : t === 'montanha' ? (1 - p) ** 1.3 * (.65 + .7 * ruido(x, y, ds, .09, 3, .55, 7)) // cristas pelo ruído
+      : p < .22 ? .5 + .28 * (p / .22) ** 2 : 1 - p // vulcão: cone com cratera (fundo a meia altura)
+    return A * h * mapa(distBorda(r, x, y), 0, MARGEM_RELEVO, 0, 1)
+  }
+}
 /** Rampa ou escada: a laje sobe e as paredes saem. */
 export const inclinado = (o: Opcoes) => o.escada_degraus >= 2 || o.inclinacao > 0
 /** Subida de um degrau padrão (mm): altura do degrau menos o assento. */
@@ -158,7 +177,7 @@ export function piso(o: Opcoes, cortes?: Float64Array): Malha & { zt: number; r:
   const z0 = zt - .6, z1 = zt + RELEVO, nz = Math.round((z1 - z0) / res + 1)
   const { XY, tri, loops } = rede(o, r, res), nl = XY.length / 2
   const base = P.length / 3, id = new Int32Array(nl * nz).fill(-1)
-  const f = relevo(o, r, XY), des = o.desgaste, rp = rampa(o, r)
+  const f = relevo(o, r, XY), des = o.desgaste, rp = rampa(o, r), rg = relevoGrande(o, r)
   const corte = new Float32Array(nl).fill(-1) // corte do topo por ponto da rede, calculado uma vez
   const v = (L: number, k: number) => {
     const n = L + nl * k
@@ -176,6 +195,7 @@ export function piso(o: Opcoes, cortes?: Float64Array): Malha & { zt: number; r:
     // a coluna da lateral encolhe até o relevo daquele ponto: a textura desce pela lateral, sem parede fina em volta (o fundo z0 fica)
     let zf = z0 + (z - z0) * (1 - ct / (z1 - z0))
     zf += rp.sobe(x, y) * k / (nz - 1) // rampa ou escada: o fundo (k = 0) fica, o topo sobe tudo; a laje vira cunha ou escada
+    if (rg) zf += rg(x, y) * k / (nz - 1) // relevo grande (Reino): igual à rampa
     P.push(x + dx * lado, y + dy * lado, zf)
     return (id[n] = base + (P.length / 3 - 1 - base))
   }

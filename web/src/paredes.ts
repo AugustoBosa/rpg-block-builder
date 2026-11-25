@@ -32,6 +32,8 @@ export function montaParedes(div: HTMLElement, o: Opcoes, previa: () => void) {
     controle(c, 'Altura (mm)', p.altura, 1, 100, v => { p.altura = v }, .5)
     controle(c, 'Espessura (mm)', p.espessura, 1, 20, v => { p.espessura = v }, .5)
     escolha(c, 'Lado da espessura', p.lado, [['fora', 'Fora'], ['centro', 'Centro'], ['dentro', 'Dentro']], v => { p.lado = v as Parede['lado']; previa() })
+    const am = marca(); am.checked = !!p.ameias; am.onchange = () => { p.ameias = am.checked; previa() }
+    c.append(campo('Ameias (muralha)', am))
     p.aberturas.forEach((ab, j) => {
       const h = document.createElement('div')
       h.className = 'nota'; h.textContent = `Abertura ${j + 1}`

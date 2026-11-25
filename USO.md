@@ -18,8 +18,16 @@ Versão para hospedar: `npm --prefix web run build` grava o site estático em `w
 
 Nada é salvo: cada abertura começa do padrão.
 
+### Escalas (Combate, Cidade, Reino)
+O Sistema (célula, pé, grid) é o mesmo nas três; muda o que a célula representa e o que se põe nela.
+- **Combate:** salas, ruínas, florestas (o que já existia).
+- **Cidade:** casas, torres, árvores e bosques como miniaturas sobre a laje; muralha = parede com **Ameias**; portão = porta.
+- **Reino:** relevo (colina, montanha, vulcão) que sobe no meio da peça e volta ao nível na borda (emenda com o vizinho plano); marcadores de cidade e castelo; água = textura Água. No mapa, cada hex é uma peça solta: o mestre põe na mesa quando os jogadores chegam lá.
+- **Gerador (aba Blocos):** seletor **Escala** no topo; Cidade abre a seção **Construções** (+ casa, torre...: posição, giro, tamanho); Reino abre também **Terreno** (relevo e altura). CLI: `--relevo_tipo montanha --relevo_altura 25`.
+- **Editor de mapa:** a escala é escolhida ao criar o mapa (fixa depois). Ferramenta **Objeto** (tecla O) + lista do objeto: clique põe ou tira, arrasto põe.
+
 ### Editor de mapa (`/mapa.html`, link na página principal)
-1. **Novo mapa** (quadrado ou hexágono, largura da célula) ou **Novo a partir de modelo…** (Masmorra, Taverna 2 andares, Caverna hex).
+1. **Novo mapa** (quadrado ou hexágono, largura da célula, escala) ou **Novo a partir de modelo…** (Masmorra, Taverna 2 andares, Caverna hex, Cidade murada, Reino).
 2. Desenhe com as ferramentas (teclas): Piso P, Apagar E, Parede W, Porta D, Janela J, Arco A, Coluna C, Rampa M, Escada S, Sala T, Corte X; R gira o sentido da rampa/escada; Ctrl+Z / Ctrl+Y. Arrastar com o botão do meio (ou Espaço + arrastar) move a vista; a roda dá zoom.
 3. **Níveis:** "+ nível" cria um andar; "Base (degraus)" sobe o nível 15,5 mm por degrau. **Salas:** cada sala tem tema e tamanho máximo da peça (linhas × colunas); a ferramenta Corte força um corte entre duas células. O tracejado azul mostra as peças.
 4. **2D / 3D:** a 3D mostra caixas na hora e troca pela peça real (1 mm) quando cada peça única fica pronta; "Só caixas (L0)" para máquinas fracas.
@@ -54,6 +62,7 @@ Grava o STL e diz se a malha fecha e quanto tempo levou. `--peca piso|grid|degra
 | `npx tsx check_emenda.ts` | emenda entre vizinhos (quadrado e hexágono, 1×1, 2×3, 3×2; Pedra e Tábuas) | ~3,5 min |
 | `npx tsx check_mapa.ts` | editor de mapa: modelo, salvar/abrir, divisão em peças, dono de parede, dedup, grids e degraus, malha fechada de peças do mapa | ~3 min |
 | `npx tsx check_zip.ts` | ZIP da exportação do mapa (CRC32 e `unzip -t`) | segundos |
+| `npx tsx check_escalas.ts` | escalas Cidade e Reino: miniaturas e relevos fecham (quadrado e hex), relevo não mexe na borda, muralha com ameias, mapa (escala, relevo, objetos, rotação) | ~30 s |
 
 No GitHub, `pages.yml` roda `check_temas` + `check_paredes D2` antes de publicar (~1 min); `checks.yml` roda a bateria completa (~17 min) e não segura o deploy.
 

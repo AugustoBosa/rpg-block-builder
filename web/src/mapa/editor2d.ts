@@ -1,11 +1,11 @@
 // Editor 2D do mapa: canvas do nível atual (e do nível de baixo, esmaecido), ponteiros, teclas e pilha de desfazer. Os controles ficam em main.ts.
-import { abrir, apaga, arestaCanonica, centroMundo, chave, pinta, poeAresta, salvar, tiraAresta, vizinho, type ArestaMapa, type Dir, type Mapa, type Nivel } from './modelo'
+import { abrir, apaga, arestaCanonica, centroMundo, chave, OBJ, pinta, poeAresta, salvar, tiraAresta, vizinho, type ArestaMapa, type Dir, type Mapa, type Nivel } from './modelo'
 import type { Sistema } from '../sistema'
 import type { TexId } from '../textura'
 import { dividir } from './divisao'
 
-export type Ferr = 'piso' | 'apagar' | 'parede' | 'porta' | 'janela' | 'arco' | 'coluna' | 'rampa' | 'escada' | 'sala' | 'corte'
-export const ed = { m: undefined as unknown as Mapa, niv: 0, sala: '', tex: 'pedra' as TexId, ferr: 'piso' as Ferr, dir: '+x' as Dir }
+export type Ferr = 'piso' | 'apagar' | 'parede' | 'porta' | 'janela' | 'arco' | 'coluna' | 'rampa' | 'escada' | 'sala' | 'corte' | 'objeto'
+export const ed = { m: undefined as unknown as Mapa, niv: 0, sala: '', tex: 'pedra' as TexId, ferr: 'piso' as Ferr, dir: '+x' as Dir, obj: 'casa' }
 
 export const COR: Record<TexId, string> = {
   pedra: '#7d766a', lisa: '#a3a3a0', lajota: '#a68e68', tijolo: '#9a5b3e', terra: '#6e5238', areia: '#c8b07a', rachado: '#6d6b67', tabuas: '#8c6a44',
@@ -14,8 +14,8 @@ export const COR: Record<TexId, string> = {
 const CORA: Record<ArestaMapa['tipo'], string> = { parede: '#e8e4da', porta: '#e9a35a', janela: '#7ec8e3', arco: '#d9c26a' }
 const VD: Record<Dir, [number, number]> = { '+x': [1, 0], '-x': [-1, 0], '+y': [0, 1], '-y': [0, -1] }
 const ORDEM: Dir[] = ['+x', '+y', '-x', '-y']
-const TECLAS: Record<string, Ferr> = { p: 'piso', e: 'apagar', w: 'parede', d: 'porta', j: 'janela', a: 'arco', c: 'coluna', m: 'rampa', s: 'escada', t: 'sala', x: 'corte' }
-const ARRASTA: Ferr[] = ['piso', 'apagar', 'parede', 'sala', 'rampa', 'escada']
+const TECLAS: Record<string, Ferr> = { p: 'piso', e: 'apagar', w: 'parede', d: 'porta', j: 'janela', a: 'arco', c: 'coluna', m: 'rampa', s: 'escada', t: 'sala', x: 'corte', o: 'objeto' }
+const ARRASTA: Ferr[] = ['piso', 'apagar', 'parede', 'sala', 'rampa', 'escada', 'objeto']
 
 type Pt = [number, number]
 type Gesto = { antes: string; modo: 'add' | 'del'; arrasta: boolean; ult: Pt }
@@ -171,6 +171,11 @@ function desenhaNivel(n: Nivel, alfa: number, cheio: boolean) {
   for (const [k, cel] of cels) {
     const [c, r] = k.split(',').map(Number), [cx, cy] = centroMundo(s, c, r)
     if (cel.tipo !== 'piso') marca(cx, cy, cel.dir ?? '+x', cel.tipo === 'escada', t)
+    if (cel.obj) { // letra do objeto (y do canvas invertido: desfaz a escala só no texto)
+      ctx.save(); ctx.translate(cx, cy); ctx.scale(1, -1)
+      ctx.fillStyle = '#111'; ctx.font = `bold ${t * 1.1}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
+      ctx.fillText(OBJ[cel.obj].slice(0, 2), 0, 0); ctx.restore()
+    }
     const col = n.colunas[k]
     if (col) {
       ctx.fillStyle = '#c9c4b8'; ctx.strokeStyle = '#111'; ctx.lineWidth = lw(1)
@@ -305,6 +310,11 @@ function acao(wx: number, wy: number, inicio: boolean) {
   switch (ed.ferr) {
     case 'piso': pinta(m, id, c, r, { tex: ed.tex, tipo: 'piso', sala }); break
     case 'apagar': apaga(m, id, c, r); break
+    case 'objeto': // clique alterna; arrasto só põe
+      if (!cel) break
+      if (inicio && cel.obj === ed.obj) delete cel.obj
+      else cel.obj = ed.obj
+      break
     case 'rampa': case 'escada':
       pinta(m, id, c, r, { tex: cel?.tex ?? ed.tex, tipo: ed.ferr === 'escada' ? 'escada' : 'rampa', dir: ed.dir, sala: cel?.sala ?? sala })
       break

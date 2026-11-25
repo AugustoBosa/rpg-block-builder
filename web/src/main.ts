@@ -1,4 +1,5 @@
-import { GUIAS, inclinado, padrao, PISO, SECAO_GUIAS, SECAO_PISO, type Opcoes } from './bloco'
+import { GUIAS, inclinado, padrao, PISO, SECAO_GUIAS, SECAO_PISO, type Opcoes, type Relevo } from './bloco'
+import { objetoNovo, OBJETOS, type TipoObjeto } from './miniaturas'
 import { cancelaExporta, exporta, previa as pedePrevia } from './cliente'
 import { TEX, texParede, type TexId } from './textura'
 import { paredesValidas, tracejado3D } from './aberturas'
@@ -10,7 +11,6 @@ import { montaParedes } from './paredes'
 import { temTelhado } from './telhado'
 import { aplicaTema, TEMAS } from './temas'
 import { $, aoMudar, botao, campo, controle, escolha, grupo, opcoes, secoes } from './ui'
-
 // nada é salvo: cada abertura começa do padrão
 const o: Opcoes = padrao()
 let enquadrar = true // só ao trocar de passo ou de peça; mexer num slider não move a câmera
@@ -105,8 +105,40 @@ formato.onchange = () => { o.formato = formato.value as Opcoes['formato']; monta
 encaixe.onchange = () => { Object.assign(o, ENCAIXES[encaixe.value as keyof typeof ENCAIXES][1]); montaSistema() }
 
 // aba Blocos (peça de piso e Pedra avançada) e aba Grids (grid e degrau). As duas leem as medidas do Sistema.
-const dPiso = secoes($('gerais'), ['Peça', 'Paredes', 'Telhado', 'Textura', 'Borda'], ['Peça'])
+const dPiso = secoes($('gerais'), ['Peça', 'Construções', 'Terreno', 'Paredes', 'Telhado', 'Textura', 'Borda'], ['Peça'])
 const poePiso = grupo(PISO, o, SECAO_PISO, dPiso, ['resolucao'])
+// escalas (spec 2026-11-25-escalas): Combate = salas; Cidade = construções e muralhas; Reino = relevo e marcadores. A escala só filtra a interface.
+const ESCALAS = { combate: 'Combate', cidade: 'Cidade', reino: 'Reino' }
+const OBJ_ESCALA: Record<string, TipoObjeto[]> = { combate: [], cidade: ['casa', 'torre', 'arvore', 'bosque'], reino: ['cidade', 'castelo', 'arvore', 'bosque'] }
+let escala = 'combate'
+const sec = (t: string) => dPiso[t].parentElement as HTMLDetailsElement
+escolha(dPiso['Terreno'], 'Relevo', o.relevo_tipo, [['', 'Plano'], ['colina', 'Colina'], ['montanha', 'Montanha'], ['vulcao', 'Vulcão']], v => { o.relevo_tipo = v as Relevo; previa() })
+const relSel = dPiso['Terreno'].querySelector('select')!
+function montaObjetos() {
+  const d = dPiso['Construções']
+  d.replaceChildren()
+  o.objetos.forEach((ob, i) => {
+    const c = document.createElement('div'), h = document.createElement('div')
+    h.className = 'nota'; h.textContent = `${i + 1} · ${OBJETOS[ob.tipo].nome}`
+    c.append(h); d.append(c)
+    const n = (rot: string, k: 'x' | 'y' | 'rot' | 'tam' | 'semente', min: number, max: number, passo: number) => controle(c, rot, ob[k], min, max, v => { ob[k] = v }, passo)
+    n('X (mm)', 'x', -60, 60, .5); n('Y (mm)', 'y', -60, 60, .5); n('Giro (graus)', 'rot', 0, 345, 15); n('Tamanho', 'tam', .4, 2, .05)
+    if (ob.tipo === 'arvore' || ob.tipo === 'bosque') n('Semente', 'semente', 1, 99, 1)
+    c.append(botao('Remover', () => { o.objetos.splice(i, 1); montaObjetos(); previa() }))
+  })
+  for (const t of OBJ_ESCALA[escala]) d.append(botao(`+ ${OBJETOS[t].nome}`, () => { o.objetos.push(objetoNovo(t)); montaObjetos(); previa() }))
+}
+const escSel = document.createElement('select')
+opcoes(escSel, Object.entries(ESCALAS))
+escSel.onchange = () => {
+  escala = escSel.value
+  sec('Construções').hidden = escala === 'combate'
+  sec('Terreno').hidden = escala !== 'reino'
+  if (escala !== 'reino') { o.relevo_tipo = ''; relSel.value = '' } // o que a escala esconde não vale
+  o.objetos = o.objetos.filter(ob => OBJ_ESCALA[escala].includes(ob.tipo))
+  montaObjetos(); previa()
+}
+escSel.onchange(new Event('change'))
 escolha(dPiso['Peça'], 'Rampa sobe para', o.inclinacao_dir, [['+y', '+Y'], ['-y', '−Y'], ['+x', '+X'], ['-x', '−X']], v => { o.inclinacao_dir = v as Opcoes['inclinacao_dir']; previa() })
 const paredesDiv = dPiso['Paredes']
 montaParedes(paredesDiv, o, previa)
@@ -147,7 +179,7 @@ opcoes(texSel, Object.entries(TEX).map(([k, t]) => [k, t.nome] as [string, strin
 texSel.onchange = () => { o.textura = texSel.value as TexId; mostraTextura(); previa() }
 opcoes(texParSel, [['', 'Igual ao piso'], ...Object.entries(TEX).map(([k, t]) => [k, t.nome] as [string, string])])
 texParSel.onchange = () => { o.texturaParede = texParSel.value as Opcoes['texturaParede']; mostraTextura(); previa() }
-$('gerais').prepend(campo('Tema', temaSel), campo('Textura', texSel), campo('Textura da parede', texParSel))
+$('gerais').prepend(campo('Escala', escSel), campo('Tema', temaSel), campo('Textura', texSel), campo('Textura da parede', texParSel))
 const dG = secoes($('op-guias'), ['Dimensões', 'Travas', 'Ímãs do grid', 'Economia'])
 grupo(GUIAS, o, SECAO_GUIAS, dG)
 const caixa = (pai: HTMLElement, rot: string, k: 'ima_borda' | 'ima_cruz' | 'ima_meio' | 'alivio') => {

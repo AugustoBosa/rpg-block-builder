@@ -5,6 +5,7 @@ import { aberturaNova, paredeNova, type Parede } from '../parede'
 import { aplicaTema, TEMAS } from '../temas'
 import { ESP, type Peca } from './divisao'
 import type { Mapa, Nivel, Sala } from './modelo'
+import type { Objeto } from '../miniaturas'
 
 type P2 = [number, number]
 const ANG = { x: 0, y: 90, h0: 0, h60: 60, h120: 120 } as const
@@ -73,6 +74,12 @@ export function opcoesDe(p: Peca, m: Mapa, sala: Sala, nivel: Nivel, avisos: str
     const [cx, cy] = ctr(x.c, x.r)
     paredes.push({ ...paredeNova(`col${np++}`, { tipo: 'eixo', eixo: 'x', desloc: cy }, x.lado), inicio: cx - x.lado / 2, altura: nivel.altura_parede, espessura: x.lado, lado: 'centro' })
   }
+  if (m.escala === 'cidade') for (const w of paredes) if (!w.id.startsWith('col')) { // muralha; o portão fica abaixo das ameias
+    w.ameias = true
+    for (const ab of w.aberturas) ab.altura = Math.min(ab.altura, w.altura - 4)
+  }
   o.paredes = paredes
+  if (p.relevo) o.relevo_tipo = p.relevo as Opcoes['relevo_tipo']
+  o.objetos = (p.objetos ?? []).map(x => { const [cx, cy] = ctr(x.c, x.r); return { tipo: x.tipo as Objeto['tipo'], x: cx, y: cy, rot: x.rot, tam: 1, semente: 1 } })
   return o
 }

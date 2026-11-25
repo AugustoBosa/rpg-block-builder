@@ -1,7 +1,7 @@
 // Vista 3D do mapa. L0 = caixas por instância (thread principal, na hora). L1 = prévia 1 mm de cada peça única (pecas.worker), trocada quando chega.
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
-import { centroMundo, nLados, vizinho, type ArestaMapa, type Mapa } from './modelo'
+import { centroMundo, nLados, RELEVOS, vizinho, type ArestaMapa, type Mapa } from './modelo'
 import { COR, lados } from './editor2d'
 import { gira, tileset, type Instancia, type Peca } from './divisao'
 import type { Sistema } from '../sistema'
@@ -14,6 +14,7 @@ type Acc = { p: number[]; c: number[] }
 // mm por nível: subidaNivel() padrão (bloco.ts não pode ser importado aqui, puxa o WASM)
 const ALTURA_DEGRAU = 15.5
 const H_CHAO = 8, ESP = 6, COL = 6, CINZA = '#9a9a94'
+const COR_OBJ: Record<string, string> = { arvore: '#4f8a3c', bosque: '#3f7a32', montanha: '#8a8a86', colina: '#7da05a', vulcao: '#8a3b2a', casa: '#b5835a', torre: '#a9a49a', cidade: '#c9a56a', castelo: '#a9a49a' }
 const parse = (k: string): P2 => k.split(',').map(Number) as P2
 const rgb = (hex: string) => { const c = new THREE.Color(hex); return [c.r, c.g, c.b] }
 
@@ -141,7 +142,16 @@ function constroiL0(m: Mapa, t: Tileset): THREE.Mesh[] {
   t.instancias.forEach((it, j) => it.celulas.forEach(k => dono.set(`${it.nivel}/${k}`, j)))
   for (const n of m.niveis) {
     const z = n.base * ALTURA_DEGRAU, dn = (k: string) => dono.get(`${n.id}/${k}`)
-    for (const [k, cel] of Object.entries(n.celulas)) { const j = dn(k); if (j !== undefined) { const [c, r] = parse(k); prisma(acc[j], s, c, r, z, rgb(COR[cel.tex])) } }
+    for (const [k, cel] of Object.entries(n.celulas)) {
+      const j = dn(k)
+      if (j === undefined) continue
+      const [c, r] = parse(k)
+      prisma(acc[j], s, c, r, z, rgb(COR[cel.tex]))
+      if (cel.obj) { // L0 do objeto: caixa no centro (relevo: larga e alta; miniatura: pequena)
+        const [cx, cy] = centroMundo(s, c, r), rl = RELEVOS.includes(cel.obj), h = rl ? 20 : 12, a = rl ? 9 : 5
+        caixa(acc[j], (u, v, zz) => [cx + u, cy + v, z + H_CHAO + zz], -a, a, -a, a, 0, h, rgb(COR_OBJ[cel.obj] ?? CINZA))
+      }
+    }
     for (const [k, ar] of Object.entries(n.arestas)) {
       // a chave canônica pode apontar para a célula vazia: aí a parede vai na vizinha, pelo lado oposto
       let [c, r, i] = k.split(',').map(Number), j = dn(`${c},${r}`)

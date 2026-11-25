@@ -1,5 +1,5 @@
 // Divisão do mapa em peças (puro: sem WASM; só modelo.ts e temas.ts). O editor 2D usa ao vivo.
-import { arestaCanonica, chave, nLados, vizinho, type ArestaMapa, type CelulaMapa, type Dir, type Mapa, type Sala } from './modelo'
+import { arestaCanonica, chave, nLados, RELEVOS, vizinho, type ArestaMapa, type CelulaMapa, type Dir, type Mapa, type Sala } from './modelo'
 import type { Sistema } from '../sistema'
 import type { TexId } from '../textura'
 import { TEMAS } from '../temas'
@@ -15,6 +15,7 @@ export interface Entrada { c: number; r: number; i: number; tipo: ArestaMapa['ti
 export interface Peca {
   linhas: number; colunas: number; tex: TexId; texParede: TexId | ''; tipo: CelulaMapa['tipo']; dir?: Dir; tema: string; altura_parede: number
   paredes: Entrada[]; colunasCel: { c: number; r: number; lado: number }[]
+  relevo?: string; ameias?: boolean; objetos?: { c: number; r: number; tipo: string; rot: number }[] // escalas Cidade e Reino (sem os campos: peça igual à de antes)
 }
 /** `rot`: quartos de volta que levam a peça canônica à posição do mapa (no hexágono, 2 = 180°). */
 export interface Instancia { chave: string; nivel: string; c0: number; r0: number; linhas: number; colunas: number; rot: 0 | 1 | 2 | 3; celulas: string[]; peca: Peca }
@@ -29,6 +30,7 @@ const transforma = (p: Peca, cr: (c: number, r: number) => P2, lado: (i: number)
     paredes: p.paredes.map(e => { const [c, r] = cr(e.c, e.r); return { ...e, c, r, i: lado(e.i) } }),
     colunasCel: p.colunasCel.map(x => { const [c, r] = cr(x.c, x.r); return { ...x, c, r } }),
   }
+  if (p.objetos) q.objetos = p.objetos.map(x => { const [c, r] = cr(x.c, x.r); return { ...x, c, r, rot: (x.rot + voltas * 90) % 360 } })
   if (p.dir) q.dir = DIRS[(DIRS.indexOf(p.dir) + voltas) % 4]
   return q
 }
@@ -104,12 +106,13 @@ function dividirComAvisos(m: Mapa, nivelId: string, avisos: string[]): Instancia
   const at = (a: P2) => cel(a[0], a[1])
   const sala = (id: string) => n.salas.find(x => x.id === id) as Sala
   const ehRampa = (x: CelulaMapa) => x.tipo !== 'piso'
+  const relevo = (x: CelulaMapa) => RELEVOS.includes(x.obj ?? '') ? x.obj! : ''
   const ladoPara = (a: P2, b: P2) => { for (let i = 0; i < K; i++) { const [x, y] = vizinho(s, a[0], a[1], i); if (x === b[0] && y === b[1]) return i } return -1 }
   const temParede = (a: P2, b: P2) => { const i = ladoPara(a, b); return i >= 0 && n.arestas[arestaCanonica(s, a[0], a[1], i)] !== undefined }
   // aresta (c, r, i) separa duas células que não podem ficar na mesma peça
   const barreira = (c: number, r: number, i: number) => {
     const A = cel(c, r), [c2, r2] = vizinho(s, c, r, i), B = cel(c2, r2)
-    if (!A || !B || A.sala !== B.sala || A.tex !== B.tex || A.tipo !== B.tipo || A.dir !== B.dir) return true
+    if (!A || !B || A.sala !== B.sala || A.tex !== B.tex || A.tipo !== B.tipo || A.dir !== B.dir || relevo(A) !== relevo(B)) return true
     const k = arestaCanonica(s, c, r, i)
     return n.arestas[k] !== undefined || (n.salas.find(x => x.id === A.sala)?.cortes ?? []).includes(k)
   }
@@ -207,6 +210,10 @@ function dividirComAvisos(m: Mapa, nivelId: string, avisos: string[]): Instancia
       linhas: q.linhas, colunas: q.colunas, tex: c0.tex, texParede, tipo: c0.tipo, tema: sala(c0.sala).tema, altura_parede: n.altura_parede,
       paredes: ent[j], colunasCel: cols[j], ...(c0.tipo !== 'piso' && c0.dir ? { dir: c0.dir } : {}),
     }
+    if (relevo(c0)) peca.relevo = relevo(c0)
+    if (m.escala === 'cidade' && ent[j].length) peca.ameias = true // entra na chave: a vista 3D não reaproveita a peça sem ameias de outro mapa
+    const obs = q.cels.flatMap(k => { const x = n.celulas[k], [c, r] = k.split(',').map(Number); return x.obj && !relevo(x) ? [{ ...rel(j, c, r), tipo: x.obj, rot: 0 }] : [] })
+    if (obs.length) peca.objetos = obs
     const cn = canonica(peca, s)
     out.push({ chave: cn.chave, nivel: n.id, c0: q.c0, r0: q.r0, linhas: q.linhas, colunas: q.colunas, rot: cn.rot, celulas: q.cels, peca: cn.peca })
   })

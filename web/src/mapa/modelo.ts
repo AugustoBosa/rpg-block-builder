@@ -3,11 +3,16 @@ import type { Sistema } from '../sistema'
 import { TEX, type TexId } from '../textura'
 
 export type Dir = '+x' | '-x' | '+y' | '-y'
-export interface CelulaMapa { tex: TexId; tipo: 'piso' | 'rampa' | 'escada'; dir?: Dir; sala: string }
+export interface CelulaMapa { tex: TexId; tipo: 'piso' | 'rampa' | 'escada'; dir?: Dir; sala: string; obj?: string /* chave de OBJ: miniatura ou relevo (Cidade, Reino) */ }
+/** Escala do mapa (spec 2026-11-25-escalas): sem o campo = combate. Só muda as ferramentas; o Sistema é o mesmo. */
+export type Escala = 'combate' | 'cidade' | 'reino'
+export const OBJ: Record<string, string> = { casa: 'Casa', torre: 'Torre', arvore: 'Árvore', bosque: 'Bosque', cidade: 'Cidade', castelo: 'Castelo', colina: 'Colina', montanha: 'Montanha', vulcao: 'Vulcão' }
+export const RELEVOS = ['colina', 'montanha', 'vulcao'] // ocupam a peça inteira; os outros são miniaturas no centro da célula
+export const OBJ_ESCALA: Record<Escala, string[]> = { combate: [], cidade: ['casa', 'torre', 'arvore', 'bosque'], reino: ['montanha', 'colina', 'vulcao', 'cidade', 'castelo', 'arvore', 'bosque'] }
 export interface ArestaMapa { tipo: 'parede' | 'porta' | 'janela' | 'arco'; tex?: TexId }
 export interface Sala { id: string; nome: string; tema: string; max: [number, number]; cortes: string[] }
 export interface Nivel { id: string; nome: string; base: number; altura_parede: number; celulas: Record<string, CelulaMapa>; arestas: Record<string, ArestaMapa>; colunas: Record<string, { lado: number }>; salas: Sala[] }
-export interface Mapa { versao: 1; nome: string; sistema: Sistema; niveis: Nivel[] }
+export interface Mapa { versao: 1; nome: string; sistema: Sistema; niveis: Nivel[]; escala?: Escala }
 
 const TEX_IDS = Object.keys(TEX), TIPOS = ['piso', 'rampa', 'escada'], ARESTAS = ['parede', 'porta', 'janela', 'arco'], DIRS: Dir[] = ['+x', '-x', '+y', '-y']
 const INT2 = /^-?\d+,-?\d+$/, INT3 = /^-?\d+,-?\d+,\d+$/
@@ -45,9 +50,13 @@ export function arestaCanonica(s: Sistema, c: number, r: number, i: number): str
   return `${c2},${r2},${(i + k / 2) % k}`
 }
 
-export function cria(sistema: Sistema, nome = 'Mapa'): Mapa {
-  const sala: Sala = { id: 's1', nome: 'Sala 1', tema: '', max: [3, 3], cortes: [] }
-  return { versao: 1, nome, sistema: { ...sistema }, niveis: [{ id: 'terreo', nome: 'Térreo', base: 0, altura_parede: 30, celulas: {}, arestas: {}, colunas: {}, salas: [sala] }] }
+/** Reino: peça 1 × 1 (cada célula é uma peça solta, posta na mesa quando os jogadores chegam lá). */
+export const maxPadrao = (e?: Escala): [number, number] => e === 'reino' ? [1, 1] : [3, 3]
+export function cria(sistema: Sistema, nome = 'Mapa', escala: Escala = 'combate'): Mapa {
+  const sala: Sala = { id: 's1', nome: 'Sala 1', tema: '', max: maxPadrao(escala), cortes: [] }
+  const m: Mapa = { versao: 1, nome, sistema: { ...sistema }, niveis: [{ id: 'terreo', nome: 'Térreo', base: 0, altura_parede: escala === 'cidade' ? 14 : 30, celulas: {}, arestas: {}, colunas: {}, salas: [sala] }] }
+  if (escala !== 'combate') m.escala = escala // combate sem o campo: arquivos iguais aos de antes
+  return m
 }
 
 const nivel = (m: Mapa, id: string) => {
@@ -91,6 +100,7 @@ export function abrir(txt: string): Mapa {
   const f = o.sistema?.formato
   if (f !== 'quadrado' && f !== 'hexagono') throw new Error(`Sistema inválido: formato "${f}" (use quadrado ou hexagono).`)
   if (!Array.isArray(o.niveis)) throw new Error('Mapa inválido: "niveis" precisa ser uma lista.')
+  if (o.escala !== undefined && !(o.escala in OBJ_ESCALA)) throw new Error(`Escala "${o.escala}" inválida (use combate, cidade ou reino).`)
   const k = nLados(o.sistema)
   for (const n of o.niveis) {
     if (!n || !Array.isArray(n.salas)) throw new Error('Nível inválido: falta a lista de salas.')
@@ -100,6 +110,7 @@ export function abrir(txt: string): Mapa {
       if (!TEX_IDS.includes(c.tex)) throw new Error(`Célula ${key}: textura "${c.tex}" não existe.`)
       if (!TIPOS.includes(c.tipo)) throw new Error(`Célula ${key}: tipo "${c.tipo}" inválido.`)
       if (c.dir !== undefined && !DIRS.includes(c.dir)) throw new Error(`Célula ${key}: sentido "${c.dir}" inválido.`)
+      if (c.obj !== undefined && !(c.obj in OBJ)) throw new Error(`Célula ${key}: objeto "${c.obj}" não existe.`)
       if (!salas.has(c.sala)) throw new Error(`Célula ${key}: sala "${c.sala}" não existe no nível "${n.id}".`)
     }
     for (const [key, a] of Object.entries<any>(n.arestas ?? {})) {
