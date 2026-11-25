@@ -21,7 +21,7 @@ Spec: `docs/superpowers/specs/2026-11-24-editor-mapa-design.md`. Plano aprovado 
 | T7 | Exportação ZIP | `c65d4ea` |
 | T8 | Modelos prontos | `b573bb3` |
 | T9 | Docs + CI | este commit |
-| F3 | Check final (Advisor) + navegador | — |
+| F3 | Check final (Advisor) + navegador | Advisor bloqueou 2: 2D e montagem.svg espelhados em y (corrigido: só a exibição inverte y) e reforço de quina sem olhar o dono (corrigido: só onde as paredes são de donos fora de P; caso 9 no check_mapa). Escada limitada a 12 degraus. Ressalvas abertas: sentido de rampa/escada na montagem.svg, rampa > 3 células, altura do nível fixa 15,5 na 3D, aviso de acesso global |
 
 ## Rulings (decisões do orquestrador; reversíveis)
 1. **Coordenadas = as de `centros()`** (coluna/linha, hex com colunas ímpares descidas meia célula), não axiais: evita conversão e bate com o gerador. Custo se errado: só o modelo e as funções de vizinho.

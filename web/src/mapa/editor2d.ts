@@ -73,7 +73,8 @@ let ctx: CanvasRenderingContext2D
 const vis = { tx: 0, ty: 0, z: 1, pronto: false }
 const lw = (px: number) => px / vis.z
 const local = (e: PointerEvent | WheelEvent): { x: number; y: number } => { const b = cv.getBoundingClientRect(); return { x: e.clientX - b.left, y: e.clientY - b.top } }
-const mundo = (p: { x: number; y: number }): Pt => [(p.x - vis.tx) / vis.z, (p.y - vis.ty) / vis.z]
+// tela: y para baixo; mundo (STL, vista 3D): y para cima. Só a exibição inverte.
+const mundo = (p: { x: number; y: number }): Pt => [(p.x - vis.tx) / vis.z, (vis.ty - p.y) / vis.z]
 /** Enquadra as células de todos os níveis (+1 célula de margem); mapa vazio: 32 × 32 células. */
 function enquadra() {
   const W = cv.clientWidth, H = cv.clientHeight, [px, py] = passo(ed.m.sistema)
@@ -81,15 +82,15 @@ function enquadra() {
   const [x0, x1, y0, y1] = ps.length ? [Math.min(...ps.map(p => p[0])) - px, Math.max(...ps.map(p => p[0])) + px, Math.min(...ps.map(p => p[1])) - py, Math.max(...ps.map(p => p[1])) + py] : [-.5 * px, 31.5 * px, -.5 * py, 31.5 * py]
   vis.z = Math.min(W / (x1 - x0), H / (y1 - y0))
   vis.tx = W / 2 - (x0 + x1) / 2 * vis.z
-  vis.ty = H / 2 - (y0 + y1) / 2 * vis.z
+  vis.ty = H / 2 + (y0 + y1) / 2 * vis.z
   vis.pronto = true
 }
 export const reenquadra = () => { vis.pronto = false }
 function zoomEm(sx: number, sy: number, f: number) {
-  const wx = (sx - vis.tx) / vis.z, wy = (sy - vis.ty) / vis.z
+  const wx = (sx - vis.tx) / vis.z, wy = (vis.ty - sy) / vis.z
   vis.z = Math.min(20, Math.max(.02, vis.z * f))
   vis.tx = sx - wx * vis.z
-  vis.ty = sy - wy * vis.z
+  vis.ty = sy + wy * vis.z
 }
 
 function redesenha() {
@@ -100,7 +101,7 @@ function redesenha() {
   ctx.setTransform(1, 0, 0, 1, 0, 0)
   ctx.fillStyle = '#1d1f22'
   ctx.fillRect(0, 0, cv.width, cv.height)
-  ctx.setTransform(dpr * vis.z, 0, 0, dpr * vis.z, dpr * vis.tx, dpr * vis.ty)
+  ctx.setTransform(dpr * vis.z, 0, 0, -dpr * vis.z, dpr * vis.tx, dpr * vis.ty)
   grade()
   const b = abaixo()
   if (b) desenhaNivel(b, .25, false)
@@ -343,7 +344,7 @@ function pDown(e: PointerEvent) {
   if (ptrs.size === 2) {
     fimGesto(); pan = null
     const [a, b] = [...ptrs.values()], mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2
-    pinca = { d: Math.hypot(a.x - b.x, a.y - b.y), z: vis.z, wx: (mx - vis.tx) / vis.z, wy: (my - vis.ty) / vis.z }
+    pinca = { d: Math.hypot(a.x - b.x, a.y - b.y), z: vis.z, wx: (mx - vis.tx) / vis.z, wy: (vis.ty - my) / vis.z }
     return
   }
   if (ptrs.size > 2) return
@@ -358,7 +359,7 @@ function pMove(e: PointerEvent) {
     const [a, b] = [...ptrs.values()], mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2
     vis.z = Math.min(20, Math.max(.02, pinca.z * Math.hypot(a.x - b.x, a.y - b.y) / pinca.d))
     vis.tx = mx - pinca.wx * vis.z
-    vis.ty = my - pinca.wy * vis.z
+    vis.ty = my + pinca.wy * vis.z
     redesenha()
     return
   }

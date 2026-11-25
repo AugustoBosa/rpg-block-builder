@@ -139,6 +139,7 @@ function dividirComAvisos(m: Mapa, nivelId: string, avisos: string[]): Instancia
   const rel = (j: number, c: number, r: number) => ({ c: c - pos[j].c0, r: r - pos[j].r0 })
 
   // 2. paredes: dona = célula não rampa/escada; empate → a canônica (a que a chave cita)
+  const donoDe = new Map<string, string>() // aresta canônica → chave da célula dona
   for (const k of Object.keys(n.arestas)) {
     const [c, r, i] = k.split(',').map(Number), a = n.arestas[k], [c2, r2] = vizinho(s, c, r, i), j2 = (i + K / 2) % K
     const A = cel(c, r), B = cel(c2, r2)
@@ -146,6 +147,7 @@ function dividirComAvisos(m: Mapa, nivelId: string, avisos: string[]): Instancia
     if (A && !ehRampa(A)) dono = [c, r, i]
     else if (B && !ehRampa(B)) dono = [c2, r2, j2]
     if (!dono) { avisos.push(`Parede na aresta ${k} some: só há rampa ou escada do lado dela.`); continue }
+    donoDe.set(k, chave(dono[0], dono[1]))
     const j = atrib.get(chave(dono[0], dono[1]))
     if (j === undefined) continue
     ent[j].push({ ...rel(j, dono[0], dono[1]), i: dono[2], tipo: a.tipo, ...(a.tex ? { tex: a.tex } : {}) })
@@ -160,8 +162,9 @@ function dividirComAvisos(m: Mapa, nivelId: string, avisos: string[]): Instancia
     const j = atrib.get(chave(a[0], a[1]))
     if (j !== undefined) ent[j].push({ ...rel(j, a[0], a[1]), i, tipo: 'reforco', ini, comp })
   }
+  const donaDe = (a: P2, b: P2) => donoDe.get(arestaCanonica(s, a[0], a[1], ladoPara(a, b))) === chave(a[0], a[1]) // a é dona da parede a|b
   const reforcoEm = (D: P2, Y: P2, X: P2, comp: number) => { // D ganha retângulo ao longo do lado para Y, a partir do vértice comum com X
-    if (!at(D) || ehRampa(at(D)!)) return
+    if (!at(D) || ehRampa(at(D)!) || !donaDe(D, X)) return // só a dona da parede X|D tem a faixa a emendar
     const iY = ladoPara(D, Y), iX = ladoPara(D, X)
     ref(D, iY, iX !== (iY + 1) % K, comp)
   }
@@ -180,6 +183,7 @@ function dividirComAvisos(m: Mapa, nivelId: string, avisos: string[]): Instancia
           const Pc = roda[p], A = roda[(p + 3) % 4], Q = roda[(p + 2) % 4], B = roda[(p + 1) % 4]
           if (!temParede(Pc, A) || !temParede(Pc, B)) continue
           if (!at(A) || !at(B) || !at(Q) || temParede(Q, A) || temParede(Q, B) || ehRampa(at(Q)!)) continue
+          if (!donaDe(A, Pc) || !donaDe(B, Pc)) continue // buraco no canto Q só quando as duas paredes estão fora de P
           const iA = ladoPara(Q, A), iB = ladoPara(Q, B)
           ref(Q, iA, iB !== (iA + 1) % K, ESP)
         } else { // hex: X com paredes para D1 e D2, D1|D2 sem parede: cada dono ganha 1,155·e ao longo da aresta interna

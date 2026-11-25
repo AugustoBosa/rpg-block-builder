@@ -293,4 +293,20 @@ const sQ2 = sis('quadrado', { largura: 35, comprimento: 35 }), sH2 = sis('hexago
   confere('hex: nenhum grid com mais de 1 coluna começa em coluna ímpar', gH.length > 0 && gH.every(x => x.colunas === 1 || x.c0 % 2 === 0), `${gH.length} grids`)
 }
 
+{ // 9. reforço só onde as duas paredes da quina são de donos fora da célula P (sala 2×2 dentro de outra sala, paredes donas das de fora)
+  for (const [s, esperado] of [[sQ2, 1], [sH2, -1]] as const) {
+    const m = cria(s, 'R'), N = m.niveis[0], K = nLados(s)
+    N.salas = [{ id: 's1', nome: 'A', tema: '', max: [3, 3], cortes: [] }, { id: 's2', nome: 'B', tema: '', max: [3, 3], cortes: [] }]
+    const dentro = (c: number, r: number) => c >= 0 && c <= 1 && r >= 0 && r <= 1
+    for (let c = -1; c <= 2; c++) for (let r = -1; r <= 2; r++) pinta(m, 'terreo', c, r, { tex: 'pedra', tipo: 'piso', sala: dentro(c, r) ? 's1' : 's2' })
+    for (let c = 0; c <= 1; c++) for (let r = 0; r <= 1; r++) for (let i = 0; i < K; i++) { const [c2, r2] = vizinho(s, c, r, i); if (!dentro(c2, r2)) poeAresta(m, 'terreo', s, c, r, i, { tipo: 'parede' }) }
+    const its = dividir(m, 'terreo'), refs = its.flatMap(it => gira(it.peca, s, it.rot).paredes.filter(e => e.tipo === 'reforco').map(e => [it, e] as const))
+    // dona de cada parede: célula da peça cuja entrada (não reforço) cai na aresta
+    const donas = new Set(its.flatMap(it => gira(it.peca, s, it.rot).paredes.filter(e => e.tipo !== 'reforco').map(e => `${it.c0 + e.c},${it.r0 + e.r},${e.i}`)))
+    const soltos = refs.filter(([it, e]) => { const c = it.c0 + e.c, r = it.r0 + e.r; return ![...Array(K).keys()].some(i => donas.has(`${c},${r},${i}`)) && s.formato === 'hexagono' })
+    const ok = esperado >= 0 ? refs.length === esperado : soltos.length === 0
+    confere(`reforço ${s.formato}: sala dentro de sala ${esperado >= 0 ? `tem ${esperado} poste (canto -x,-y)` : 'só em célula dona de parede'}`, ok, `${refs.length} reforços, ${soltos.length} em célula sem parede`)
+  }
+}
+
 if (falhas) process.exit(1)

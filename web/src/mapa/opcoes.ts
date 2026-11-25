@@ -34,7 +34,7 @@ export function opcoesDe(p: Peca, m: Mapa, sala: Sala, nivel: Nivel, avisos: str
     const dir = p.dir ?? '+y', ei = dir[1] === 'x' ? 0 : 1
     o.inclinacao_dir = dir
     const v = regiao(o, p.linhas, p.colunas).seg.flatMap(g => [g[ei], g[ei + 2]]), ext = Math.max(...v) - Math.min(...v)
-    if (p.tipo === 'escada') { o.escada_degraus = Math.max(2, Math.round(ext / 8)); o.escada_altura = subidaNivel(o) }
+    if (p.tipo === 'escada') { o.escada_degraus = Math.min(12, Math.max(2, Math.round(ext / 8))); o.escada_altura = subidaNivel(o) }
     else {
       const graus = Math.atan(subidaNivel(o) / ext) * 180 / Math.PI
       if (graus > 40) avisos.push(`Rampa de ${ext.toFixed(0)} mm: inclinação limitada a 40° (o nível sobe mais que isso).`)

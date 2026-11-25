@@ -85,11 +85,11 @@ function montagem(m: Mapa, n: Nivel, t: Tileset, ids: Map<string, string>): stri
       sx += cx; sy += cy
       lados(s, c, r).forEach(([a, b], i) => { const [c2, r2] = vizinho(s, c, r, i); if (!dentro.has(chave(c2, r2))) contorno.push(linha(a, b, '#222', 1)) })
     }
-    rotulos.push(`<text x="${f(sx / it.celulas.length)}" y="${f(sy / it.celulas.length)}">${ids.get(it.chave) ?? ''}</text>`)
+    rotulos.push(`<text x="${f(sx / it.celulas.length)}" y="${f(-sy / it.celulas.length)}">${ids.get(it.chave) ?? ''}</text>`)
   }
   const paredes = Object.keys(n.arestas).map(k => { const [c, r, i] = k.split(',').map(Number); const [a, b] = lados(s, c, r)[i]; return linha(a, b, '#000', 4) })
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${f(x0)} ${f(y0)} ${f(w)} ${f(h)}" width="${f(w)}mm" height="${f(h)}mm">
-<g>${cinza.join('')}</g><g>${contorno.join('')}</g><g>${paredes.join('')}</g>
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${f(x0)} ${f(-(y0 + h))} ${f(w)} ${f(h)}" width="${f(w)}mm" height="${f(h)}mm">
+<g transform="scale(1,-1)">${cinza.join('')}${contorno.join('')}${paredes.join('')}</g>
 <g font-family="sans-serif" font-size="6" text-anchor="middle" dominant-baseline="middle">${rotulos.join('')}</g>
 </svg>
 `
