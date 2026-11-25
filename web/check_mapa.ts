@@ -1,6 +1,11 @@
 // Check do modelo do mapa: `cd web && npx tsx check_mapa.ts`. Imprime PASS/FALHA por caso.
-import { centros, celula, SISTEMA, type Sistema } from './src/sistema'
+import { centros, celula, contorno, SISTEMA, type Sistema } from './src/sistema'
 import { abrir, arestaCanonica, apaga, cria, centroMundo, nLados, pinta, poeAresta, salvar, vizinho, type CelulaMapa, type Mapa } from './src/mapa/modelo'
+import { dividir, gira, tileset, type Instancia, type Peca } from './src/mapa/divisao'
+import { opcoesDe } from './src/mapa/opcoes'
+import { quadro } from './src/aberturas'
+import { pisoComParedes } from './src/parede'
+import { fechada } from './src/bloco'
 
 let falhas = 0
 const confere = (nome: string, ok: boolean, medido: string) => { if (!ok) falhas++; console.log(`${ok ? 'PASS' : 'FALHA'} ${nome}: ${medido}`) }
@@ -83,5 +88,181 @@ const depoisUm = Object.keys(m.niveis[0].arestas).sort().join(' ')
 apaga(m, 'terreo', 1, 0)
 const depoisDois = Object.keys(m.niveis[0].arestas).length
 confere('apaga: aresta com vizinho ainda pintado fica; órfã some', arestasAntes === '0,0,0 0,0,1' && depoisUm === '0,0,0' && depoisDois === 0, `antes "${arestasAntes}", depois de apagar (0,0) "${depoisUm}", depois de apagar (1,0) ${depoisDois} arestas`)
+
+// ---- divisão em peças (T3): divisao.ts e opcoes.ts ----
+type P2 = [number, number]
+const ESP = 6
+const dot = (a: P2, b: P2) => a[0] * b[0] + a[1] * b[1]
+const dentroConvexo = (p: P2, P: P2[]) => { // p dentro (ou na borda) de polígono convexo, em qualquer sentido
+  const cs = P.map((a, j) => { const b = P[(j + 1) % P.length]; return (b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0]) })
+  return cs.every(x => x >= -1e-6) || cs.every(x => x <= 1e-6)
+}
+const giraPt = (p: P2, voltas: number): P2 => { let [x, y] = p; for (let t = 0; t < voltas; t++) [x, y] = [-y, x]; return [x, y] } // anti-horário, quarto de volta por passo
+const mapaDe = (s: Sistema, cels: P2[], max: P2 = [3, 3]): Mapa => {
+  const mp = cria(s, 'T'), N = mp.niveis[0]
+  N.salas = [{ id: 's1', nome: 'Sala', tema: '', max, cortes: [] }]
+  for (const [c, r] of cels) pinta(mp, 'terreo', c, r, { tex: 'pedra', tipo: 'piso', sala: 's1' })
+  return mp
+}
+const bordaParede = (mp: Mapa, s: Sistema) => { // parede em toda aresta de célula que dá para fora do mapa
+  const N = mp.niveis[0]
+  for (const k of Object.keys(N.celulas)) {
+    const [c, r] = k.split(',').map(Number)
+    for (let i = 0; i < nLados(s); i++) { const [c2, r2] = vizinho(s, c, r, i); if (!N.celulas[`${c2},${r2}`]) poeAresta(mp, 'terreo', s, c, r, i, { tipo: 'parede' }) }
+  }
+}
+const salaDe = (mp: Mapa, it: Instancia) => mp.niveis[0].salas.find(x => x.id === mp.niveis[0].celulas[it.celulas[0]].sala)!
+const atravessa = (mp: Mapa, it: Instancia) => { // independente de divisao.ts: aresta interna da peça com parede, corte, sala, tex, tipo ou dir diferente
+  const N = mp.niveis[0], s = mp.sistema, set = new Set(it.celulas)
+  return it.celulas.some(key => {
+    const [c, r] = key.split(',').map(Number), A = N.celulas[key]
+    return Array.from({ length: nLados(s) }, (_, i) => i).some(i => {
+      const [c2, r2] = vizinho(s, c, r, i), k2 = `${c2},${r2}`, ak = arestaCanonica(s, c, r, i)
+      if (!set.has(k2)) return false
+      const B = N.celulas[k2], sa = N.salas.find(x => x.id === A.sala)!
+      return N.arestas[ak] !== undefined || sa.cortes.includes(ak) || A.tex !== B.tex || A.tipo !== B.tipo || A.sala !== B.sala || A.dir !== B.dir
+    })
+  })
+}
+const retangulos = (o: ReturnType<typeof opcoesDe>) => o.paredes.map(p => { const q = quadro(o, p); return [q.pt(0, q.o1), q.pt(p.comprimento, q.o1), q.pt(p.comprimento, q.o2), q.pt(0, q.o2)] as P2[] })
+const meioCelulas = (s: Sistema, keys: string[]): P2 => { // centro da caixa das células no mapa (mesmo critério de centros())
+  const P = keys.map(k => { const [c, r] = k.split(',').map(Number); return centroMundo(s, c, r) })
+  const xs = P.map(p => p[0]), ys = P.map(p => p[1])
+  return [(Math.min(...xs) + Math.max(...xs)) / 2, (Math.min(...ys) + Math.max(...ys)) / 2]
+}
+const pecaUm = (i: number): Peca => ({ linhas: 1, colunas: 1, tex: 'pedra', texParede: '', tipo: 'piso', tema: '', altura_parede: 30, paredes: [{ c: 0, r: 0, i, tipo: 'parede' }], colunasCel: [] })
+const sQ2 = sis('quadrado', { largura: 35, comprimento: 35 }), sH2 = sis('hexagono', { largura: 35 })
+
+{ // 1. cobertura, tamanho e barreiras num mapa 7×5 com 2 salas, cortes, paredes, porta, rampa e coluna
+  const s7 = sis('quadrado', { largura: 35, comprimento: 35 })
+  const m1 = cria(s7, 'Mapa 7x5'), N1 = m1.niveis[0]
+  N1.salas = [{ id: 's1', nome: 'A', tema: '', max: [3, 3], cortes: [arestaCanonica(s7, 1, 2, 0)] }, { id: 's2', nome: 'B', tema: 'taverna', max: [2, 4], cortes: [] }]
+  for (let c = 0; c < 7; c++) for (let r = 0; r < 5; r++) {
+    const sala = c <= 3 ? 's1' : 's2', tipo = c === 2 && r === 4 ? 'rampa' : 'piso'
+    pinta(m1, 'terreo', c, r, { tex: c === 5 && r <= 1 ? 'lajota' : 'pedra', tipo, sala, ...(tipo === 'rampa' ? { dir: '+x' as const } : {}) })
+  }
+  bordaParede(m1, s7)
+  poeAresta(m1, 'terreo', s7, 3, 3, 0, { tipo: 'porta' })
+  poeAresta(m1, 'terreo', s7, 1, 1, 1, { tipo: 'parede' })
+  N1.colunas['1,1'] = { lado: 10 }
+  const ins1 = dividir(m1, 'terreo'), cob = new Map<string, number>()
+  for (const it of ins1) for (const k of it.celulas) cob.set(k, (cob.get(k) ?? 0) + 1)
+  const todas = Object.keys(N1.celulas)
+  const cobreTudo = todas.length === cob.size && todas.every(k => cob.get(k) === 1)
+  const cabe = ins1.every(it => { const sa = salaDe(m1, it); return it.linhas <= sa.max[0] && it.colunas <= sa.max[1] })
+  const cruza = ins1.some(it => atravessa(m1, it))
+  confere('cobertura: toda célula em 1 peça; nenhuma passa de sala.max; nenhuma atravessa parede, corte, sala, tex, tipo ou dir', cobreTudo && cabe && !cruza, `${todas.length} células em ${ins1.length} peças`)
+
+  // 2. toda aresta com parede tem exatamente 1 dono (contado pelas peças, já desgiradas para o mapa)
+  const cont = new Map<string, number>()
+  for (const it of ins1) for (const e of gira(it.peca, m1.sistema, it.rot).paredes) if (e.tipo !== 'reforco') {
+    const k = arestaCanonica(s7, it.c0 + e.c, it.r0 + e.r, e.i); cont.set(k, (cont.get(k) ?? 0) + 1)
+  }
+  const esperado = (k: string) => { const [c, r, i] = k.split(',').map(Number), [c2, r2] = vizinho(s7, c, r, i); return N1.celulas[`${c},${r}`]?.tipo === 'piso' || N1.celulas[`${c2},${r2}`]?.tipo === 'piso' ? 1 : 0 }
+  const donosOk = Object.keys(N1.arestas).every(k => (cont.get(k) ?? 0) === esperado(k))
+  confere('dono: toda aresta com parede tem exatamente 1 dono', donosOk, `${Object.keys(N1.arestas).length} arestas com parede`)
+}
+
+{ // 3. simetria: sala 6×6 cercada, max 3×3
+  const cels66: P2[] = []
+  for (let c = 0; c < 6; c++) for (let r = 0; r < 6; r++) cels66.push([c, r])
+  const mq = mapaDe(sQ2, cels66, [3, 3]); bordaParede(mq, sQ2)
+  const iq = dividir(mq, 'terreo'), uq = tileset(mq).pecas
+  const mr = mapaDe(sis('quadrado', { largura: 35, comprimento: 50 }), cels66, [3, 3]); bordaParede(mr, mr.sistema)
+  const ur = tileset(mr).pecas
+  const quadrada = iq.length === 4 && uq.size === 1 && [...uq.values()][0].qtd === 4
+  const retangular = ur.size === 2 && [...ur.values()].every(e => e.qtd === 2)
+  confere('simetria: 6×6 quadrada → 4 peças e 1 única (qtd 4); retângulo 35×50 → 2 únicas', quadrada && retangular, `quadrada: ${iq.length} peças, ${uq.size} única(s); retângulo: ${ur.size} única(s)`)
+}
+
+{ // 4. hexágono: sala 4×4 cercada cobre tudo; coluna ímpar não inicia peça de mais de 1 coluna
+  const cels44: P2[] = []
+  for (let c = 0; c < 4; c++) for (let r = 0; r < 4; r++) cels44.push([c, r])
+  const mh = mapaDe(sH2, cels44, [3, 3]); bordaParede(mh, sH2)
+  const ins = dividir(mh, 'terreo'), cob = new Map<string, number>()
+  for (const it of ins) for (const k of it.celulas) cob.set(k, (cob.get(k) ?? 0) + 1)
+  const cobre = cels44.length === cob.size && cels44.every(([c, r]) => cob.get(`${c},${r}`) === 1)
+  const colunas = ins.every(it => it.colunas === 1 || it.c0 % 2 === 0)
+  confere('hex 4×4 cercada: cobre tudo 1 vez; coluna ímpar não inicia peça de mais de 1 coluna', cobre && colunas, `${ins.length} peças`)
+}
+
+{ // 5. âncora: parede de 1 lado, dentro da célula e encostada no lado certo (quadrado e hex); gira leva a parede ao lado girado
+  for (const [nome, s] of [['quadrado', sQ2], ['hexágono', sH2]] as [string, Sistema][]) {
+    const mp = cria(s, 'A'), N = mp.niveis[0], sa = N.salas[0], k = nLados(s), cl = celula(s), V = contorno(cl, 0)
+    const ruins: number[] = []
+    for (let i = 0; i < k; i++) {
+      const o = opcoesDe(pecaUm(i), mp, sa, N), R = retangulos(o)
+      if (o.paredes.length !== 1) { ruins.push(i); continue }
+      const nv = cl.n[i], a = cl.a[i], tg: P2 = [-nv[1], nv[0]], pr = R[0].map(p => dot(p, nv)), al = R[0].map(p => dot(p, tg))
+      const lado = [dot(V[(i - 1 + k) % k], tg), dot(V[i], tg)]
+      const encosta = Math.abs(Math.max(...pr) - a) < .01 && Math.abs(Math.min(...pr) - (a - ESP)) < .01
+        && Math.abs(Math.min(...al) - Math.min(...lado)) < .01 && Math.abs(Math.max(...al) - Math.max(...lado)) < .01
+      if (!encosta || !R[0].every(p => dentroConvexo(p, V))) ruins.push(i)
+    }
+    confere(`âncora (${nome}): parede de cada lado dentro da célula e encostada no lado certo`, ruins.length === 0, ruins.length ? `falhou nos lados ${ruins.join(', ')}` : `${k} lados ok`)
+    let giro = true
+    const voltas = s.formato === 'hexagono' ? [2] : [1, 2, 3]
+    for (let i = 0; i < k; i++) {
+      const base = retangulos(opcoesDe(pecaUm(i), mp, sa, N))[0]
+      for (const rot of voltas) {
+        const g = retangulos(opcoesDe(gira(pecaUm(i), s, rot), mp, sa, N)), esp = base.map(p => giraPt(p, rot))
+        if (g.length !== 1 || !esp.every(p => g[0].some(q => Math.hypot(p[0] - q[0], p[1] - q[1]) < .01))) giro = false
+      }
+    }
+    confere(`gira (${nome}): girar a peça gira a parede no sentido anti-horário`, giro, voltas.map(v => `${v * 90}°`).join(' '))
+  }
+}
+
+{ // 6. reforço: sala em L (4×4 sem o canto 2×2), quadrado e hex. Cada ponto a < e da parede, do lado de dentro, tem de estar coberto
+  const faltas = (s: Sistema, cels: P2[]) => {
+    const mp = mapaDe(s, cels), N = mp.niveis[0], sa = N.salas[0], k = nLados(s), V = contorno(celula(s), 0)
+    bordaParede(mp, s)
+    const rects: P2[][] = []
+    for (const it of dividir(mp, 'terreo')) {
+      const mc = meioCelulas(s, it.celulas)
+      for (const R of retangulos(opcoesDe(it.peca, mp, sa, N))) rects.push(R.map(p => { const g = giraPt(p, it.rot); return [g[0] + mc[0], g[1] + mc[1]] as P2 }))
+    }
+    const celPol = cels.map(([c, r]) => { const [cx, cy] = centroMundo(s, c, r); return V.map(v => [cx + v[0], cy + v[1]] as P2) })
+    const bordas: [P2, P2][] = []
+    for (const [c, r] of cels) {
+      const [cx, cy] = centroMundo(s, c, r)
+      for (let i = 0; i < k; i++) {
+        const [c2, r2] = vizinho(s, c, r, i), a = V[(i - 1 + k) % k], b = V[i]
+        if (!N.celulas[`${c2},${r2}`]) bordas.push([[cx + a[0], cy + a[1]], [cx + b[0], cy + b[1]]])
+      }
+    }
+    const dseg = (p: P2, [a, b]: [P2, P2]) => { const dx = b[0] - a[0], dy = b[1] - a[1], t = Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / (dx * dx + dy * dy))); return Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy) }
+    const xs = celPol.flatMap(P => P.map(p => p[0])), ys = celPol.flatMap(P => P.map(p => p[1]))
+    let total = 0, falta = 0
+    for (let x = Math.min(...xs); x <= Math.max(...xs); x += .5) for (let y = Math.min(...ys); y <= Math.max(...ys); y += .5) {
+      const p: P2 = [x, y]
+      if (!celPol.some(P => dentroConvexo(p, P))) continue
+      if (Math.min(...bordas.map(b => dseg(p, b))) >= ESP - .05) continue
+      total++
+      if (!rects.some(R => dentroConvexo(p, R))) falta++
+    }
+    return { total, falta }
+  }
+  const L: P2[] = []
+  for (let c = 0; c < 4; c++) for (let r = 0; r < 4; r++) if (!(c >= 2 && r >= 2)) L.push([c, r])
+  const rq = faltas(sQ2, L), rh = faltas(sH2, L)
+  confere('reforço: pontos a < e da parede, do lado de dentro, cobertos (sala em L, quadrado e hex)', rq.falta === 0 && rh.falta === 0 && rq.total > 0 && rh.total > 0, `quadrado: ${rq.falta}/${rq.total} sem cobrir; hex: ${rh.falta}/${rh.total}`)
+}
+
+{ // 7. malha fechada (previa) de 3 peças únicas: com porta, rampa e hexágono
+  const pega = async (mp: Mapa, escolhe: (it: Instancia) => boolean) => {
+    const it = tileset(mp).instancias.find(escolhe)!
+    const ma = await pisoComParedes(opcoesDe(it.peca, mp, salaDe(mp, it), mp.niveis[0]), true)
+    return fechada(ma.pos, ma.idx)
+  }
+  const mA = mapaDe(sQ2, [[0, 0], [1, 0]]); bordaParede(mA, sQ2); poeAresta(mA, 'terreo', sQ2, 0, 0, 2, { tipo: 'porta' })
+  const mR = mapaDe(sQ2, [[0, 0], [1, 0]]); bordaParede(mR, sQ2)
+  for (const c of [0, 1]) pinta(mR, 'terreo', c, 0, { tex: 'pedra', tipo: 'rampa', dir: '+x', sala: 's1' })
+  const mH = mapaDe(sH2, [[0, 0], [1, 0], [0, 1], [1, 1]]); bordaParede(mH, sH2)
+  const f1 = await pega(mA, it => it.peca.paredes.some(e => e.tipo === 'porta'))
+  const f2 = await pega(mR, it => it.peca.tipo === 'rampa')
+  const f3 = await pega(mH, it => it.peca.paredes.length > 0)
+  confere('malha fechada (previa): peça com porta, rampa e hexágono', f1 && f2 && f3, `porta ${f1}, rampa ${f2}, hex ${f3}`)
+}
 
 if (falhas) process.exit(1)
