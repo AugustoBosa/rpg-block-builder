@@ -18,6 +18,14 @@ Versão para hospedar: `npm --prefix web run build` grava o site estático em `w
 
 Nada é salvo: cada abertura começa do padrão.
 
+### Editor de mapa (`/mapa.html`, link na página principal)
+1. **Novo mapa** (quadrado ou hexágono, largura da célula) ou **Novo a partir de modelo…** (Masmorra, Taverna 2 andares, Caverna hex).
+2. Desenhe com as ferramentas (teclas): Piso P, Apagar E, Parede W, Porta D, Janela J, Arco A, Coluna C, Rampa M, Escada S, Sala T, Corte X; R gira o sentido da rampa/escada; Ctrl+Z / Ctrl+Y. Arrastar com o botão do meio (ou Espaço + arrastar) move a vista; a roda dá zoom.
+3. **Níveis:** "+ nível" cria um andar; "Base (degraus)" sobe o nível 15,5 mm por degrau. **Salas:** cada sala tem tema e tamanho máximo da peça (linhas × colunas); a ferramenta Corte força um corte entre duas células. O tracejado azul mostra as peças.
+4. **2D / 3D:** a 3D mostra caixas na hora e troca pela peça real (1 mm) quando cada peça única fica pronta; "Só caixas (L0)" para máquinas fracas.
+5. **Exportar tileset (ZIP):** uma STL por peça única + grids + degraus, `manifesto.csv` (quantidades), `montagem_<nível>.svg` (planta com o id de cada peça) e `mapa.json`. A estimativa aparece antes (um mapa médio passa de 500 MB e ~30 min); "Baixar uma peça…" baixa um STL só.
+6. **Salvar / Abrir:** arquivo `.json` do mapa.
+
 ### Abas e ajustes
 | Aba | O que ajusta |
 |---|---|
@@ -44,6 +52,8 @@ Grava o STL e diz se a malha fecha e quanto tempo levou. `--peca piso|grid|degra
 | `npx tsx check_paredes.ts [D2 D15 ...]` | paredes, aberturas, rampa, canto, pilar, telhado, grid, travas, exportação; `D2` = 5 hashes de referência (`ref_hashes.json`) | completo ~8 min |
 | `npx tsx check_texturas.ts` | as 15 texturas: malha fecha, emenda 0,0000 mm, média de relevo, parede unida | ~8 min |
 | `npx tsx check_emenda.ts` | emenda entre vizinhos (quadrado e hexágono, 1×1, 2×3, 3×2; Pedra e Tábuas) | ~3,5 min |
+| `npx tsx check_mapa.ts` | editor de mapa: modelo, salvar/abrir, divisão em peças, dono de parede, dedup, grids e degraus, malha fechada de peças do mapa | ~3 min |
+| `npx tsx check_zip.ts` | ZIP da exportação do mapa (CRC32 e `unzip -t`) | segundos |
 
 No GitHub, `pages.yml` roda `check_temas` + `check_paredes D2` antes de publicar (~1 min); `checks.yml` roda a bateria completa (~17 min) e não segura o deploy.
 

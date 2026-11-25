@@ -25,3 +25,5 @@ jobs:
       - run: npx tsx check_paredes.ts
       - run: npx tsx check_emenda.ts
       - run: npx tsx check_texturas.ts
+      - run: npx tsx check_mapa.ts
+      - run: npx tsx check_zip.ts

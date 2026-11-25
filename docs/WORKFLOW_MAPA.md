@@ -10,17 +10,17 @@ Spec: `docs/superpowers/specs/2026-11-24-editor-mapa-design.md`. Plano aprovado 
 ## Fases
 | Fase | Tarefa | Estado |
 |---|---|---|
-| F0 | Pesquisa D&D (`docs/AMBIENTES_DND.md`) + estatística dos mapas locais (`docs/MAPAS_REFERENCIA.md`, gitignored) | em andamento |
-| F1 | Spec + revisão do Advisor | em andamento |
-| T1 | Modelo + salvar/abrir + `check_mapa.ts` | — |
-| T2 | Bloco de escada + D17 | — |
-| T3 | Divisão em peças + dedup | — |
-| T4 | Níveis: grids + degraus | — |
-| T5 | Página + editor 2D | — |
-| T6 | Vista 3D com LOD | — |
-| T7 | Exportação ZIP | — |
-| T8 | Modelos prontos | — |
-| T9 | Docs + CI | — |
+| F0 | Pesquisa D&D (`docs/AMBIENTES_DND.md`) + estatística dos mapas locais (`docs/MAPAS_REFERENCIA.md`, gitignored) | feito |
+| F1 | Spec + revisão do Advisor | feito |
+| T1 | Modelo + salvar/abrir + `check_mapa.ts` | `791ac46` |
+| T2 | Bloco de escada + D17 | `0d4346a` |
+| T3 | Divisão em peças + dedup | `227bb83` |
+| T4 | Níveis: grids + degraus | `33b4919` |
+| T5 | Página + editor 2D | `ee7e2eb` |
+| T6 | Vista 3D com LOD | `95efd3e` (orquestrador: worker só livre no 'pronto', parede de borda no L0, enquadramento) |
+| T7 | Exportação ZIP | `c65d4ea` |
+| T8 | Modelos prontos | `b573bb3` |
+| T9 | Docs + CI | este commit |
 | F3 | Check final (Advisor) + navegador | — |
 
 ## Rulings (decisões do orquestrador; reversíveis)
