@@ -1,7 +1,7 @@
 // Check das escalas Cidade e Reino: `cd web && npx tsx check_escalas.ts`. Imprime PASS/FALHA por caso.
 // Miniaturas e relevo grande fecham a malha (quadrado e hexágono); relevo não mexe na borda (emenda 0 com o vizinho plano); muralha com ameias fecha.
 import { fechada, padrao, piso, relevoGrande, type Opcoes } from './src/bloco'
-import { pisoComParedes, paredeNova } from './src/parede'
+import { pisoComParedes, paredeNova, regrasEscala } from './src/parede'
 import { objetoNovo, OBJETOS, type TipoObjeto } from './src/miniaturas'
 import { distBorda } from './src/sistema'
 import { readFileSync } from 'node:fs'
@@ -37,6 +37,22 @@ for (const formato of ['quadrado', 'hexagono'] as const) {
   const m = await pisoComParedes(base({ paredes: [p] }))
   confere('muralha com ameias fecha', fechada(m.pos, m.idx), `${m.idx.length / 3} tri`)
 }
+// regras: o que cada escala desliga (e avisa)
+{
+  const fora = regrasEscala(base({ objetos: [{ ...objetoNovo('casa'), x: 15 }, objetoNovo('arvore')] }))
+  confere('objeto que passa da borda é ignorado com aviso', fora.obs.length === 1 && fora.obs[0].tipo === 'arvore' && /borda/.test(fora.av.join()), fora.av.join(' '))
+  const longe = regrasEscala(base({ objetos: [{ ...objetoNovo('arvore'), x: 80 }] }))
+  confere('objeto com centro fora da peça é ignorado', longe.obs.length === 0, longe.av.join(' '))
+  const p = { ...paredeNova('m', { tipo: 'eixo', eixo: 'x', desloc: 0 }, 30), inicio: -15, altura: 20, espessura: 4, lado: 'centro' as const, ameias: true }
+  const rel = regrasEscala(base({ relevo_tipo: 'montanha', paredes: [p] }))
+  confere('paredes desligadas com relevo', !rel.paredes && /relevo/.test(rel.av.join()), rel.av.join(' '))
+  const ram = regrasEscala(base({ inclinacao: 20, objetos: [objetoNovo('casa')] }))
+  confere('objetos desligados na rampa', ram.obs.length === 0 && /rampa/.test(ram.av.join()), ram.av.join(' '))
+  const comAm = await pisoComParedes(base({ paredes: [p] }), true), semAm = await pisoComParedes(base({ paredes: [{ ...p, ameias: false }] }), true)
+  const fund = { telhado_forma: 'duas' as const, telhado_modo: 'fundido' as const }
+  const fAm = await pisoComParedes(base({ ...fund, paredes: [p] }), true), fSem = await pisoComParedes(base({ ...fund, paredes: [{ ...p, ameias: false }] }), true)
+  confere('ameias somem com telhado fundido', comAm.idx.length !== semAm.idx.length && fAm.idx.length === fSem.idx.length, `${comAm.idx.length / 3} × ${semAm.idx.length / 3} tri; fundido ${fAm.idx.length / 3} × ${fSem.idx.length / 3}`)
+}
 // editor de mapa
 {
   const ler = (a: string) => abrir(readFileSync(`public/mapas/${a}`, 'utf8'))
@@ -59,6 +75,9 @@ for (const formato of ['quadrado', 'hexagono'] as const) {
   pinta(q, 'terreo', 0, 0, { tex: 'pedra', tipo: 'piso', sala: 's1', obj: 'casa' })
   const p = tileset(q).instancias[0].peca, rots = [1, 2, 3].map(r => gira(p, q.sistema, r).objetos![0].rot)
   confere('rotação gira o objeto junto', rots.join(',') === '90,180,270', rots.join(','))
+  pinta(q, 'terreo', 1, 0, { tex: 'pedra', tipo: 'rampa', dir: '+x', sala: 's1', obj: 'casa' })
+  const tq = tileset(q), pr = tq.instancias.find(i => i.peca.tipo === 'rampa')!.peca
+  confere('mapa: objeto em rampa ignorado com aviso', !pr.objetos && tq.avisos.some(a => /rampa/.test(a)), tq.avisos.join(' '))
 }
 console.log(falhas ? `${falhas} FALHA(S)` : 'tudo PASS')
 process.exit(falhas ? 1 : 0)

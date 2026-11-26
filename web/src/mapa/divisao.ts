@@ -106,7 +106,8 @@ function dividirComAvisos(m: Mapa, nivelId: string, avisos: string[]): Instancia
   const at = (a: P2) => cel(a[0], a[1])
   const sala = (id: string) => n.salas.find(x => x.id === id) as Sala
   const ehRampa = (x: CelulaMapa) => x.tipo !== 'piso'
-  const relevo = (x: CelulaMapa) => RELEVOS.includes(x.obj ?? '') ? x.obj! : ''
+  const relevo = (x: CelulaMapa) => x.tipo === 'piso' && RELEVOS.includes(x.obj ?? '') ? x.obj! : '' // rampa/escada: objeto ignorado (aviso abaixo)
+  for (const [k, x] of Object.entries(n.celulas)) if (x.obj && x.tipo !== 'piso') avisos.push(`Objeto na célula ${k} (rampa/escada) ignorado.`)
   const ladoPara = (a: P2, b: P2) => { for (let i = 0; i < K; i++) { const [x, y] = vizinho(s, a[0], a[1], i); if (x === b[0] && y === b[1]) return i } return -1 }
   const temParede = (a: P2, b: P2) => { const i = ladoPara(a, b); return i >= 0 && n.arestas[arestaCanonica(s, a[0], a[1], i)] !== undefined }
   // aresta (c, r, i) separa duas células que não podem ficar na mesma peça
@@ -212,7 +213,7 @@ function dividirComAvisos(m: Mapa, nivelId: string, avisos: string[]): Instancia
     }
     if (relevo(c0)) peca.relevo = relevo(c0)
     if (m.escala === 'cidade' && ent[j].length) peca.ameias = true // entra na chave: a vista 3D não reaproveita a peça sem ameias de outro mapa
-    const obs = q.cels.flatMap(k => { const x = n.celulas[k], [c, r] = k.split(',').map(Number); return x.obj && !relevo(x) ? [{ ...rel(j, c, r), tipo: x.obj, rot: 0 }] : [] })
+    const obs = q.cels.flatMap(k => { const x = n.celulas[k], [c, r] = k.split(',').map(Number); return x.obj && x.tipo === 'piso' && !relevo(x) ? [{ ...rel(j, c, r), tipo: x.obj, rot: 0 }] : [] })
     if (obs.length) peca.objetos = obs
     const cn = canonica(peca, s)
     out.push({ chave: cn.chave, nivel: n.id, c0: q.c0, r0: q.r0, linhas: q.linhas, colunas: q.colunas, rot: cn.rot, celulas: q.cels, peca: cn.peca })

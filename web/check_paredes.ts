@@ -412,7 +412,8 @@ t('D15', 'exportação: 3x3 quatro águas fundido sem ilhas (1 componente, fecha
 t('D15', 'oitão texturizado: vértices da face de topo não são planos', () => {
   const o = comCanto({ telhado_forma: 'duas', telhado_eixo: 'x' }), g = geoTelhado(o), m = telhadoSolto(o)
   let n = 0, lo = 1e9, hi = -1e9
-  for (let i = 0; i < m.pos.length; i += 3) if (m.pos[i] > g.x1 - 3 && m.pos[i + 2] > 1) { n++; lo = Math.min(lo, m.pos[i]); hi = Math.max(hi, m.pos[i]) }
+  // só a face do oitão: perto de x1 e bem abaixo da água (os vértices da água texturizada ficam a até 1,5 mm do topo; sem este corte o teste passava sem textura no oitão)
+  for (let i = 0; i < m.pos.length; i += 3) if (m.pos[i] > g.x1 - 1.6 && m.pos[i + 2] > 1 && m.pos[i + 2] < g.topo(m.pos[i], m.pos[i + 1]) - 1.6) { n++; lo = Math.min(lo, m.pos[i]); hi = Math.max(hi, m.pos[i]) }
   if (!n || hi - lo < .1) throw new Error(`${n} vértices, desvio ${(hi - lo).toFixed(3)} mm`); return `${n} vértices, desvio ${(hi - lo).toFixed(2)} mm`
 })
 t('D15', 'fundido: sem junta aberta (base do telhado ≤ menor topo texturizado das paredes)', () => {
@@ -422,6 +423,19 @@ t('D15', 'fundido: sem junta aberta (base do telhado ≤ menor topo texturizado 
   for (let i = 0; i < m.pos.length; i += 3) if (m.pos[i + 2] > p.altura - o.teto - .01 && Math.abs(m.pos[i + k] - b.lo[k] - d / 2) < d / 2 - .05) topoMin = Math.min(topoMin, m.pos[i + 2])
   const af = Math.max(...o.paredes.map(q => Math.max(Math.min(o.teto, q.espessura / 2 - .3), 0))) + .05 // mesmo cálculo de pisoComParedes
   if (af < p.altura - topoMin) throw new Error(`afunda ${af.toFixed(2)} < relevo ${(p.altura - topoMin).toFixed(2)}`); return `afunda ${af.toFixed(2)} ≥ relevo ${(p.altura - topoMin).toFixed(2)} mm`
+})
+t('D15', 'fundido: sem junta aberta na malha (nenhum vértice entre o topo das paredes e o telhado, por dentro da planta)', async () => {
+  const o = comCanto({ telhado_forma: 'duas', telhado_modo: 'fundido' }), m = await pisoComParedes(o), zb = geoTelhado(o).zb
+  let n = 0
+  for (const p of o.paredes) {
+    const { d, n: nn, o1, o2, s } = quadro(o, p), z0 = o.altura + p.altura - o.teto - .01 // a até `teto` abaixo do topo nominal
+    const e = Math.max(Math.min(o.teto, p.espessura / 2 - .3), 0) + .1 // as faces texturizadas recuam até isto: o miolo começa depois
+    for (let i = 0; i < m.pos.length; i += 3) {
+      const x = m.pos[i] - s[0], y = m.pos[i + 1] - s[1], z = m.pos[i + 2], u = x * d[0] + y * d[1] - p.inicio, w = x * nn[0] + y * nn[1]
+      if (z > z0 && z < zb - .01 && u > e && u < p.comprimento - e && w > o1 + e && w < o2 - e) n++ // superfície no miolo da parede, sob o telhado = junta
+    }
+  }
+  if (n) throw new Error(`${n} vértices de junta aberta`); return '0 vértices de junta'
 })
 t('D15', 'telhado ignorado na rampa, no hexágono e fundido sem paredes', async () => {
   const f = { telhado_forma: 'duas', telhado_modo: 'fundido' }

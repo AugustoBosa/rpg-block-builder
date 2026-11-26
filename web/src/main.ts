@@ -8,6 +8,7 @@ import { esquema } from './esquema'
 import { aoMudarVer, config, enquadra, mostra, mostraTracejado, type Ver } from './vista'
 import { gerando, hudPerf, infoPerf, montaCards, perf, RES, resRapida } from './cards'
 import { montaParedes } from './paredes'
+import { regrasEscala } from './parede'
 import { temTelhado } from './telhado'
 import { aplicaTema, TEMAS } from './temas'
 import { $, aoMudar, botao, campo, controle, escolha, grupo, opcoes, secoes } from './ui'
@@ -37,6 +38,7 @@ function previa(res = resRapida()) {
         mostra(0, r.m[0])
         mostra(1, r.m[1])
         $('aviso').textContent = ''
+        $('avisoEscala').textContent = passo === 3 ? regrasEscala(snap).av.map(a => '⚠ ' + a).join(' ') : '' // escalas: o que foi ignorado
         $('avisoGrid').textContent = passo === 2 ? [...avisos(snap), ...(r.av ?? [])].join(' ') : ''
       }
       mostraTracejado(passo === 3 ? snap.paredes.flatMap(w => tracejado3D(snap, w)) : [])

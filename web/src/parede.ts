@@ -6,6 +6,7 @@ import { OBJETOS, solidoObjeto } from './miniaturas'
 import { perfilAbertura, pilares, quadro } from './aberturas'
 import { profTex, texParede } from './textura'
 import { geoTelhado, solidoTelhado, temTelhado } from './telhado'
+import { distBorda, regiao, type Regiao } from './sistema'
 
 
 export type Ancora =
@@ -62,7 +63,7 @@ function solido(o: OpcoesP, p: Parede, baixo: number, dl = 0, tex = false, viz?:
       const n1 = m; m = m.add(sol); n1.delete(); sol.delete(); anel.delete()
     }
   }
-  if (p.ameias) { // ameia 3, vão 3, ameia 3...: centrado, com ameia nas duas pontas
+  if (p.ameias && !(temTelhado(o) && o.telhado_modo === 'fundido')) { // ameia 3, vão 3, ameia 3...: centrado, com ameia nas duas pontas (telhado fundido em cima: sem ameias, senão os vãos ficam sob o telhado)
     const L = p.comprimento, n = Math.max(0, Math.floor((L - 3) / 6)), a0 = (L - 3 - 6 * n) / 2, H = p.altura
     for (let i = 0; i < n; i++) {
       const a = a0 + 3 + 6 * i, corte = poe(Manifold.extrude([[[a, H - 3], [a + 3, H - 3], [a + 3, H + 1], [a, H + 1]]], T), o2 + .5)
@@ -109,18 +110,36 @@ export function parede(o: OpcoesP, p: Parede, textura = false, viz?: Parede[]): 
 
 export { areaDentro, foraDaArea, perfilAbertura } from './aberturas' // F2: geometria pura do vão
 
+/** Regras das escalas (prévia e exportação usam as mesmas): o que é ignorado e o aviso de cada coisa.
+ *  Rampa/escada desliga objetos (ficariam enterrados no lado alto); relevo grande desliga paredes (ficariam enterradas);
+ *  objeto cuja planta (raio × tamanho) passa da borda é ignorado (sairia solto no STL). */
+export function regrasEscala(o: Opcoes, r: Regiao = regiao(o, o.linhas, o.colunas)) {
+  const av: string[] = [], inc = inclinado(o), rel = !!o.relevo_tipo, obs0 = o.objetos ?? []
+  if (rel && o.paredes.length) av.push('Paredes desligadas com relevo.')
+  if (inc && obs0.length) av.push('Objetos desligados na rampa/escada.')
+  const dentro = (x: number, y: number) => r.cs.some(([cx, cy]) => r.c.n.every(([nx, ny], i) => (x - cx) * nx + (y - cy) * ny <= r.c.a[i] + 1e-9))
+  const obs = inc ? [] : obs0.filter((ob, i) => {
+    const ok = dentro(ob.x, ob.y) && distBorda(r, ob.x, ob.y) >= OBJETOS[ob.tipo].raio * ob.tam
+    if (!ok) av.push(`Objeto ${i + 1} (${OBJETOS[ob.tipo].nome}) passa da borda da peça: ignorado.`)
+    return ok
+  })
+  return { av, obs, paredes: !inc && !rel }
+}
+
 /** F1. Piso final (Pedra) unido às paredes. `previa`: piso cru (sem suavizar/reduzir), como a prévia da interface.
  *  Sem paredes devolve exatamente o piso de antes (regressão D2). */
 export const avisosPiso: string[] = []
 const MIN_FRAG = 5 // mm³: componentes menores que isto (e que não são a maior) são fragmentos do relevo e saem na exportação
 export async function pisoComParedes(o: OpcoesP, previa = false, cortes?: Float64Array): Promise<Malha> {
   const c = piso(o, cortes), base: Malha = previa ? { pos: c.pos, idx: c.idx } : await final(c)
-  const fundido = temTelhado(o) && o.telhado_modo === 'fundido' && o.paredes.length > 0 // fundido sem paredes ficaria solto no ar
-  const obs = o.objetos ?? []
-  if ((!o.paredes.length || inclinado(o)) && !obs.length) return base // rampa ou escada: paredes ignoradas
+  const fundido = temTelhado(o) && o.telhado_modo === 'fundido' && o.paredes.length > 0 && !o.relevo_tipo // fundido sem paredes ficaria solto no ar
+  const re = regrasEscala(o, c.r), obs = re.obs
+  avisosPiso.length = 0
+  avisosPiso.push(...re.av)
+  if ((!o.paredes.length || !re.paredes) && !obs.length) return base // rampa, escada ou relevo: paredes ignoradas
   const z0 = o.altura - RELEVO - AFUNDA - .05 // a base entra na laje (zt − 0,6) e passa 0,05 mm dela: fundo coplanar gerava triângulos de área zero
   // paredes exatas (sem engordar): faces coplanares entre paredes e com o piso se fundem na união (sem degrau de 0,02 mm); `desentorta` limpa triângulos de área ~0
-  const ps = inclinado(o) ? [] : o.pilar ? [...o.paredes, ...pilares(o, o.paredes)] : o.paredes
+  const ps = !re.paredes ? [] : o.pilar ? [...o.paredes, ...pilares(o, o.paredes)] : o.paredes
   // miniaturas: chão 1 mm abaixo do topo nominal, no ponto mais baixo do relevo grande sob a planta; descem até 0,3 mm abaixo do topo do corpo
   const rg = relevoGrande(o, c.r), zt = o.altura - RELEVO
   const mini = obs.map(ob => {
@@ -136,7 +155,6 @@ export async function pisoComParedes(o: OpcoesP, previa = false, cortes?: Float6
   }
   const f = new Manifold(new Mesh({ numProp: 3, vertProperties: base.pos, triVerts: base.idx }))
   let u = Manifold.union([f, ...ws])
-  avisosPiso.length = 0
   if (!previa) { // exportação: descarta fragmentos flutuantes minúsculos (ilhas do relevo na borda); paredes e telhado ficam
     const ps2 = u.decompose(), vs = ps2.map(q => q.volume()), mx = Math.max(...vs), ok = ps2.filter((_, i) => vs[i] >= MIN_FRAG || vs[i] === mx)
     if (ok.length < ps2.length) { u.delete(); u = Manifold.compose(ok); avisosPiso.push(`${ps2.length - ok.length} fragmento(s) minúsculo(s) descartado(s).`) }

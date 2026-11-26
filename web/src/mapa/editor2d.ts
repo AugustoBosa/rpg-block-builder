@@ -311,7 +311,7 @@ function acao(wx: number, wy: number, inicio: boolean) {
     case 'piso': pinta(m, id, c, r, { tex: ed.tex, tipo: 'piso', sala }); break
     case 'apagar': apaga(m, id, c, r); break
     case 'objeto': // clique alterna; arrasto só põe
-      if (!cel) break
+      if (!cel || cel.tipo !== 'piso') break // em rampa/escada o objeto ficaria enterrado no lado alto
       if (inicio && cel.obj === ed.obj) delete cel.obj
       else cel.obj = ed.obj
       break
