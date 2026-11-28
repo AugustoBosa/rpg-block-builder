@@ -1,10 +1,13 @@
-# RPG Block Builder
+# RPG Block Builder: gerador de terreno de masmorra para impressão 3D
 
-Gerador de blocos de terreno para RPG de mesa.
+Gerador online e grátis de **blocos de terreno e masmorra para RPG de mesa** (D&D e similares), prontos para **impressão 3D** em STL.
+
+**Usar online:** https://augustobosa.github.io/rpg-block-builder/
+
+> **In English:** Free browser tool to generate 3D-printable tabletop RPG dungeon tiles and terrain (floors, walls, doors, ramps, roofs, grids with magnets or clips) and export STL files. Includes a 2D map editor that splits a whole dungeon, tavern or cave into printable pieces. Square or hex grids, three.js, no server needed. Interface in Brazilian Portuguese.
 
 Este projeto gera blocos de masmorra para imprimir em 3D (FDM). Os blocos encaixam num grid de células. A ferramenta roda **no navegador** (three.js) e grava STL prontos para o fatiador. Ela não precisa de Blender nem de servidor.
 
-**Usar online:** https://augustobosa.github.io/rpg-block-builder/
 
 Os dados medidos do produto original de referência (catálogo, índices e `spec_encaixe.json`) não fazem parte deste repositório. Os scripts Python de medição e o `gerar.py` esperam esses arquivos e só rodam na cópia local do autor.
 
