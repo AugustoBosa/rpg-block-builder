@@ -1,46 +1,44 @@
-# RPG Block Builder: gerador de terreno de masmorra para impressão 3D
+# RPG Block Builder: 3D-printable dungeon terrain generator
+[![en](https://img.shields.io/badge/lang-en-red.svg)](README.md) [![pt-br](https://img.shields.io/badge/lang-pt--br-green.svg)](README.pt-br.md)
 
-Gerador online e grátis de **blocos de terreno e masmorra para RPG de mesa** (D&D e similares), prontos para **impressão 3D** em STL.
+Free online generator of **tabletop RPG terrain and dungeon tiles** (D&D and similar), ready for **3D printing** as STL.
 
-**Usar online:** https://augustobosa.github.io/rpg-block-builder/
+**Use it online:** https://augustobosa.github.io/rpg-block-builder/
 
-> **In English:** Free browser tool to generate 3D-printable tabletop RPG dungeon tiles and terrain (floors, walls, doors, ramps, roofs, grids with magnets or clips) and export STL files. Includes a 2D map editor that splits a whole dungeon, tavern or cave into printable pieces. Square or hex grids, three.js, no server needed. Interface in Brazilian Portuguese.
+This project generates dungeon blocks for 3D printing (FDM). The blocks fit onto a cell grid. The tool runs **in the browser** (three.js) and writes STL files ready for the slicer. No Blender and no server needed. Interface in Brazilian Portuguese.
 
-Este projeto gera blocos de masmorra para imprimir em 3D (FDM). Os blocos encaixam num grid de células. A ferramenta roda **no navegador** (three.js) e grava STL prontos para o fatiador. Ela não precisa de Blender nem de servidor.
+The measured data of the original reference product (catalog, indexes and `spec_encaixe.json`) are not part of this repository. The Python measurement scripts and `gerar.py` expect those files and only run on the author's local copy.
 
+**License:** MIT (see `LICENSE`). The manifold-3d library used on the web is Apache-2.0, compatible with MIT.
 
-Os dados medidos do produto original de referência (catálogo, índices e `spec_encaixe.json`) não fazem parte deste repositório. Os scripts Python de medição e o `gerar.py` esperam esses arquivos e só rodam na cópia local do autor.
+## Status (2026-11-23)
 
-**Licença:** MIT (ver `LICENSE`). A biblioteca manifold-3d usada na web é Apache-2.0, compatível com a MIT.
-
-## Estado (2026-11-23)
-
-| Parte | Estado |
+| Part | Status |
 |---|---|
-| Ferramenta web (`web/`) | **Aba 1 · Sistema:** formato da célula (quadrado com largura e comprimento independentes, ou hexágono) e encaixe próprio parametrizado. **Aba 2 · Grids:** grid e degrau (adaptador de nível) nas medidas do Sistema, com chanfro do furo (ângulo livre), travas (clip ou macho/fêmea) e ímãs (até 4 por lado). **Aba 3 · Blocos:** piso de N × M células com **15 texturas** (piso e parede separados) e 13 temas; paredes com portas e janelas, canto com pilar, rampa e telhado (uma, duas, quatro águas ou plano com mureta; removível ou fundido; oco por padrão). Vista 3D com corte, elevação, modos e cotas; esquemas 2D. STL final no navegador, em Web Worker |
-| Editor de mapa (`web/mapa.html`) | Desenho 2D (quadrado ou hexágono) de masmorra, taverna, caverna etc., com paredes, portas, janelas, arcos, colunas, rampas, escadas, salas e níveis; vista 3D (caixas na hora, peças reais depois); divide o mapa em peças por sala, deduplica por rotação e exporta o tileset em ZIP (STL únicos, grids, degraus, manifesto e planta de montagem). 3 escalas: Combate, Cidade (casas, torres, árvores, muralha com ameias) e Reino (montanha, colina, vulcão, água, marcadores; cada hex é uma peça solta). 5 modelos prontos |
-| Gerador em Blender (`gerar.py`) | **Congelado.** Fica só como referência de qualidade e de receita das texturas. O plugin (painel) foi descontinuado em 2026-11-06 |
-| Ferramentas de medição (Python) | Ativas: conferem os STL da web e do Blender |
-| Impressão | Nada foi impresso ainda |
+| Web tool (`web/`) | **Tab 1 · System:** cell shape (square with independent width and length, or hexagon) and parametric custom joint. **Tab 2 · Grids:** grid and step (level adapter) using the System measurements, with hole chamfer (free angle), locks (clip or male/female) and magnets (up to 4 per side). **Tab 3 · Blocks:** N × M cell floor with **15 textures** (floor and wall separate) and 13 themes; walls with doors and windows, corner with pillar, ramp and roof (shed, gable, hip or flat with parapet; removable or fused; hollow by default). 3D view with section, elevation, modes and dimensions; 2D drawings. Final STL in the browser, in a Web Worker |
+| Map editor (`web/mapa.html`) | 2D drawing (square or hex) of dungeon, tavern, cave etc., with walls, doors, windows, arches, columns, ramps, stairs, rooms and levels; 3D view (instant boxes, real pieces later); splits the map into pieces per room, deduplicates by rotation and exports the tileset as ZIP (unique STLs, grids, steps, manifest and assembly plan). 3 scales: Combat, City (houses, towers, trees, crenellated wall) and Kingdom (mountain, hill, volcano, water, markers; each hex is a loose piece). 5 ready-made templates |
+| Blender generator (`gerar.py`) | **Frozen.** Kept only as a reference for quality and texture recipes. The plugin (panel) was discontinued on 2026-11-06 |
+| Measurement tools (Python) | Active: check the web and Blender STLs |
+| Printing | Nothing printed yet |
 
-## Por onde começar
+## Where to start (docs in Portuguese)
 
-1. `RETOMAR.md`: estado, decisões e próximo passo. **Leia primeiro.**
-2. `USO.md`: como rodar a web, gerar STL pela linha de comando e medir.
-3. `docs/MIGRACAO.md`: inventário de tudo que o gerador do Blender faz e o plano para levar cada parte à web.
-4. Referência: `docs/PROPS.md` (objetos externos), `docs/HD.md` e `docs/AMOSTRA_HD.md` (peças originais para medida).
+1. `RETOMAR.md`: status, decisions and next step. **Read first.**
+2. `USO.md`: how to run the web tool, generate STL from the command line and measure.
+3. `docs/MIGRACAO.md`: inventory of everything the Blender generator does and the plan to bring each part to the web.
+4. Reference: `docs/PROPS.md` (external objects), `docs/HD.md` and `docs/AMOSTRA_HD.md` (original pieces for measurement).
 
-## Pastas e arquivos
+## Folders and files
 
-| Caminho | O que é |
+| Path | What it is |
 |---|---|
-| `web/` | Ferramenta online (Vite + TypeScript + three.js + meshoptimizer) |
-| `gerar.py` | Gerador em Blender (referência congelada). `piloto_externos.py` usa funções dele |
-| `validar.py`, `emenda.py`, `facetas.py`, `calibrar.py`, `medir_stl.py` | Medição dos STL |
-| `campo_textura.py` (Blender) e `web/campo.ts` | Campo de uma textura em área grande, para comparar Blender e web |
-| `render_stl.py`, `folha.py` | Imagens para comparar (o render usa o Blender) |
-| `spec_encaixe.json` | Medidas do pé e do grid, tiradas das peças originais. **Só para teste:** o produto vai ter encaixe próprio |
-| `piloto_externos.py` | Piloto de props externos (Blender, fora da web) |
-| `indice_*.csv`, `hd_listagem.tsv`, `gerar_indice.py`, `AMOSTRA_HD_MANIFESTO.csv` | Índice das peças originais do HD |
-| `catalogo/` | Páginas dos catálogos originais (referência visual) |
-| `saida/` | Resultados gerados (fora do git) |
+| `web/` | Online tool (Vite + TypeScript + three.js + meshoptimizer) |
+| `gerar.py` | Blender generator (frozen reference). `piloto_externos.py` uses its functions |
+| `validar.py`, `emenda.py`, `facetas.py`, `calibrar.py`, `medir_stl.py` | STL measurement |
+| `campo_textura.py` (Blender) and `web/campo.ts` | A texture field over a large area, to compare Blender and web |
+| `render_stl.py`, `folha.py` | Comparison images (the render uses Blender) |
+| `spec_encaixe.json` | Foot and grid measurements taken from the original pieces. **Testing only:** the product will have its own joint |
+| `piloto_externos.py` | External props pilot (Blender, outside the web) |
+| `indice_*.csv`, `hd_listagem.tsv`, `gerar_indice.py`, `AMOSTRA_HD_MANIFESTO.csv` | Index of the original HD pieces |
+| `catalogo/` | Pages from the original catalogs (visual reference) |
+| `saida/` | Generated output (not in git) |
